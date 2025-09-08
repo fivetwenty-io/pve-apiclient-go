@@ -2,12 +2,15 @@ package ssl
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
 )
 
 // FingerprintCache manages persistent storage of certificate fingerprints.
@@ -37,6 +40,7 @@ type FingerprintEntry struct {
 // NewFingerprintCache creates a new fingerprint cache.
 func NewFingerprintCache(filename string) *FingerprintCache {
 	return &FingerprintCache{
+		mu:           sync.RWMutex{},
 		filename:     filename,
 		autoSave:     true,
 		fingerprints: make(map[string]FingerprintEntry),
@@ -58,12 +62,18 @@ func (fc *FingerprintCache) Load() error {
 			// File doesn't exist yet, that's OK
 			return nil
 		}
+
 		return fmt.Errorf("failed to open cache file: %w", err)
 	}
-	defer file.Close()
+
+	defer func() {
+		_ = file.Close() // Ignore close errors for read operations
+	}()
 
 	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&fc.fingerprints); err != nil && err != io.EOF {
+
+	err = decoder.Decode(&fc.fingerprints)
+	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("failed to decode cache file: %w", err)
 	}
 
@@ -81,13 +91,16 @@ func (fc *FingerprintCache) Save() error {
 
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(fc.filename)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+
+	err := os.MkdirAll(dir, constants.DirPermissions)
+	if err != nil {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
 	// Create temporary file
 	tempFile := filepath.Clean(fc.filename + ".tmp")
-	file, err := os.OpenFile(tempFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
+
+	file, err := os.OpenFile(tempFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, constants.FilePermissions)
 	if err != nil {
 		return fmt.Errorf("failed to create cache file: %w", err)
 	}
@@ -95,20 +108,27 @@ func (fc *FingerprintCache) Save() error {
 	// Write JSON data
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(fc.fingerprints); err != nil {
+
+	err = encoder.Encode(fc.fingerprints)
+	if err != nil {
 		_ = file.Close()
 		_ = os.Remove(tempFile)
+
 		return fmt.Errorf("failed to encode cache data: %w", err)
 	}
 
-	if err := file.Close(); err != nil {
+	err = file.Close()
+	if err != nil {
 		_ = os.Remove(tempFile)
+
 		return fmt.Errorf("failed to close cache file: %w", err)
 	}
 
 	// Atomically rename temp file to actual file
-	if err := os.Rename(tempFile, fc.filename); err != nil {
+	err = os.Rename(tempFile, fc.filename)
+	if err != nil {
 		_ = os.Remove(tempFile)
+
 		return fmt.Errorf("failed to save cache file: %w", err)
 	}
 
@@ -125,6 +145,7 @@ func (fc *FingerprintCache) Add(entry FingerprintEntry) error {
 
 	// Update timestamps
 	now := time.Now()
+
 	if existing, exists := fc.fingerprints[entry.Fingerprint]; exists {
 		entry.FirstSeen = existing.FirstSeen
 		entry.LastSeen = now
@@ -132,6 +153,7 @@ func (fc *FingerprintCache) Add(entry FingerprintEntry) error {
 		entry.FirstSeen = now
 		entry.LastSeen = now
 	}
+
 	entry.LastUsed = now
 
 	fc.fingerprints[entry.Fingerprint] = entry
@@ -139,6 +161,7 @@ func (fc *FingerprintCache) Add(entry FingerprintEntry) error {
 	if fc.autoSave {
 		return fc.saveUnlocked()
 	}
+
 	return nil
 }
 
@@ -148,12 +171,14 @@ func (fc *FingerprintCache) Get(fingerprint string) (FingerprintEntry, bool) {
 	defer fc.mu.RUnlock()
 
 	normalized := NormalizeFingerprint(fingerprint)
+
 	entry, exists := fc.fingerprints[normalized]
 	if exists {
 		// Update last used time
 		entry.LastUsed = time.Now()
 		fc.fingerprints[normalized] = entry
 	}
+
 	return entry, exists
 }
 
@@ -168,6 +193,7 @@ func (fc *FingerprintCache) Remove(fingerprint string) error {
 	if fc.autoSave {
 		return fc.saveUnlocked()
 	}
+
 	return nil
 }
 
@@ -180,6 +206,7 @@ func (fc *FingerprintCache) GetAll() []FingerprintEntry {
 	for _, entry := range fc.fingerprints {
 		entries = append(entries, entry)
 	}
+
 	return entries
 }
 
@@ -189,11 +216,13 @@ func (fc *FingerprintCache) GetTrusted() []FingerprintEntry {
 	defer fc.mu.RUnlock()
 
 	var trusted []FingerprintEntry
+
 	for _, entry := range fc.fingerprints {
 		if entry.Trusted {
 			trusted = append(trusted, entry)
 		}
 	}
+
 	return trusted
 }
 
@@ -203,11 +232,13 @@ func (fc *FingerprintCache) GetByHost(host string) []FingerprintEntry {
 	defer fc.mu.RUnlock()
 
 	var entries []FingerprintEntry
+
 	for _, entry := range fc.fingerprints {
 		if entry.Host == host {
 			entries = append(entries, entry)
 		}
 	}
+
 	return entries
 }
 
@@ -226,6 +257,7 @@ func (fc *FingerprintCache) SetTrusted(fingerprint string, trusted bool) error {
 			return fc.saveUnlocked()
 		}
 	}
+
 	return nil
 }
 
@@ -239,6 +271,7 @@ func (fc *FingerprintCache) Clear() error {
 	if fc.autoSave {
 		return fc.saveUnlocked()
 	}
+
 	return nil
 }
 
@@ -246,49 +279,8 @@ func (fc *FingerprintCache) Clear() error {
 func (fc *FingerprintCache) SetAutoSave(enabled bool) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
+
 	fc.autoSave = enabled
-}
-
-// saveUnlocked saves without acquiring the lock (must be called with lock held).
-func (fc *FingerprintCache) saveUnlocked() error {
-	if fc.filename == "" {
-		return nil
-	}
-
-	// Create directory if it doesn't exist
-	dir := filepath.Dir(fc.filename)
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return fmt.Errorf("failed to create cache directory: %w", err)
-	}
-
-	// Create temporary file
-	tempFile := filepath.Clean(fc.filename + ".tmp")
-	file, err := os.OpenFile(tempFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
-	if err != nil {
-		return fmt.Errorf("failed to create cache file: %w", err)
-	}
-
-	// Write JSON data
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(fc.fingerprints); err != nil {
-		_ = file.Close()
-		_ = os.Remove(tempFile)
-		return fmt.Errorf("failed to encode cache data: %w", err)
-	}
-
-	if err := file.Close(); err != nil {
-		_ = os.Remove(tempFile)
-		return fmt.Errorf("failed to close cache file: %w", err)
-	}
-
-	// Atomically rename temp file to actual file
-	if err := os.Rename(tempFile, fc.filename); err != nil {
-		_ = os.Remove(tempFile)
-		return fmt.Errorf("failed to save cache file: %w", err)
-	}
-
-	return nil
 }
 
 // CleanupExpired removes expired certificate entries.
@@ -305,6 +297,7 @@ func (fc *FingerprintCache) CleanupExpired() error {
 			// Keep if used within the last 30 days
 			if entry.LastUsed.Add(30 * 24 * time.Hour).Before(now) {
 				delete(fc.fingerprints, fingerprint)
+
 				changed = true
 			}
 		}
@@ -313,6 +306,58 @@ func (fc *FingerprintCache) CleanupExpired() error {
 	if changed && fc.autoSave {
 		return fc.saveUnlocked()
 	}
+
+	return nil
+}
+
+func (fc *FingerprintCache) saveUnlocked() error {
+	if fc.filename == "" {
+		return nil
+	}
+
+	// Create directory if it doesn't exist
+	dir := filepath.Dir(fc.filename)
+
+	err := os.MkdirAll(dir, constants.DirPermissions)
+	if err != nil {
+		return fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	// Create temporary file
+	tempFile := filepath.Clean(fc.filename + ".tmp")
+
+	file, err := os.OpenFile(tempFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, constants.FilePermissions)
+	if err != nil {
+		return fmt.Errorf("failed to create cache file: %w", err)
+	}
+
+	// Write JSON data
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	err = encoder.Encode(fc.fingerprints)
+	if err != nil {
+		_ = file.Close()
+		_ = os.Remove(tempFile)
+
+		return fmt.Errorf("failed to encode cache data: %w", err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		_ = os.Remove(tempFile)
+
+		return fmt.Errorf("failed to close cache file: %w", err)
+	}
+
+	// Atomically rename temp file to actual file
+	err = os.Rename(tempFile, fc.filename)
+	if err != nil {
+		_ = os.Remove(tempFile)
+
+		return fmt.Errorf("failed to save cache file: %w", err)
+	}
+
 	return nil
 }
 

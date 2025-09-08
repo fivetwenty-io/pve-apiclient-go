@@ -2,27 +2,34 @@ package auth
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"syscall"
 
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
 	"golang.org/x/term"
+)
+
+var (
+	ErrHardwareTokenRequiresBrowser = errors.New("hardware token authentication (U2F/WebAuthn) requires browser interaction")
+	ErrNoTFAResponseConfigured      = errors.New("no TFA response configured for available types")
 )
 
 // TFAType represents the type of two-factor authentication.
 type TFAType string
 
 const (
-	// TFATypeTOTP represents Time-based One-Time Password (e.g., Google Authenticator)
+	// TFATypeTOTP represents Time-based One-Time Password (e.g., Google Authenticator).
 	TFATypeTOTP TFAType = "totp"
-	// TFATypeYubico represents Yubico OTP
+	// TFATypeYubico represents Yubico OTP.
 	TFATypeYubico TFAType = "yubico"
-	// TFATypeRecovery represents recovery codes
+	// TFATypeRecovery represents recovery codes.
 	TFATypeRecovery TFAType = "recovery"
-	// TFATypeU2F represents Universal 2nd Factor
+	// TFATypeU2F represents Universal 2nd Factor.
 	TFATypeU2F TFAType = "u2f"
-	// TFATypeWebAuthn represents WebAuthn/FIDO2
+	// TFATypeWebAuthn represents WebAuthn/FIDO2.
 	TFATypeWebAuthn TFAType = "webauthn"
 )
 
@@ -47,17 +54,20 @@ func NewInteractiveTFAHandler() *InteractiveTFAHandler {
 // HandleTFAChallenge interactively handles a TFA challenge.
 func (h *InteractiveTFAHandler) HandleTFAChallenge(challenge *TFAChallenge) (*TFAResponse, error) {
 	// Display available TFA types
-	fmt.Printf("Two-factor authentication required.\n")
+	_, _ = fmt.Fprintf(os.Stderr, "Two-factor authentication required.\n")
+
 	if len(challenge.Types) > 0 {
-		fmt.Printf("Available TFA types: %s\n", strings.Join(challenge.Types, ", "))
+		_, _ = fmt.Fprintf(os.Stderr, "Available TFA types: %s\n", strings.Join(challenge.Types, ", "))
 	}
 
 	// Determine which type to use
 	tfaType := h.selectTFAType(challenge.Types)
 
 	// Get the TFA response based on type
-	var response string
-	var err error
+	var (
+		response string
+		err      error
+	)
 
 	switch TFAType(tfaType) {
 	case TFATypeTOTP:
@@ -67,7 +77,7 @@ func (h *InteractiveTFAHandler) HandleTFAChallenge(challenge *TFAChallenge) (*TF
 	case TFATypeRecovery:
 		response, err = h.promptRecovery()
 	case TFATypeU2F, TFATypeWebAuthn:
-		return nil, fmt.Errorf("hardware token authentication (U2F/WebAuthn) requires browser interaction")
+		return nil, ErrHardwareTokenRequiresBrowser
 	default:
 		response, err = h.promptGeneric(tfaType)
 	}
@@ -95,13 +105,15 @@ func (h *InteractiveTFAHandler) selectTFAType(availableTypes []string) string {
 	}
 
 	// Multiple types available, let user choose
-	fmt.Println("Select TFA type:")
+	_, _ = fmt.Fprintln(os.Stderr, "Select TFA type:")
+
 	for i, t := range availableTypes {
-		fmt.Printf("%d. %s\n", i+1, t)
+		_, _ = fmt.Fprintf(os.Stderr, "%d. %s\n", i+1, t)
 	}
 
 	for {
-		fmt.Print("Enter choice (1-", len(availableTypes), "): ")
+		_, _ = fmt.Fprint(os.Stderr, "Enter choice (1-", len(availableTypes), "): ")
+
 		input, err := h.reader.ReadString('\n')
 		if err != nil {
 			continue
@@ -111,7 +123,9 @@ func (h *InteractiveTFAHandler) selectTFAType(availableTypes []string) string {
 
 		// Check if user entered a number
 		var choice int
-		if _, err := fmt.Sscanf(input, "%d", &choice); err == nil {
+
+		_, err = fmt.Sscanf(input, "%d", &choice)
+		if err == nil {
 			if choice >= 1 && choice <= len(availableTypes) {
 				return availableTypes[choice-1]
 			}
@@ -124,47 +138,55 @@ func (h *InteractiveTFAHandler) selectTFAType(availableTypes []string) string {
 			}
 		}
 
-		fmt.Println("Invalid choice. Please try again.")
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid choice. Please try again.")
 	}
 }
 
 // promptTOTP prompts for a TOTP code.
 func (h *InteractiveTFAHandler) promptTOTP() (string, error) {
-	fmt.Print("Enter TOTP code: ")
+	_, _ = fmt.Fprint(os.Stderr, "Enter TOTP code: ")
+
 	code, err := h.reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read TOTP code: %w", err)
 	}
+
 	return strings.TrimSpace(code), nil
 }
 
 // promptYubico prompts for a Yubico OTP.
 func (h *InteractiveTFAHandler) promptYubico() (string, error) {
-	fmt.Print("Touch your YubiKey or enter Yubico OTP: ")
+	_, _ = fmt.Fprint(os.Stderr, "Touch your YubiKey or enter Yubico OTP: ")
+
 	otp, err := h.reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read Yubico OTP: %w", err)
 	}
+
 	return strings.TrimSpace(otp), nil
 }
 
 // promptRecovery prompts for a recovery code.
 func (h *InteractiveTFAHandler) promptRecovery() (string, error) {
-	fmt.Print("Enter recovery code: ")
+	_, _ = fmt.Fprint(os.Stderr, "Enter recovery code: ")
+
 	code, err := h.reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read recovery code: %w", err)
 	}
+
 	return strings.TrimSpace(code), nil
 }
 
 // promptGeneric prompts for a generic TFA response.
 func (h *InteractiveTFAHandler) promptGeneric(tfaType string) (string, error) {
-	fmt.Printf("Enter %s code: ", tfaType)
+	_, _ = fmt.Fprintf(os.Stderr, "Enter %s code: ", tfaType)
+
 	code, err := h.reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read %s code: %w", tfaType, err)
 	}
+
 	return strings.TrimSpace(code), nil
 }
 
@@ -202,19 +224,20 @@ func (h *AutoTFAHandler) HandleTFAChallenge(challenge *TFAChallenge) (*TFARespon
 		}
 	}
 
-	return nil, fmt.Errorf("no TFA response configured for available types: %v", challenge.Types)
+	return nil, fmt.Errorf("%w: %v", ErrNoTFAResponseConfigured, challenge.Types)
 }
 
 // PromptPassword prompts for a password without echoing to terminal.
 func PromptPassword(prompt string) (string, error) {
-	fmt.Print(prompt)
+	_, _ = fmt.Fprint(os.Stderr, prompt)
 
 	// Read password without echo
-	password, err := term.ReadPassword(int(syscall.Stdin))
-	fmt.Println() // Print newline after password input
+	password, err := term.ReadPassword(syscall.Stdin)
+
+	_, _ = fmt.Fprintln(os.Stderr) // Print newline after password input
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read password: %w", err)
 	}
 
 	return string(password), nil
@@ -222,12 +245,15 @@ func PromptPassword(prompt string) (string, error) {
 
 // PromptUsername prompts for a username.
 func PromptUsername(prompt string) (string, error) {
-	fmt.Print(prompt)
+	_, _ = fmt.Fprint(os.Stderr, prompt)
+
 	reader := bufio.NewReader(os.Stdin)
+
 	username, err := reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read username: %w", err)
 	}
+
 	return strings.TrimSpace(username), nil
 }
 
@@ -245,7 +271,8 @@ func PromptCredentials() (*Credentials, error) {
 
 	// Parse realm from username if present (user@realm format)
 	realm := "pam" // default realm
-	if parts := strings.Split(username, "@"); len(parts) == 2 {
+
+	if parts := strings.Split(username, "@"); len(parts) == constants.ExpectedPartsCount {
 		username = parts[0]
 		realm = parts[1]
 	}

@@ -2,9 +2,37 @@
 package compatibility
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+// PVE version constants.
+const (
+	PVEMajorV3 = 3
+	PVEMajorV5 = 5
+	PVEMajorV6 = 6
+	PVEMajorV7 = 7
+	PVEMajorV8 = 8
+
+	PVEMinorV0 = 0
+	PVEMinorV1 = 1
+	PVEMinorV2 = 2
+	PVEMinorV3 = 3
+	PVEMinorV4 = 4
+
+	PVEPatchV0   = 0
+	PVEPatchV999 = 999
+)
+
+var (
+	ErrInvalidVersionFormat      = errors.New("invalid version format")
+	ErrUnknownFeature            = errors.New("unknown feature")
+	ErrUnknownEndpoint           = errors.New("unknown endpoint")
+	ErrNoCompatibleEndpointFound = errors.New("no compatible endpoint found")
 )
 
 // Version represents a PVE version.
@@ -22,12 +50,13 @@ func ParseVersion(versionStr string) (*Version, error) {
 	re := regexp.MustCompile(`^(\d+)\.(\d+)(?:\.(\d+))?(?:-(.+))?$`)
 	matches := re.FindStringSubmatch(versionStr)
 
-	if len(matches) < 3 {
-		return nil, fmt.Errorf("invalid version format: %s", versionStr)
+	if len(matches) < constants.MinimumMatchCount {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidVersionFormat, versionStr)
 	}
 
 	major, _ := strconv.Atoi(matches[1])
 	minor, _ := strconv.Atoi(matches[2])
+
 	patch := 0
 	if matches[3] != "" {
 		patch, _ = strconv.Atoi(matches[3])
@@ -46,6 +75,7 @@ func (v *Version) String() string {
 	if v.Build != "" {
 		return fmt.Sprintf("%d.%d.%d-%s", v.Major, v.Minor, v.Patch, v.Build)
 	}
+
 	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
@@ -56,6 +86,7 @@ func (v *Version) Compare(other *Version) int {
 		if v.Major < other.Major {
 			return -1
 		}
+
 		return 1
 	}
 
@@ -63,6 +94,7 @@ func (v *Version) Compare(other *Version) int {
 		if v.Minor < other.Minor {
 			return -1
 		}
+
 		return 1
 	}
 
@@ -70,6 +102,7 @@ func (v *Version) Compare(other *Version) int {
 		if v.Patch < other.Patch {
 			return -1
 		}
+
 		return 1
 	}
 
@@ -78,7 +111,13 @@ func (v *Version) Compare(other *Version) int {
 
 // IsAtLeast checks if version is at least the specified version.
 func (v *Version) IsAtLeast(major, minor, patch int) bool {
-	other := &Version{Major: major, Minor: minor, Patch: patch}
+	other := &Version{
+		Major: major,
+		Minor: minor,
+		Patch: patch,
+		Build: "",
+	}
+
 	return v.Compare(other) >= 0
 }
 
@@ -99,149 +138,14 @@ type Matrix struct {
 
 // NewMatrix creates a new compatibility matrix.
 func NewMatrix() *Matrix {
-	m := &Matrix{
+	matrix := &Matrix{
 		features: make(map[string]*Feature),
 	}
 
 	// Initialize with known PVE features and their version requirements
-	m.initializeFeatures()
+	matrix.initializeFeatures()
 
-	return m
-}
-
-func (m *Matrix) initializeFeatures() {
-	// PVE 6.x features
-	m.AddFeature("storage_content", &Feature{
-		Name:        "Storage Content API",
-		Description: "Access to storage content listing and management",
-		MinVersion:  &Version{Major: 6, Minor: 0, Patch: 0},
-	})
-
-	m.AddFeature("vm_snapshots", &Feature{
-		Name:        "VM Snapshots",
-		Description: "VM snapshot creation and management",
-		MinVersion:  &Version{Major: 6, Minor: 0, Patch: 0},
-	})
-
-	m.AddFeature("cloud_init", &Feature{
-		Name:        "Cloud-Init Support",
-		Description: "Cloud-init configuration for VMs",
-		MinVersion:  &Version{Major: 6, Minor: 2, Patch: 0},
-	})
-
-	// PVE 7.x features
-	m.AddFeature("pbs_integration", &Feature{
-		Name:        "Proxmox Backup Server Integration",
-		Description: "Native PBS backup and restore support",
-		MinVersion:  &Version{Major: 7, Minor: 0, Patch: 0},
-	})
-
-	m.AddFeature("tags", &Feature{
-		Name:        "VM/CT Tags",
-		Description: "Tagging support for VMs and containers",
-		MinVersion:  &Version{Major: 7, Minor: 1, Patch: 0},
-	})
-
-	m.AddFeature("sdn", &Feature{
-		Name:        "Software Defined Networking",
-		Description: "SDN zones, vnets, and subnets",
-		MinVersion:  &Version{Major: 7, Minor: 3, Patch: 0},
-	})
-
-	// PVE 8.x features
-	m.AddFeature("firewall_ipsets_v2", &Feature{
-		Name:        "Firewall IPSets v2",
-		Description: "Enhanced firewall IP sets with additional options",
-		MinVersion:  &Version{Major: 8, Minor: 0, Patch: 0},
-	})
-
-	m.AddFeature("notification_system", &Feature{
-		Name:        "Notification System",
-		Description: "Unified notification system with matchers and targets",
-		MinVersion:  &Version{Major: 8, Minor: 1, Patch: 0},
-	})
-
-	// Deprecated features
-	m.AddFeature("openvz", &Feature{
-		Name:        "OpenVZ Containers",
-		Description: "OpenVZ container support",
-		MinVersion:  &Version{Major: 3, Minor: 0, Patch: 0},
-		MaxVersion:  &Version{Major: 5, Minor: 4, Patch: 999},
-		Deprecated:  true,
-		Alternative: "Use LXC containers instead",
-	})
-
-	// API endpoint changes
-	m.AddFeature("api_token_auth", &Feature{
-		Name:        "API Token Authentication",
-		Description: "Token-based authentication for API access",
-		MinVersion:  &Version{Major: 6, Minor: 2, Patch: 0},
-	})
-
-	m.AddFeature("webauthn", &Feature{
-		Name:        "WebAuthn/FIDO2",
-		Description: "WebAuthn/FIDO2 second factor authentication",
-		MinVersion:  &Version{Major: 7, Minor: 4, Patch: 0},
-	})
-
-	// Resource pool features
-	m.AddFeature("pool_permissions", &Feature{
-		Name:        "Enhanced Pool Permissions",
-		Description: "Granular permission management for resource pools",
-		MinVersion:  &Version{Major: 6, Minor: 1, Patch: 0},
-	})
-
-	// Backup features
-	m.AddFeature("backup_fleecing", &Feature{
-		Name:        "Backup Fleecing",
-		Description: "Improved backup performance using fleecing",
-		MinVersion:  &Version{Major: 7, Minor: 2, Patch: 0},
-	})
-
-	m.AddFeature("backup_notes", &Feature{
-		Name:        "Backup Notes",
-		Description: "Notes field for backup archives",
-		MinVersion:  &Version{Major: 6, Minor: 3, Patch: 0},
-	})
-
-	// Migration features
-	m.AddFeature("live_migration_nbd", &Feature{
-		Name:        "NBD Live Migration",
-		Description: "Live migration using NBD protocol",
-		MinVersion:  &Version{Major: 6, Minor: 0, Patch: 0},
-	})
-
-	m.AddFeature("remote_migration", &Feature{
-		Name:        "Remote Migration",
-		Description: "Migration between different PVE clusters",
-		MinVersion:  &Version{Major: 7, Minor: 0, Patch: 0},
-	})
-
-	// Storage features
-	m.AddFeature("ceph_quincy", &Feature{
-		Name:        "Ceph Quincy",
-		Description: "Ceph Quincy (17.x) support",
-		MinVersion:  &Version{Major: 7, Minor: 2, Patch: 0},
-	})
-
-	m.AddFeature("ceph_reef", &Feature{
-		Name:        "Ceph Reef",
-		Description: "Ceph Reef (18.x) support",
-		MinVersion:  &Version{Major: 8, Minor: 1, Patch: 0},
-	})
-
-	// Hardware features
-	m.AddFeature("pci_mapping", &Feature{
-		Name:        "PCI Device Mapping",
-		Description: "Cluster-wide PCI device mapping",
-		MinVersion:  &Version{Major: 8, Minor: 1, Patch: 0},
-	})
-
-	m.AddFeature("cpu_models_v2", &Feature{
-		Name:        "CPU Models v2",
-		Description: "Enhanced CPU model definitions",
-		MinVersion:  &Version{Major: 7, Minor: 3, Patch: 0},
-	})
+	return matrix
 }
 
 // AddFeature adds a feature to the compatibility matrix.
@@ -253,7 +157,7 @@ func (m *Matrix) AddFeature(key string, feature *Feature) {
 func (m *Matrix) IsFeatureSupported(featureKey string, version *Version) (bool, string) {
 	feature, exists := m.features[featureKey]
 	if !exists {
-		return false, fmt.Sprintf("unknown feature: %s", featureKey)
+		return false, "unknown feature: " + featureKey
 	}
 
 	// Check minimum version
@@ -267,6 +171,7 @@ func (m *Matrix) IsFeatureSupported(featureKey string, version *Version) (bool, 
 		if feature.Alternative != "" {
 			msg += fmt.Sprintf(" (%s)", feature.Alternative)
 		}
+
 		return false, msg
 	}
 
@@ -276,6 +181,7 @@ func (m *Matrix) IsFeatureSupported(featureKey string, version *Version) (bool, 
 		if feature.Alternative != "" {
 			msg += fmt.Sprintf(" (%s)", feature.Alternative)
 		}
+
 		return true, msg
 	}
 
@@ -299,9 +205,227 @@ func (m *Matrix) GetSupportedFeatures(version *Version) []string {
 func (m *Matrix) GetFeatureInfo(featureKey string) (*Feature, error) {
 	feature, exists := m.features[featureKey]
 	if !exists {
-		return nil, fmt.Errorf("unknown feature: %s", featureKey)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownFeature, featureKey)
 	}
+
 	return feature, nil
+}
+
+func (m *Matrix) initializeFeatures() {
+	m.initializeCoreFeatures()
+	m.initializeAuthFeatures()
+	m.initializeBackupFeatures()
+	m.initializeMigrationFeatures()
+	m.initializeStorageFeatures()
+	m.initializeHardwareFeatures()
+	m.initializeDeprecatedFeatures()
+}
+
+func (m *Matrix) initializeCoreFeatures() {
+	m.addCoreStorageFeatures()
+	m.addCoreVMFeatures()
+	m.addCoreNetworkingFeatures()
+	m.addCoreSystemFeatures()
+}
+
+func (m *Matrix) addCoreStorageFeatures() {
+	m.AddFeature("storage_content", &Feature{
+		Name:        "Storage Content API",
+		Description: "Access to storage content listing and management",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("pbs_integration", &Feature{
+		Name:        "Proxmox Backup Server Integration",
+		Description: "Native PBS backup and restore support",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) addCoreVMFeatures() {
+	m.AddFeature("vm_snapshots", &Feature{
+		Name:        "VM Snapshots",
+		Description: "VM snapshot creation and management",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("cloud_init", &Feature{
+		Name:        "Cloud-Init Support",
+		Description: "Cloud-init configuration for VMs",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV2, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("tags", &Feature{
+		Name:        "VM/CT Tags",
+		Description: "Tagging support for VMs and containers",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV1, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) addCoreNetworkingFeatures() {
+	m.AddFeature("sdn", &Feature{
+		Name:        "Software Defined Networking",
+		Description: "SDN zones, vnets, and subnets",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV3, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("firewall_ipsets_v2", &Feature{
+		Name:        "Firewall IPSets v2",
+		Description: "Enhanced firewall IP sets with additional options",
+		MinVersion:  &Version{Major: PVEMajorV8, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) addCoreSystemFeatures() {
+	m.AddFeature("notification_system", &Feature{
+		Name:        "Notification System",
+		Description: "Unified notification system with matchers and targets",
+		MinVersion:  &Version{Major: PVEMajorV8, Minor: PVEMinorV1, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("pool_permissions", &Feature{
+		Name:        "Enhanced Pool Permissions",
+		Description: "Granular permission management for resource pools",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV1, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) initializeAuthFeatures() {
+	m.AddFeature("api_token_auth", &Feature{
+		Name:        "API Token Authentication",
+		Description: "Token-based authentication for API access",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV2, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("webauthn", &Feature{
+		Name:        "WebAuthn/FIDO2",
+		Description: "WebAuthn/FIDO2 second factor authentication",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV4, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) initializeBackupFeatures() {
+	m.AddFeature("backup_fleecing", &Feature{
+		Name:        "Backup Fleecing",
+		Description: "Improved backup performance using fleecing",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV2, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("backup_notes", &Feature{
+		Name:        "Backup Notes",
+		Description: "Notes field for backup archives",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV3, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) initializeMigrationFeatures() {
+	m.AddFeature("live_migration_nbd", &Feature{
+		Name:        "NBD Live Migration",
+		Description: "Live migration using NBD protocol",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("remote_migration", &Feature{
+		Name:        "Remote Migration",
+		Description: "Migration between different PVE clusters",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) initializeStorageFeatures() {
+	m.AddFeature("ceph_quincy", &Feature{
+		Name:        "Ceph Quincy",
+		Description: "Ceph Quincy (17.x) support",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV2, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("ceph_reef", &Feature{
+		Name:        "Ceph Reef",
+		Description: "Ceph Reef (18.x) support",
+		MinVersion:  &Version{Major: PVEMajorV8, Minor: PVEMinorV1, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) initializeHardwareFeatures() {
+	m.AddFeature("pci_mapping", &Feature{
+		Name:        "PCI Device Mapping",
+		Description: "Cluster-wide PCI device mapping",
+		MinVersion:  &Version{Major: PVEMajorV8, Minor: PVEMinorV1, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+
+	m.AddFeature("cpu_models_v2", &Feature{
+		Name:        "CPU Models v2",
+		Description: "Enhanced CPU model definitions",
+		MinVersion:  &Version{Major: PVEMajorV7, Minor: PVEMinorV3, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Deprecated:  false,
+		Alternative: "",
+	})
+}
+
+func (m *Matrix) initializeDeprecatedFeatures() {
+	m.AddFeature("openvz", &Feature{
+		Name:        "OpenVZ Containers",
+		Description: "OpenVZ container support",
+		MinVersion:  &Version{Major: PVEMajorV3, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  &Version{Major: PVEMajorV5, Minor: PVEMinorV4, Patch: PVEPatchV999, Build: ""},
+		Deprecated:  true,
+		Alternative: "Use LXC containers instead",
+	})
 }
 
 // Checker provides compatibility checking functionality.
@@ -358,31 +482,8 @@ func NewEndpointRegistry() *EndpointRegistry {
 		endpoints: make(map[string][]*APIEndpoint),
 	}
 	r.initialize()
+
 	return r
-}
-
-func (r *EndpointRegistry) initialize() {
-	// Example endpoint versioning
-	r.Register("vm_config", &APIEndpoint{
-		Path:       "/nodes/{node}/qemu/{vmid}/config",
-		Method:     "GET",
-		MinVersion: &Version{Major: 6, Minor: 0, Patch: 0},
-	})
-
-	r.Register("vm_cloud_init", &APIEndpoint{
-		Path:       "/nodes/{node}/qemu/{vmid}/cloudinit",
-		Method:     "GET",
-		MinVersion: &Version{Major: 6, Minor: 2, Patch: 0},
-	})
-
-	// Deprecated endpoint example
-	r.Register("old_backup", &APIEndpoint{
-		Path:        "/nodes/{node}/vzdump",
-		Method:      "POST",
-		MinVersion:  &Version{Major: 3, Minor: 0, Patch: 0},
-		MaxVersion:  &Version{Major: 5, Minor: 4, Patch: 999},
-		Replacement: "/nodes/{node}/backup",
-	})
 }
 
 // Register registers an API endpoint.
@@ -394,21 +495,51 @@ func (r *EndpointRegistry) Register(key string, endpoint *APIEndpoint) {
 func (r *EndpointRegistry) GetEndpoint(key string, version *Version) (*APIEndpoint, error) {
 	endpoints, exists := r.endpoints[key]
 	if !exists {
-		return nil, fmt.Errorf("unknown endpoint: %s", key)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownEndpoint, key)
 	}
 
-	for _, ep := range endpoints {
+	for _, endpoint := range endpoints {
 		// Check version compatibility
-		if ep.MinVersion != nil && version.Compare(ep.MinVersion) < 0 {
+		if endpoint.MinVersion != nil && version.Compare(endpoint.MinVersion) < 0 {
 			continue
 		}
-		if ep.MaxVersion != nil && version.Compare(ep.MaxVersion) > 0 {
+
+		if endpoint.MaxVersion != nil && version.Compare(endpoint.MaxVersion) > 0 {
 			continue
 		}
-		return ep, nil
+
+		return endpoint, nil
 	}
 
-	return nil, fmt.Errorf("no compatible endpoint found for %s in PVE %s", key, version)
+	return nil, fmt.Errorf("%w for %s in PVE %s", ErrNoCompatibleEndpointFound, key, version)
+}
+
+func (r *EndpointRegistry) initialize() {
+	// Example endpoint versioning
+	r.Register("vm_config", &APIEndpoint{
+		Path:        "/nodes/{node}/qemu/{vmid}/config",
+		Method:      "GET",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Replacement: "",
+	})
+
+	r.Register("vm_cloud_init", &APIEndpoint{
+		Path:        "/nodes/{node}/qemu/{vmid}/cloudinit",
+		Method:      "GET",
+		MinVersion:  &Version{Major: PVEMajorV6, Minor: PVEMinorV2, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  nil,
+		Replacement: "",
+	})
+
+	// Deprecated endpoint example
+	r.Register("old_backup", &APIEndpoint{
+		Path:        "/nodes/{node}/vzdump",
+		Method:      "POST",
+		MinVersion:  &Version{Major: PVEMajorV3, Minor: PVEMinorV0, Patch: PVEPatchV0, Build: ""},
+		MaxVersion:  &Version{Major: PVEMajorV5, Minor: PVEMinorV4, Patch: PVEPatchV999, Build: ""},
+		Replacement: "/nodes/{node}/backup",
+	})
 }
 
 // Report generates a compatibility report.
@@ -438,19 +569,19 @@ func GenerateReport(pveVersion string) (*Report, error) {
 	// Add version-specific recommendations
 	version := checker.GetVersion()
 
-	if version.Major < 7 {
+	if version.Major < PVEMajorV7 {
 		report.Warnings = append(report.Warnings,
 			"PVE 6.x is approaching end of life. Consider upgrading to PVE 7.x or 8.x")
 		report.Recommendations = append(report.Recommendations,
 			"Plan migration to PVE 7.x or 8.x for continued support and new features")
 	}
 
-	if version.Major == 7 && version.Minor < 4 {
+	if version.Major == PVEMajorV7 && version.Minor < PVEMinorV4 {
 		report.Recommendations = append(report.Recommendations,
 			"Consider upgrading to PVE 7.4 or later for improved performance and security features")
 	}
 
-	if version.Major >= 8 {
+	if version.Major >= PVEMajorV8 {
 		report.Recommendations = append(report.Recommendations,
 			"PVE 8.x includes the new notification system and enhanced SDN features")
 	}
@@ -511,24 +642,6 @@ func (h *MigrationHelper) GetMigrationSteps() []string {
 	return steps
 }
 
-func (h *MigrationHelper) getMajorVersionSteps(major int) []string {
-	var steps []string
-
-	switch major {
-	case 7:
-		steps = append(steps, "Review PBS integration configuration")
-		steps = append(steps, "Update backup scripts to use new PBS features")
-		steps = append(steps, "Test remote migration functionality")
-
-	case 8:
-		steps = append(steps, "Configure new notification system")
-		steps = append(steps, "Review firewall IPSet configurations")
-		steps = append(steps, "Test PCI device mapping features")
-	}
-
-	return steps
-}
-
 // GetNewFeatures returns features added between versions.
 func (h *MigrationHelper) GetNewFeatures() []string {
 	var newFeatures []string
@@ -572,14 +685,14 @@ func (h *MigrationHelper) GetBreakingChanges() []string {
 	// Major version upgrades typically have breaking changes
 	if h.targetVersion.Major > h.sourceVersion.Major {
 		switch h.targetVersion.Major {
-		case 7:
-			if h.sourceVersion.Major < 7 {
+		case PVEMajorV7:
+			if h.sourceVersion.Major < PVEMajorV7 {
 				changes = append(changes, "Corosync 3 is now required for cluster communication")
 				changes = append(changes, "Minimum kernel version changed to 5.x")
 				changes = append(changes, "OpenVZ support completely removed")
 			}
-		case 8:
-			if h.sourceVersion.Major < 8 {
+		case PVEMajorV8:
+			if h.sourceVersion.Major < PVEMajorV8 {
 				changes = append(changes, "Notification system replaces email-only notifications")
 				changes = append(changes, "IPSet API v2 has different parameter structure")
 				changes = append(changes, "Some perl modules replaced with rust implementations")
@@ -590,29 +703,47 @@ func (h *MigrationHelper) GetBreakingChanges() []string {
 	return changes
 }
 
+func (h *MigrationHelper) getMajorVersionSteps(major int) []string {
+	var steps []string
+
+	switch major {
+	case PVEMajorV7:
+		steps = append(steps, "Review PBS integration configuration")
+		steps = append(steps, "Update backup scripts to use new PBS features")
+		steps = append(steps, "Test remote migration functionality")
+
+	case PVEMajorV8:
+		steps = append(steps, "Configure new notification system")
+		steps = append(steps, "Review firewall IPSet configurations")
+		steps = append(steps, "Test PCI device mapping features")
+	}
+
+	return steps
+}
+
 // ValidateConfiguration validates if a configuration is compatible with a PVE version.
 func ValidateConfiguration(config map[string]interface{}, version *Version) (bool, []string) {
 	var issues []string
 
 	// Check for version-specific configuration requirements
-	if version.Major >= 8 {
+	if version.Major >= PVEMajorV8 {
 		// PVE 8.x specific validations
 		if _, hasNotification := config["notification"]; !hasNotification {
 			issues = append(issues, "PVE 8.x requires notification configuration")
 		}
 	}
 
-	if version.Major >= 7 {
+	if version.Major >= PVEMajorV7 {
 		// PVE 7.x specific validations
 		if sdn, ok := config["sdn"].(map[string]interface{}); ok {
-			if version.Minor < 3 && len(sdn) > 0 {
+			if version.Minor < PVEMinorV3 && len(sdn) > 0 {
 				issues = append(issues, "SDN features require PVE 7.3 or later")
 			}
 		}
 	}
 
 	// Check for deprecated configuration options
-	if _, hasOpenvz := config["openvz"]; hasOpenvz && version.Major >= 6 {
+	if _, hasOpenvz := config["openvz"]; hasOpenvz && version.Major >= PVEMajorV6 {
 		issues = append(issues, "OpenVZ configuration is not supported in PVE 6.x and later")
 	}
 

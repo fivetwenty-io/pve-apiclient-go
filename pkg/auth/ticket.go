@@ -1,37 +1,58 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apicilent-go/pkg/errors"
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+	apierrors "github.com/fivetwenty-io/pve-apiclient-go/pkg/errors"
+)
+
+var (
+	ErrAuthenticationFailedNoTicket = errors.New("authentication failed: no ticket received")
+	ErrLoginFailedNoTicket          = errors.New("login failed: no ticket received")
+	ErrTFAFailedNoTicket            = errors.New("TFA failed: no ticket received")
 )
 
 // TicketAuthenticator provides ticket-based authentication for PVE.
 type TicketAuthenticator struct {
-	baseURL     string
-	httpClient  *http.Client
-	credentials *Credentials
-	ticket      *Ticket
-	cookieName  string
+	baseURL      string
+	httpClient   *http.Client
+	credentials  *Credentials
+	ticket       *Ticket
+	cookieName   string
+	pveNewFormat bool
 }
 
 // NewTicketAuthenticator creates a new ticket authenticator.
-func NewTicketAuthenticator(baseURL string, credentials *Credentials, httpClient *http.Client) *TicketAuthenticator {
+func NewTicketAuthenticator(baseURL string, credentials *Credentials, httpClient *http.Client, cookieName string, pveNewFormat bool) *TicketAuthenticator {
 	if credentials.Realm == "" {
 		credentials.Realm = "pam" // Default realm
 	}
 
 	return &TicketAuthenticator{
-		baseURL:     baseURL,
-		httpClient:  httpClient,
-		credentials: credentials,
-		cookieName:  "PVEAuthCookie",
+		baseURL:      baseURL,
+		httpClient:   httpClient,
+		credentials:  credentials,
+		cookieName:   firstNonEmpty(cookieName, "PVEAuthCookie"),
+		pveNewFormat: pveNewFormat,
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+
+	return ""
 }
 
 // Authenticate performs the authentication process.
@@ -42,7 +63,7 @@ func (ta *TicketAuthenticator) Authenticate() error {
 	}
 
 	if result.TFAChallenge != nil {
-		return &errors.TFARequiredError{
+		return &apierrors.TFARequiredError{
 			Ticket:    result.TFAChallenge.Ticket,
 			Challenge: result.TFAChallenge.Challenge,
 			Types:     result.TFAChallenge.Types,
@@ -51,10 +72,11 @@ func (ta *TicketAuthenticator) Authenticate() error {
 
 	if result.Ticket != nil {
 		ta.ticket = result.Ticket
+
 		return nil
 	}
 
-	return fmt.Errorf("authentication failed: no ticket received")
+	return ErrAuthenticationFailedNoTicket
 }
 
 // IsAuthenticated checks if the current session is authenticated.
@@ -67,7 +89,17 @@ func (ta *TicketAuthenticator) GetHeaders() map[string]string {
 	if ta.ticket == nil {
 		return nil
 	}
-	return ta.ticket.GetHeaders()
+
+	headers := make(map[string]string)
+	if ta.ticket.Value != "" {
+		headers["Cookie"] = fmt.Sprintf("%s=%s", ta.cookieName, ta.ticket.Value)
+	}
+
+	if ta.ticket.CSRFToken != "" {
+		headers["CSRFPreventionToken"] = ta.ticket.CSRFToken
+	}
+
+	return headers
 }
 
 // Refresh refreshes the authentication if necessary.
@@ -88,10 +120,11 @@ func (ta *TicketAuthenticator) Logout() error {
 	}
 
 	// Create logout request
-	logoutURL := fmt.Sprintf("%s/access/ticket", ta.baseURL)
-	req, err := http.NewRequest("DELETE", logoutURL, nil)
+	logoutURL := ta.baseURL + "/access/ticket"
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, logoutURL, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create logout request: %w", err)
 	}
 
 	// Add authentication headers
@@ -102,9 +135,12 @@ func (ta *TicketAuthenticator) Logout() error {
 	// Send logout request
 	resp, err := ta.httpClient.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send logout request: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		_ = resp.Body.Close() // Ignore close errors
+	}()
 
 	// Clear the ticket
 	ta.ticket = nil
@@ -122,11 +158,140 @@ func (ta *TicketAuthenticator) GetTicket() *Ticket {
 	return ta.ticket
 }
 
-// login performs the login operation.
-func (ta *TicketAuthenticator) login() (*AuthResult, error) {
-	loginURL := fmt.Sprintf("%s/access/ticket", ta.baseURL)
+type tfaResponse struct {
+	Data struct {
+		Ticket              string `json:"ticket"`
+		CSRFPreventionToken string `json:"CSRFPreventionToken"`
+		Username            string `json:"username"`
+	} `json:"data"`
+	Success int               `json:"success,omitempty"`
+	Message string            `json:"message,omitempty"`
+	Errors  map[string]string `json:"errors,omitempty"`
+}
 
-	// Prepare login data
+// CompleteTFA completes the two-factor authentication process.
+func (ta *TicketAuthenticator) CompleteTFA(challenge *TFAChallenge, response *TFAResponse) (*AuthResult, error) {
+	req, err := ta.createTFARequest(challenge, response)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := ta.sendTFARequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	tfaResp, err := ta.parseTFAResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return ta.processTFAResult(resp, tfaResp), nil
+}
+
+func (ta *TicketAuthenticator) createTFARequest(challenge *TFAChallenge, response *TFAResponse) (*http.Request, error) {
+	tfaURL := ta.baseURL + "/access/tfa"
+
+	data := url.Values{}
+	data.Set("response", response.Response)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, tfaURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TFA request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if challenge.Ticket != "" {
+		req.Header.Set("Cookie", fmt.Sprintf("%s=%s", ta.cookieName, challenge.Ticket))
+	}
+
+	return req, nil
+}
+
+func (ta *TicketAuthenticator) sendTFARequest(req *http.Request) (*http.Response, error) {
+	resp, err := ta.httpClient.Do(req)
+	if err != nil {
+		return nil, &apierrors.ConnectionError{
+			Message: "TFA request failed",
+			Cause:   err,
+		}
+	}
+
+	return resp, nil
+}
+
+func (ta *TicketAuthenticator) parseTFAResponse(resp *http.Response) (*tfaResponse, error) {
+	var tfaResp tfaResponse
+
+	decoder := json.NewDecoder(resp.Body)
+
+	err := decoder.Decode(&tfaResp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse TFA response: %w", err)
+	}
+
+	return &tfaResp, nil
+}
+
+func (ta *TicketAuthenticator) processTFAResult(resp *http.Response, tfaResp *tfaResponse) *AuthResult {
+	if resp.StatusCode != http.StatusOK || tfaResp.Success != 1 {
+		return &AuthResult{
+			Success: false,
+			Error:   apierrors.ParseAPIError(resp.StatusCode, []byte(tfaResp.Message)),
+		}
+	}
+
+	if tfaResp.Data.Ticket != "" {
+		validUntil := time.Now().Add(constants.TicketValidity())
+
+		ticket := &Ticket{
+			Value:      tfaResp.Data.Ticket,
+			CSRFToken:  tfaResp.Data.CSRFPreventionToken,
+			Username:   tfaResp.Data.Username,
+			ValidUntil: validUntil,
+		}
+
+		ta.ticket = ticket
+
+		return &AuthResult{
+			Success: true,
+			Ticket:  ticket,
+		}
+	}
+
+	return &AuthResult{
+		Success: false,
+		Error:   ErrTFAFailedNoTicket,
+	}
+}
+
+func (ta *TicketAuthenticator) login() (*AuthResult, error) {
+	loginURL := ta.baseURL + "/access/ticket"
+	data := ta.prepareLoginData()
+
+	req, err := ta.createLoginRequest(loginURL, data)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := ta.sendLoginRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	return ta.processLoginResponse(resp)
+}
+
+func (ta *TicketAuthenticator) prepareLoginData() url.Values {
 	data := url.Values{}
 	data.Set("username", fmt.Sprintf("%s@%s", ta.credentials.Username, ta.credentials.Realm))
 	data.Set("password", ta.credentials.Password)
@@ -135,24 +300,37 @@ func (ta *TicketAuthenticator) login() (*AuthResult, error) {
 		data.Set("otp", ta.credentials.OTP)
 	}
 
-	// Create login request
-	req, err := http.NewRequest("POST", loginURL, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
+	if ta.pveNewFormat {
+		data.Set("new-format", "1")
 	}
+
+	return data
+}
+
+func (ta *TicketAuthenticator) createLoginRequest(loginURL string, data url.Values) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, loginURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create login request: %w", err)
+	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	// Send login request
+	return req, nil
+}
+
+func (ta *TicketAuthenticator) sendLoginRequest(req *http.Request) (*http.Response, error) {
 	resp, err := ta.httpClient.Do(req)
 	if err != nil {
-		return nil, &errors.ConnectionError{
+		return nil, &apierrors.ConnectionError{
 			Message: "login request failed",
 			Cause:   err,
 		}
 	}
-	defer resp.Body.Close()
 
-	// Parse response
+	return resp, nil
+}
+
+func (ta *TicketAuthenticator) processLoginResponse(resp *http.Response) (*AuthResult, error) {
 	var response struct {
 		Data struct {
 			Ticket              string                 `json:"ticket"`
@@ -171,19 +349,19 @@ func (ta *TicketAuthenticator) login() (*AuthResult, error) {
 	}
 
 	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&response); err != nil {
+
+	err := decoder.Decode(&response)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse login response: %w", err)
 	}
 
-	// Check for errors
 	if resp.StatusCode != http.StatusOK {
 		return &AuthResult{
 			Success: false,
-			Error:   errors.ParseAPIError(resp.StatusCode, []byte(response.Message)),
+			Error:   apierrors.ParseAPIError(resp.StatusCode, []byte(response.Message)),
 		}, nil
 	}
 
-	// Check if TFA is required
 	if response.Data.NeedTFA || response.Data.Ticket2 != "" {
 		return &AuthResult{
 			Success: false,
@@ -195,10 +373,8 @@ func (ta *TicketAuthenticator) login() (*AuthResult, error) {
 		}, nil
 	}
 
-	// Successful login
 	if response.Data.Ticket != "" {
-		// Calculate ticket expiration (PVE tickets are valid for 2 hours)
-		validUntil := time.Now().Add(2 * time.Hour)
+		validUntil := time.Now().Add(constants.TicketValidity())
 
 		return &AuthResult{
 			Success: true,
@@ -213,87 +389,6 @@ func (ta *TicketAuthenticator) login() (*AuthResult, error) {
 
 	return &AuthResult{
 		Success: false,
-		Error:   fmt.Errorf("login failed: no ticket received"),
-	}, nil
-}
-
-// CompleteTFA completes the two-factor authentication process.
-func (ta *TicketAuthenticator) CompleteTFA(challenge *TFAChallenge, response *TFAResponse) (*AuthResult, error) {
-	tfaURL := fmt.Sprintf("%s/access/tfa", ta.baseURL)
-
-	// Prepare TFA data
-	data := url.Values{}
-	data.Set("response", response.Response)
-
-	// Create TFA request
-	req, err := http.NewRequest("POST", tfaURL, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Add the partial ticket
-	if challenge.Ticket != "" {
-		req.Header.Set("Cookie", fmt.Sprintf("%s=%s", ta.cookieName, challenge.Ticket))
-	}
-
-	// Send TFA request
-	resp, err := ta.httpClient.Do(req)
-	if err != nil {
-		return nil, &errors.ConnectionError{
-			Message: "TFA request failed",
-			Cause:   err,
-		}
-	}
-	defer resp.Body.Close()
-
-	// Parse response
-	var tfaResp struct {
-		Data struct {
-			Ticket              string `json:"ticket"`
-			CSRFPreventionToken string `json:"CSRFPreventionToken"`
-			Username            string `json:"username"`
-		} `json:"data"`
-		Success int               `json:"success,omitempty"`
-		Message string            `json:"message,omitempty"`
-		Errors  map[string]string `json:"errors,omitempty"`
-	}
-
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&tfaResp); err != nil {
-		return nil, fmt.Errorf("failed to parse TFA response: %w", err)
-	}
-
-	// Check for errors
-	if resp.StatusCode != http.StatusOK || tfaResp.Success != 1 {
-		return &AuthResult{
-			Success: false,
-			Error:   errors.ParseAPIError(resp.StatusCode, []byte(tfaResp.Message)),
-		}, nil
-	}
-
-	// Successful TFA
-	if tfaResp.Data.Ticket != "" {
-		// Calculate ticket expiration (PVE tickets are valid for 2 hours)
-		validUntil := time.Now().Add(2 * time.Hour)
-
-		ticket := &Ticket{
-			Value:      tfaResp.Data.Ticket,
-			CSRFToken:  tfaResp.Data.CSRFPreventionToken,
-			Username:   tfaResp.Data.Username,
-			ValidUntil: validUntil,
-		}
-
-		ta.ticket = ticket
-
-		return &AuthResult{
-			Success: true,
-			Ticket:  ticket,
-		}, nil
-	}
-
-	return &AuthResult{
-		Success: false,
-		Error:   fmt.Errorf("TFA failed: no ticket received"),
+		Error:   ErrLoginFailedNoTicket,
 	}, nil
 }

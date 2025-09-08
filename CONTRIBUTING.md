@@ -48,7 +48,7 @@ Please be respectful and constructive in all interactions.
 
 ```bash
 # Clone the repository
-git clone https://github.com/fivetwenty-io/pve-apicilent-go.git
+git clone https://github.com/fivetwenty-io/pve-apiclient-go.git
 cd pve-apiclient-go
 
 # Install dependencies

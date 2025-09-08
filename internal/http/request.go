@@ -3,11 +3,16 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/url"
 	"strings"
+)
+
+var (
+	ErrUnsupportedMethod = errors.New("unsupported method")
 )
 
 // RequestBuilder helps construct HTTP requests for the PVE API.
@@ -19,7 +24,10 @@ type RequestBuilder struct {
 	formParams  url.Values
 	jsonBody    interface{}
 	headers     map[string]string
-	files       map[string]io.Reader
+	files       map[string]struct {
+		filename string
+		r        io.Reader
+	}
 }
 
 // NewRequestBuilder creates a new request builder.
@@ -31,13 +39,17 @@ func NewRequestBuilder(method, baseURL, path string) *RequestBuilder {
 		queryParams: url.Values{},
 		formParams:  url.Values{},
 		headers:     make(map[string]string),
-		files:       make(map[string]io.Reader),
+		files: make(map[string]struct {
+			filename string
+			r        io.Reader
+		}),
 	}
 }
 
 // AddQueryParam adds a query parameter to the request.
 func (rb *RequestBuilder) AddQueryParam(key string, value interface{}) *RequestBuilder {
 	rb.queryParams.Add(key, fmt.Sprintf("%v", value))
+
 	return rb
 }
 
@@ -46,12 +58,14 @@ func (rb *RequestBuilder) AddQueryParams(params map[string]interface{}) *Request
 	for key, value := range params {
 		rb.AddQueryParam(key, value)
 	}
+
 	return rb
 }
 
 // AddFormParam adds a form parameter to the request.
 func (rb *RequestBuilder) AddFormParam(key string, value interface{}) *RequestBuilder {
 	rb.formParams.Add(key, fmt.Sprintf("%v", value))
+
 	return rb
 }
 
@@ -60,18 +74,21 @@ func (rb *RequestBuilder) AddFormParams(params map[string]interface{}) *RequestB
 	for key, value := range params {
 		rb.AddFormParam(key, value)
 	}
+
 	return rb
 }
 
 // SetJSONBody sets the JSON body for the request.
 func (rb *RequestBuilder) SetJSONBody(body interface{}) *RequestBuilder {
 	rb.jsonBody = body
+
 	return rb
 }
 
 // AddHeader adds a header to the request.
 func (rb *RequestBuilder) AddHeader(key, value string) *RequestBuilder {
 	rb.headers[key] = value
+
 	return rb
 }
 
@@ -80,12 +97,17 @@ func (rb *RequestBuilder) AddHeaders(headers map[string]string) *RequestBuilder 
 	for key, value := range headers {
 		rb.headers[key] = value
 	}
+
 	return rb
 }
 
-// AddFile adds a file to be uploaded.
-func (rb *RequestBuilder) AddFile(fieldName string, file io.Reader) *RequestBuilder {
-	rb.files[fieldName] = file
+// AddFile adds a file to be uploaded with the given filename.
+func (rb *RequestBuilder) AddFile(fieldName, filename string, file io.Reader) *RequestBuilder {
+	rb.files[fieldName] = struct {
+		filename string
+		r        io.Reader
+	}{filename: filename, r: file}
+
 	return rb
 }
 
@@ -126,12 +148,14 @@ func (rb *RequestBuilder) BuildBody() (io.Reader, string, error) {
 			if err != nil {
 				return nil, "", fmt.Errorf("failed to marshal JSON body: %w", err)
 			}
+
 			return bytes.NewReader(body), "application/json", nil
 		}
 
 		// Default to form-encoded body
 		if len(rb.formParams) > 0 {
 			body := rb.formParams.Encode()
+
 			return strings.NewReader(body), "application/x-www-form-urlencoded", nil
 		}
 
@@ -139,37 +163,41 @@ func (rb *RequestBuilder) BuildBody() (io.Reader, string, error) {
 		return nil, "", nil
 
 	default:
-		return nil, "", fmt.Errorf("unsupported method: %s", rb.method)
+		return nil, "", fmt.Errorf("%w: %s", ErrUnsupportedMethod, rb.method)
 	}
 }
 
 // buildMultipartBody builds a multipart form body for file uploads.
 func (rb *RequestBuilder) buildMultipartBody() (io.Reader, string, error) {
 	var buffer bytes.Buffer
+
 	writer := multipart.NewWriter(&buffer)
 
 	// Add form parameters
 	for key, values := range rb.formParams {
 		for _, value := range values {
-			if err := writer.WriteField(key, value); err != nil {
+			err := writer.WriteField(key, value)
+			if err != nil {
 				return nil, "", fmt.Errorf("failed to write field %s: %w", key, err)
 			}
 		}
 	}
 
 	// Add files
-	for fieldName, file := range rb.files {
-		part, err := writer.CreateFormFile(fieldName, fieldName)
+	for fieldName, fileData := range rb.files {
+		part, err := writer.CreateFormFile(fieldName, fileData.filename)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to create form file %s: %w", fieldName, err)
 		}
 
-		if _, err := io.Copy(part, file); err != nil {
+		_, err = io.Copy(part, fileData.r)
+		if err != nil {
 			return nil, "", fmt.Errorf("failed to copy file %s: %w", fieldName, err)
 		}
 	}
 
-	if err := writer.Close(); err != nil {
+	err := writer.Close()
+	if err != nil {
 		return nil, "", fmt.Errorf("failed to close multipart writer: %w", err)
 	}
 
@@ -220,12 +248,14 @@ func NewPathBuilder() *PathBuilder {
 // Add adds a path segment.
 func (pb *PathBuilder) Add(segment string) *PathBuilder {
 	pb.segments = append(pb.segments, segment)
+
 	return pb
 }
 
 // AddFormat adds a formatted path segment.
 func (pb *PathBuilder) AddFormat(format string, args ...interface{}) *PathBuilder {
 	segment := fmt.Sprintf(format, args...)
+
 	return pb.Add(segment)
 }
 
@@ -234,8 +264,8 @@ func (pb *PathBuilder) Build() string {
 	return "/" + strings.Join(pb.segments, "/")
 }
 
-// Common PVE API paths
-var (
+// Common PVE API paths.
+const (
 	PathAccessTicket  = "/access/ticket"
 	PathAccessTFA     = "/access/tfa"
 	PathAccessUsers   = "/access/users"
@@ -258,6 +288,7 @@ func BuildNodePath(node string, segments ...string) string {
 	for _, segment := range segments {
 		pb.Add(segment)
 	}
+
 	return pb.Build()
 }
 
@@ -267,6 +298,7 @@ func BuildVMPath(node string, vmid int, segments ...string) string {
 	for _, segment := range segments {
 		pb.Add(segment)
 	}
+
 	return pb.Build()
 }
 
@@ -276,6 +308,7 @@ func BuildContainerPath(node string, vmid int, segments ...string) string {
 	for _, segment := range segments {
 		pb.Add(segment)
 	}
+
 	return pb.Build()
 }
 
@@ -285,5 +318,6 @@ func BuildStoragePath(storage string, segments ...string) string {
 	for _, segment := range segments {
 		pb.Add(segment)
 	}
+
 	return pb.Build()
 }

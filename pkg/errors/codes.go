@@ -1,14 +1,14 @@
 package errors
 
-// HTTP status codes commonly used by PVE API
+// HTTP status codes commonly used by PVE API.
 const (
-	// Success codes
+	// Success codes.
 	StatusOK        = 200
 	StatusCreated   = 201
 	StatusAccepted  = 202
 	StatusNoContent = 204
 
-	// Client error codes
+	// Client error codes.
 	StatusBadRequest          = 400
 	StatusUnauthorized        = 401
 	StatusPaymentRequired     = 402
@@ -21,7 +21,7 @@ const (
 	StatusUnprocessableEntity = 422
 	StatusTooManyRequests     = 429
 
-	// Server error codes
+	// Server error codes.
 	StatusInternalServerError = 500
 	StatusNotImplemented      = 501
 	StatusBadGateway          = 502
@@ -29,66 +29,66 @@ const (
 	StatusGatewayTimeout      = 504
 )
 
-// PVE-specific error codes
+// PVE-specific error codes.
 const (
-	// Authentication and authorization
+	// Authentication and authorization.
 	CodeAuthenticationFailed = 401
 	CodePermissionDenied     = 403
 	CodeTFARequired          = 730
 
-	// Parameter errors
+	// Parameter errors.
 	CodeInvalidParameter = 400
 	CodeMissingParameter = 422
 
-	// Resource errors
+	// Resource errors.
 	CodeResourceNotFound = 404
 	CodeResourceLocked   = 423
 	CodeResourceInUse    = 409
 	CodeResourceExists   = 409
 	CodeQuotaExceeded    = 507
 
-	// Operation errors
+	// Operation errors.
 	CodeOperationTimeout    = 504
 	CodeOperationFailed     = 500
 	CodeOperationNotAllowed = 405
 
-	// Configuration errors
+	// Configuration errors.
 	CodeConfigurationError = 500
 	CodeInvalidConfig      = 422
 )
 
-// ErrorCodeToMessage maps error codes to human-readable messages.
-var ErrorCodeToMessage = map[int]string{
-	StatusOK:                  "Success",
-	StatusCreated:             "Created",
-	StatusAccepted:            "Accepted",
-	StatusNoContent:           "No Content",
-	StatusBadRequest:          "Bad Request",
-	StatusUnauthorized:        "Unauthorized",
-	StatusPaymentRequired:     "Payment Required",
-	StatusForbidden:           "Forbidden",
-	StatusNotFound:            "Not Found",
-	StatusMethodNotAllowed:    "Method Not Allowed",
-	StatusNotAcceptable:       "Not Acceptable",
-	StatusConflict:            "Conflict",
-	StatusGone:                "Gone",
-	StatusUnprocessableEntity: "Unprocessable Entity",
-	StatusTooManyRequests:     "Too Many Requests",
-	StatusInternalServerError: "Internal Server Error",
-	StatusNotImplemented:      "Not Implemented",
-	StatusBadGateway:          "Bad Gateway",
-	StatusServiceUnavailable:  "Service Unavailable",
-	StatusGatewayTimeout:      "Gateway Timeout",
-	CodeTFARequired:           "Two-Factor Authentication Required",
-	CodeResourceLocked:        "Resource Locked",
-	CodeQuotaExceeded:         "Quota Exceeded",
-}
-
 // GetErrorMessage returns a human-readable message for an error code.
 func GetErrorMessage(code int) string {
-	if msg, ok := ErrorCodeToMessage[code]; ok {
+	errorCodeToMessage := map[int]string{
+		StatusOK:                  "Success",
+		StatusCreated:             "Created",
+		StatusAccepted:            "Accepted",
+		StatusNoContent:           "No Content",
+		StatusBadRequest:          "Bad Request",
+		StatusUnauthorized:        "Unauthorized",
+		StatusPaymentRequired:     "Payment Required",
+		StatusForbidden:           "Forbidden",
+		StatusNotFound:            "Not Found",
+		StatusMethodNotAllowed:    "Method Not Allowed",
+		StatusNotAcceptable:       "Not Acceptable",
+		StatusConflict:            "Conflict",
+		StatusGone:                "Gone",
+		StatusUnprocessableEntity: "Unprocessable Entity",
+		StatusTooManyRequests:     "Too Many Requests",
+		StatusInternalServerError: "Internal Server Error",
+		StatusNotImplemented:      "Not Implemented",
+		StatusBadGateway:          "Bad Gateway",
+		StatusServiceUnavailable:  "Service Unavailable",
+		StatusGatewayTimeout:      "Gateway Timeout",
+		CodeTFARequired:           "Two-Factor Authentication Required",
+		CodeResourceLocked:        "Resource Locked",
+		CodeQuotaExceeded:         "Quota Exceeded",
+	}
+
+	if msg, ok := errorCodeToMessage[code]; ok {
 		return msg
 	}
+
 	return "Unknown Error"
 }
 

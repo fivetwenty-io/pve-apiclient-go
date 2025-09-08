@@ -4,9 +4,21 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+var (
+	ErrCertificateNil                   = errors.New("certificate is nil")
+	ErrCertificateFingerprintNotTrusted = errors.New("certificate fingerprint is not trusted")
+	ErrCertificateVerificationFailed    = errors.New("certificate verification failed")
+	ErrUnknownCertificateFingerprint    = errors.New("unknown certificate fingerprint (manual verification required)")
+	ErrCannotVerifyFingerprint          = errors.New("cannot verify certificate fingerprint")
+	ErrInvalidFingerprintLength         = errors.New("invalid fingerprint length")
 )
 
 // FingerprintVerifier handles certificate fingerprint verification.
@@ -22,8 +34,12 @@ type FingerprintVerifier struct {
 // NewFingerprintVerifier creates a new fingerprint verifier.
 func NewFingerprintVerifier() *FingerprintVerifier {
 	return &FingerprintVerifier{
+		mu:                 sync.RWMutex{},
 		cache:              make(map[string]bool),
+		lastUnknown:        "",
 		manualVerification: false,
+		registerCallback:   nil,
+		verifyCallback:     nil,
 	}
 }
 
@@ -31,6 +47,7 @@ func NewFingerprintVerifier() *FingerprintVerifier {
 func (fv *FingerprintVerifier) SetManualVerification(enabled bool) {
 	fv.mu.Lock()
 	defer fv.mu.Unlock()
+
 	fv.manualVerification = enabled
 }
 
@@ -38,6 +55,7 @@ func (fv *FingerprintVerifier) SetManualVerification(enabled bool) {
 func (fv *FingerprintVerifier) SetRegisterCallback(callback func(string)) {
 	fv.mu.Lock()
 	defer fv.mu.Unlock()
+
 	fv.registerCallback = callback
 }
 
@@ -45,13 +63,14 @@ func (fv *FingerprintVerifier) SetRegisterCallback(callback func(string)) {
 func (fv *FingerprintVerifier) SetVerifyCallback(callback func(*x509.Certificate) bool) {
 	fv.mu.Lock()
 	defer fv.mu.Unlock()
+
 	fv.verifyCallback = callback
 }
 
 // VerifyCertificate verifies a certificate against known fingerprints.
 func (fv *FingerprintVerifier) VerifyCertificate(cert *x509.Certificate) error {
 	if cert == nil {
-		return fmt.Errorf("certificate is nil")
+		return ErrCertificateNil
 	}
 
 	// Calculate SHA256 fingerprint
@@ -65,7 +84,8 @@ func (fv *FingerprintVerifier) VerifyCertificate(cert *x509.Certificate) error {
 		if trusted {
 			return nil
 		}
-		return fmt.Errorf("certificate fingerprint %s is not trusted", fingerprint)
+
+		return fmt.Errorf("%w: %s", ErrCertificateFingerprintNotTrusted, fingerprint)
 	}
 
 	// Store as last unknown
@@ -78,21 +98,24 @@ func (fv *FingerprintVerifier) VerifyCertificate(cert *x509.Certificate) error {
 			if fv.registerCallback != nil {
 				fv.registerCallback(fingerprint)
 			}
+
 			return nil
 		}
+
 		fv.cache[fingerprint] = false
-		return fmt.Errorf("certificate verification failed for fingerprint %s", fingerprint)
+
+		return fmt.Errorf("%w for fingerprint %s", ErrCertificateVerificationFailed, fingerprint)
 	}
 
 	// If manual verification is enabled, prompt user
 	if fv.manualVerification {
 		// In a real implementation, this would interact with the user
 		// For now, we'll reject unknown certificates
-		return fmt.Errorf("unknown certificate fingerprint %s (manual verification required)", fingerprint)
+		return fmt.Errorf("%w: %s", ErrUnknownCertificateFingerprint, fingerprint)
 	}
 
 	// No verification method available, reject
-	return fmt.Errorf("cannot verify certificate fingerprint %s", fingerprint)
+	return fmt.Errorf("%w: %s", ErrCannotVerifyFingerprint, fingerprint)
 }
 
 // AddTrustedFingerprint adds a fingerprint to the trusted cache.
@@ -129,6 +152,7 @@ func (fv *FingerprintVerifier) RemoveTrustedFingerprint(fingerprint string) {
 func (fv *FingerprintVerifier) GetLastUnknownFingerprint() string {
 	fv.mu.RLock()
 	defer fv.mu.RUnlock()
+
 	return fv.lastUnknown
 }
 
@@ -143,6 +167,7 @@ func (fv *FingerprintVerifier) GetTrustedFingerprints() []string {
 			fingerprints = append(fingerprints, fp)
 		}
 	}
+
 	return fingerprints
 }
 
@@ -150,6 +175,7 @@ func (fv *FingerprintVerifier) GetTrustedFingerprints() []string {
 func (fv *FingerprintVerifier) ClearCache() {
 	fv.mu.Lock()
 	defer fv.mu.Unlock()
+
 	fv.cache = make(map[string]bool)
 	fv.lastUnknown = ""
 }
@@ -157,6 +183,7 @@ func (fv *FingerprintVerifier) ClearCache() {
 // CalculateFingerprint calculates the SHA256 fingerprint of a certificate.
 func CalculateFingerprint(cert *x509.Certificate) string {
 	hash := sha256.Sum256(cert.Raw)
+
 	return FormatFingerprint(hash[:])
 }
 
@@ -183,6 +210,7 @@ func NormalizeFingerprint(fingerprint string) string {
 
 	// Re-add colons in standard format
 	var parts []string
+
 	for i := 0; i < len(normalized); i += 2 {
 		if i+2 <= len(normalized) {
 			parts = append(parts, normalized[i:i+2])
@@ -207,8 +235,8 @@ func ParseFingerprint(fingerprint string) ([]byte, error) {
 	}
 
 	// SHA256 fingerprints should be 32 bytes
-	if len(bytes) != 32 {
-		return nil, fmt.Errorf("invalid fingerprint length: expected 32 bytes, got %d", len(bytes))
+	if len(bytes) != constants.SHA256ByteLength {
+		return nil, fmt.Errorf("%w: expected 32 bytes, got %d", ErrInvalidFingerprintLength, len(bytes))
 	}
 
 	return bytes, nil

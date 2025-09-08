@@ -3,10 +3,23 @@ package ssl
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
+)
+
+var (
+	ErrNoCertificatesProvided           = errors.New("no certificates provided")
+	ErrFingerprintVerifierNotConfigured = errors.New("fingerprint verifier not configured")
+	ErrNoCertificatesInChain            = errors.New("no certificates in chain")
+	ErrCertificateNotYetValid           = errors.New("certificate not yet valid")
+	ErrCertificateExpired               = errors.New("certificate has expired")
+	ErrCAParsingFailed                  = errors.New("failed to parse CA certificate(s)")
+	ErrCAPathMustBeAbsolute             = errors.New("CA certificate path must be absolute")
 )
 
 // VerificationMode defines how SSL certificates should be verified.
@@ -39,6 +52,7 @@ func NewVerifier(mode VerificationMode) *Verifier {
 	return &Verifier{
 		mode:                mode,
 		fingerprintVerifier: NewFingerprintVerifier(),
+		caCertPool:          nil,
 		skipHostname:        false,
 		allowExpired:        false,
 	}
@@ -67,8 +81,38 @@ func (v *Verifier) SetAllowExpired(allow bool) {
 // GetTLSConfig returns a TLS configuration based on the verifier settings.
 func (v *Verifier) GetTLSConfig(serverName string) *tls.Config {
 	config := &tls.Config{
-		ServerName: serverName,
-		MinVersion: tls.VersionTLS12,
+		Rand:                                nil,
+		Time:                                nil,
+		Certificates:                        nil,
+		NameToCertificate:                   nil,
+		GetCertificate:                      nil,
+		GetClientCertificate:                nil,
+		GetConfigForClient:                  nil,
+		VerifyPeerCertificate:               nil,
+		VerifyConnection:                    nil,
+		RootCAs:                             nil,
+		NextProtos:                          nil,
+		ServerName:                          serverName,
+		ClientAuth:                          0,
+		ClientCAs:                           nil,
+		InsecureSkipVerify:                  false,
+		CipherSuites:                        nil,
+		PreferServerCipherSuites:            true,
+		SessionTicketsDisabled:              false,
+		SessionTicketKey:                    [32]byte{},
+		ClientSessionCache:                  nil,
+		UnwrapSession:                       nil,
+		WrapSession:                         nil,
+		MinVersion:                          tls.VersionTLS12,
+		MaxVersion:                          0,
+		CurvePreferences:                    nil,
+		DynamicRecordSizingDisabled:         false,
+		Renegotiation:                       0,
+		KeyLogWriter:                        nil,
+		EncryptedClientHelloConfigList:      nil,
+		EncryptedClientHelloRejectionVerify: nil,
+		GetEncryptedClientHelloKeys:         nil,
+		EncryptedClientHelloKeys:            nil,
 	}
 
 	switch v.mode {
@@ -97,10 +141,30 @@ func (v *Verifier) GetTLSConfig(serverName string) *tls.Config {
 	return config
 }
 
-// verifyFingerprint verifies only the certificate fingerprint.
+// VerifyCertificateChain verifies a certificate chain.
+func (v *Verifier) VerifyCertificateChain(certs []*x509.Certificate, hostname string) error {
+	if len(certs) == 0 {
+		return ErrNoCertificatesInChain
+	}
+
+	leafCert := certs[0]
+
+	err := v.checkCertificateValidity(leafCert)
+	if err != nil {
+		return err
+	}
+
+	err = v.checkHostname(leafCert, hostname)
+	if err != nil {
+		return err
+	}
+
+	return v.verifyChain(leafCert, certs)
+}
+
 func (v *Verifier) verifyFingerprint(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 	if len(rawCerts) == 0 {
-		return fmt.Errorf("no certificates provided")
+		return ErrNoCertificatesProvided
 	}
 
 	// Parse the leaf certificate
@@ -114,29 +178,34 @@ func (v *Verifier) verifyFingerprint(rawCerts [][]byte, verifiedChains [][]*x509
 		return v.fingerprintVerifier.VerifyCertificate(cert)
 	}
 
-	return fmt.Errorf("fingerprint verifier not configured")
+	return ErrFingerprintVerifierNotConfigured
 }
 
-// verifyPeerOnly verifies the peer certificate without hostname verification.
 func (v *Verifier) verifyPeerOnly(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 	if len(rawCerts) == 0 {
-		return fmt.Errorf("no certificates provided")
+		return ErrNoCertificatesProvided
 	}
 
 	// Parse certificates
 	certs := make([]*x509.Certificate, len(rawCerts))
-	for i, rawCert := range rawCerts {
+	for index, rawCert := range rawCerts {
 		cert, err := x509.ParseCertificate(rawCert)
 		if err != nil {
 			return fmt.Errorf("failed to parse certificate: %w", err)
 		}
-		certs[i] = cert
+
+		certs[index] = cert
 	}
 
 	// Verify certificate chain
 	opts := x509.VerifyOptions{
-		Roots:         v.caCertPool,
-		Intermediates: x509.NewCertPool(),
+		DNSName:                   "",
+		Intermediates:             x509.NewCertPool(),
+		Roots:                     v.caCertPool,
+		CurrentTime:               time.Time{},
+		KeyUsages:                 nil,
+		MaxConstraintComparisions: 0,
+		CertificatePolicies:       nil,
 	}
 
 	// Add intermediate certificates
@@ -154,13 +223,16 @@ func (v *Verifier) verifyPeerOnly(rawCerts [][]byte, verifiedChains [][]*x509.Ce
 
 	// Verify the certificate chain
 	_, err := certs[0].Verify(opts)
-	return err
+	if err != nil {
+		return fmt.Errorf("certificate verification failed: %w", err)
+	}
+
+	return nil
 }
 
-// verifyFull performs full certificate verification including custom checks.
 func (v *Verifier) verifyFull(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 	if len(rawCerts) == 0 {
-		return fmt.Errorf("no certificates provided")
+		return ErrNoCertificatesProvided
 	}
 
 	// Parse the leaf certificate
@@ -171,9 +243,11 @@ func (v *Verifier) verifyFull(rawCerts [][]byte, verifiedChains [][]*x509.Certif
 
 	// Check fingerprint if verifier is configured
 	if v.fingerprintVerifier != nil {
-		if err := v.fingerprintVerifier.VerifyCertificate(cert); err != nil {
+		err := v.fingerprintVerifier.VerifyCertificate(cert)
+		if err != nil {
 			// Fingerprint doesn't match, but continue with other checks
 			// The fingerprint verifier might just be logging unknown certificates
+			_ = err // explicitly ignore error to continue with other verification checks
 		}
 	}
 
@@ -183,47 +257,58 @@ func (v *Verifier) verifyFull(rawCerts [][]byte, verifiedChains [][]*x509.Certif
 	return nil
 }
 
-// VerifyCertificateChain verifies a certificate chain.
-func (v *Verifier) VerifyCertificateChain(certs []*x509.Certificate, hostname string) error {
-	if len(certs) == 0 {
-		return fmt.Errorf("no certificates in chain")
+func (v *Verifier) checkCertificateValidity(cert *x509.Certificate) error {
+	if v.allowExpired {
+		return nil
 	}
 
-	leafCert := certs[0]
-
-	// Check expiration
-	if !v.allowExpired {
-		now := time.Now()
-		if now.Before(leafCert.NotBefore) {
-			return fmt.Errorf("certificate not yet valid")
-		}
-		if now.After(leafCert.NotAfter) {
-			return fmt.Errorf("certificate has expired")
-		}
+	now := time.Now()
+	if now.Before(cert.NotBefore) {
+		return ErrCertificateNotYetValid
 	}
 
-	// Check hostname
-	if !v.skipHostname && hostname != "" {
-		if err := leafCert.VerifyHostname(hostname); err != nil {
-			return fmt.Errorf("hostname verification failed: %w", err)
-		}
+	if now.After(cert.NotAfter) {
+		return ErrCertificateExpired
 	}
 
-	// Verify chain
-	if v.caCertPool != nil {
-		opts := x509.VerifyOptions{
-			Roots:         v.caCertPool,
-			Intermediates: x509.NewCertPool(),
-		}
+	return nil
+}
 
-		// Add intermediate certificates
-		for i := 1; i < len(certs); i++ {
-			opts.Intermediates.AddCert(certs[i])
-		}
+func (v *Verifier) checkHostname(cert *x509.Certificate, hostname string) error {
+	if v.skipHostname || hostname == "" {
+		return nil
+	}
 
-		if _, err := leafCert.Verify(opts); err != nil {
-			return fmt.Errorf("certificate chain verification failed: %w", err)
-		}
+	err := cert.VerifyHostname(hostname)
+	if err != nil {
+		return fmt.Errorf("hostname verification failed: %w", err)
+	}
+
+	return nil
+}
+
+func (v *Verifier) verifyChain(leafCert *x509.Certificate, certs []*x509.Certificate) error {
+	if v.caCertPool == nil {
+		return nil
+	}
+
+	opts := x509.VerifyOptions{
+		DNSName:                   "",
+		Intermediates:             x509.NewCertPool(),
+		Roots:                     v.caCertPool,
+		CurrentTime:               time.Time{},
+		KeyUsages:                 nil,
+		MaxConstraintComparisions: 0,
+		CertificatePolicies:       nil,
+	}
+
+	for i := 1; i < len(certs); i++ {
+		opts.Intermediates.AddCert(certs[i])
+	}
+
+	_, err := leafCert.Verify(opts)
+	if err != nil {
+		return fmt.Errorf("certificate chain verification failed: %w", err)
 	}
 
 	return nil
@@ -232,48 +317,106 @@ func (v *Verifier) VerifyCertificateChain(certs []*x509.Certificate, hostname st
 // CreateTLSConfig creates a TLS configuration for a given host.
 func CreateTLSConfig(host string, options *TLSOptions) (*tls.Config, error) {
 	config := &tls.Config{
-		ServerName: extractHostname(host),
-		MinVersion: tls.VersionTLS12,
+		Rand:                                nil,
+		Time:                                nil,
+		Certificates:                        nil,
+		NameToCertificate:                   nil,
+		GetCertificate:                      nil,
+		GetClientCertificate:                nil,
+		GetConfigForClient:                  nil,
+		VerifyPeerCertificate:               nil,
+		VerifyConnection:                    nil,
+		RootCAs:                             nil,
+		NextProtos:                          nil,
+		ServerName:                          extractHostname(host),
+		ClientAuth:                          0,
+		ClientCAs:                           nil,
+		InsecureSkipVerify:                  false,
+		CipherSuites:                        nil,
+		PreferServerCipherSuites:            true,
+		SessionTicketsDisabled:              false,
+		SessionTicketKey:                    [32]byte{},
+		ClientSessionCache:                  nil,
+		UnwrapSession:                       nil,
+		WrapSession:                         nil,
+		MinVersion:                          tls.VersionTLS12,
+		MaxVersion:                          0,
+		CurvePreferences:                    nil,
+		DynamicRecordSizingDisabled:         false,
+		Renegotiation:                       0,
+		KeyLogWriter:                        nil,
+		EncryptedClientHelloConfigList:      nil,
+		EncryptedClientHelloRejectionVerify: nil,
+		GetEncryptedClientHelloKeys:         nil,
+		EncryptedClientHelloKeys:            nil,
 	}
 
-	// Set verification mode
-	if options != nil {
-		if options.InsecureSkipVerify {
-			config.InsecureSkipVerify = true
-		}
-
-		// Load CA certificates
-		if options.CACert != "" {
-			pool, err := LoadCACertificate(options.CACert)
-			if err != nil {
-				return nil, err
-			}
-			config.RootCAs = pool
-		}
-
-		// Load client certificates
-		if options.ClientCert != "" && options.ClientKey != "" {
-			cert, err := tls.LoadX509KeyPair(options.ClientCert, options.ClientKey)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load client certificates: %w", err)
-			}
-			config.Certificates = []tls.Certificate{cert}
-		}
-
-		// Set minimum TLS version
-		if options.MinTLSVersion != 0 {
-			config.MinVersion = options.MinTLSVersion
-		} else {
-			config.MinVersion = tls.VersionTLS12
-		}
-
-		// Set cipher suites if specified
-		if len(options.CipherSuites) > 0 {
-			config.CipherSuites = options.CipherSuites
-		}
+	if options == nil {
+		return config, nil
 	}
+
+	err := configureTLSVerification(config, options)
+	if err != nil {
+		return nil, err
+	}
+
+	err = configureTLSCertificates(config, options)
+	if err != nil {
+		return nil, err
+	}
+
+	configureTLSVersion(config, options)
+	configureCipherSuites(config, options)
 
 	return config, nil
+}
+
+func configureTLSVerification(config *tls.Config, options *TLSOptions) error {
+	if options.InsecureSkipVerify {
+		config.InsecureSkipVerify = true
+	}
+
+	if options.CACert == "" {
+		return nil
+	}
+
+	pool, err := LoadCACertificate(options.CACert)
+	if err != nil {
+		return err
+	}
+
+	config.RootCAs = pool
+
+	return nil
+}
+
+func configureTLSCertificates(config *tls.Config, options *TLSOptions) error {
+	if options.ClientCert == "" || options.ClientKey == "" {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(options.ClientCert, options.ClientKey)
+	if err != nil {
+		return fmt.Errorf("failed to load client certificates: %w", err)
+	}
+
+	config.Certificates = []tls.Certificate{cert}
+
+	return nil
+}
+
+func configureTLSVersion(config *tls.Config, options *TLSOptions) {
+	if options.MinTLSVersion != 0 {
+		config.MinVersion = options.MinTLSVersion
+	} else {
+		config.MinVersion = tls.VersionTLS12
+	}
+}
+
+func configureCipherSuites(config *tls.Config, options *TLSOptions) {
+	if len(options.CipherSuites) > 0 {
+		config.CipherSuites = options.CipherSuites
+	}
 }
 
 // TLSOptions contains TLS configuration options.
@@ -288,20 +431,41 @@ type TLSOptions struct {
 
 // LoadCACertificate loads a CA certificate from a file.
 func LoadCACertificate(filename string) (*x509.CertPool, error) {
-	// This would load the certificate from file
-	// For now, return the system pool
-	pool, err := x509.SystemCertPool()
-	if err != nil {
-		pool = x509.NewCertPool()
+	if filename == "" {
+		pool, err := x509.SystemCertPool()
+		if err != nil {
+			pool = x509.NewCertPool()
+		}
+
+		return pool, nil
 	}
+
+	// Clean and validate the file path to prevent directory traversal
+	cleanPath := filepath.Clean(filename)
+	if !filepath.IsAbs(cleanPath) {
+		return nil, fmt.Errorf("%w: %s", ErrCAPathMustBeAbsolute, filename)
+	}
+
+	pemBytes, err := os.ReadFile(cleanPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA certificate file: %w", err)
+	}
+
+	pool := x509.NewCertPool()
+	if ok := pool.AppendCertsFromPEM(pemBytes); !ok {
+		return nil, fmt.Errorf("%w from %s", ErrCAParsingFailed, filename)
+	}
+
 	return pool, nil
 }
 
 // extractHostname extracts the hostname from a host:port string.
 func extractHostname(host string) string {
-	if h, _, err := net.SplitHostPort(host); err == nil {
+	h, _, err := net.SplitHostPort(host)
+	if err == nil {
 		return h
 	}
+
 	return host
 }
 
@@ -309,6 +473,15 @@ func extractHostname(host string) string {
 func GetCertificateInfo(cert *x509.Certificate) map[string]interface{} {
 	info := make(map[string]interface{})
 
+	addBasicCertInfo(info, cert)
+	addSubjectAltNames(info, cert)
+	addKeyUsageInfo(info, cert)
+	addExtendedKeyUsageInfo(info, cert)
+
+	return info
+}
+
+func addBasicCertInfo(info map[string]interface{}, cert *x509.Certificate) {
 	info["subject"] = cert.Subject.String()
 	info["issuer"] = cert.Issuer.String()
 	info["serial"] = cert.SerialNumber.String()
@@ -317,61 +490,78 @@ func GetCertificateInfo(cert *x509.Certificate) map[string]interface{} {
 	info["fingerprint"] = CalculateFingerprint(cert)
 	info["signature_algorithm"] = cert.SignatureAlgorithm.String()
 	info["public_key_algorithm"] = cert.PublicKeyAlgorithm.String()
+}
 
-	// DNS names
+func addSubjectAltNames(info map[string]interface{}, cert *x509.Certificate) {
 	if len(cert.DNSNames) > 0 {
 		info["dns_names"] = cert.DNSNames
 	}
 
-	// IP addresses
 	if len(cert.IPAddresses) > 0 {
 		ips := make([]string, len(cert.IPAddresses))
 		for i, ip := range cert.IPAddresses {
 			ips[i] = ip.String()
 		}
+
 		info["ip_addresses"] = ips
 	}
+}
 
-	// Key usage
+func addKeyUsageInfo(info map[string]interface{}, cert *x509.Certificate) {
 	var keyUsage []string
-	if cert.KeyUsage&x509.KeyUsageDigitalSignature != 0 {
-		keyUsage = append(keyUsage, "Digital Signature")
+
+	keyUsageMap := map[x509.KeyUsage]string{
+		x509.KeyUsageDigitalSignature: "Digital Signature",
+		x509.KeyUsageKeyEncipherment:  "Key Encipherment",
+		x509.KeyUsageDataEncipherment: "Data Encipherment",
+		x509.KeyUsageKeyAgreement:     "Key Agreement",
+		x509.KeyUsageCertSign:         "Certificate Signing",
 	}
-	if cert.KeyUsage&x509.KeyUsageKeyEncipherment != 0 {
-		keyUsage = append(keyUsage, "Key Encipherment")
+
+	for usage, name := range keyUsageMap {
+		if cert.KeyUsage&usage != 0 {
+			keyUsage = append(keyUsage, name)
+		}
 	}
-	if cert.KeyUsage&x509.KeyUsageDataEncipherment != 0 {
-		keyUsage = append(keyUsage, "Data Encipherment")
-	}
-	if cert.KeyUsage&x509.KeyUsageKeyAgreement != 0 {
-		keyUsage = append(keyUsage, "Key Agreement")
-	}
-	if cert.KeyUsage&x509.KeyUsageCertSign != 0 {
-		keyUsage = append(keyUsage, "Certificate Signing")
-	}
+
 	if len(keyUsage) > 0 {
 		info["key_usage"] = strings.Join(keyUsage, ", ")
 	}
+}
 
-	// Extended key usage
-	if len(cert.ExtKeyUsage) > 0 {
-		var extKeyUsage []string
-		for _, usage := range cert.ExtKeyUsage {
-			switch usage {
-			case x509.ExtKeyUsageServerAuth:
-				extKeyUsage = append(extKeyUsage, "Server Authentication")
-			case x509.ExtKeyUsageClientAuth:
-				extKeyUsage = append(extKeyUsage, "Client Authentication")
-			case x509.ExtKeyUsageCodeSigning:
-				extKeyUsage = append(extKeyUsage, "Code Signing")
-			case x509.ExtKeyUsageEmailProtection:
-				extKeyUsage = append(extKeyUsage, "Email Protection")
-			}
-		}
-		if len(extKeyUsage) > 0 {
-			info["extended_key_usage"] = strings.Join(extKeyUsage, ", ")
-		}
+func addExtendedKeyUsageInfo(info map[string]interface{}, cert *x509.Certificate) {
+	if len(cert.ExtKeyUsage) == 0 {
+		return
 	}
 
-	return info
+	extKeyUsage := make([]string, 0, len(cert.ExtKeyUsage))
+
+	for _, usage := range cert.ExtKeyUsage {
+		name := getExtKeyUsageName(usage)
+		extKeyUsage = append(extKeyUsage, name)
+	}
+
+	if len(extKeyUsage) > 0 {
+		info["extended_key_usage"] = strings.Join(extKeyUsage, ", ")
+	}
+}
+
+func getExtKeyUsageName(usage x509.ExtKeyUsage) string {
+	switch usage {
+	case x509.ExtKeyUsageServerAuth:
+		return "Server Authentication"
+	case x509.ExtKeyUsageClientAuth:
+		return "Client Authentication"
+	case x509.ExtKeyUsageCodeSigning:
+		return "Code Signing"
+	case x509.ExtKeyUsageEmailProtection:
+		return "Email Protection"
+	case x509.ExtKeyUsageAny, x509.ExtKeyUsageIPSECEndSystem, x509.ExtKeyUsageIPSECTunnel,
+		x509.ExtKeyUsageIPSECUser, x509.ExtKeyUsageTimeStamping, x509.ExtKeyUsageOCSPSigning,
+		x509.ExtKeyUsageMicrosoftServerGatedCrypto, x509.ExtKeyUsageNetscapeServerGatedCrypto,
+		x509.ExtKeyUsageMicrosoftCommercialCodeSigning, x509.ExtKeyUsageMicrosoftKernelCodeSigning:
+		return fmt.Sprintf("Usage %d", usage)
+	}
+
+	return fmt.Sprintf("Usage %d", usage)
 }

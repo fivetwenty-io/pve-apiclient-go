@@ -5,12 +5,28 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+var (
+	ErrHostRequired                           = errors.New("host is required")
+	ErrAuthenticationCredentialsRequired      = errors.New("authentication credentials required (username/password, API token, or ticket)")
+	ErrPasswordRequiredForUsernameAuth        = errors.New("password required when using username authentication")
+	ErrInvalidProtocol                        = errors.New("invalid protocol")
+	ErrInvalidPort                            = errors.New("invalid port")
+	ErrClientKeyRequiredWithClientCertificate = errors.New("client key required when client certificate is specified")
+	ErrClientCertificateRequiredWithClientKey = errors.New("client certificate required when client key is specified")
 )
 
 // SSLVerifyMode defines how SSL certificates should be verified.
 type SSLVerifyMode int
 
 const (
+	// Protocol constants.
+	ProtocolHTTP  = "http"
+	ProtocolHTTPS = "https"
+
 	// SSLVerifyNone disables SSL verification (insecure).
 	SSLVerifyNone SSLVerifyMode = iota
 	// SSLVerifyPeer verifies the peer certificate.
@@ -26,7 +42,7 @@ type Options struct {
 	// Connection
 	Host     string // Hostname or IP address of the PVE server
 	Port     int    // Port number (default: 8006)
-	Protocol string // Protocol to use: "http" or "https" (default: "https")
+	Protocol string // Protocol to use: ProtocolHTTP or ProtocolHTTPS (default: ProtocolHTTPS)
 
 	// Authentication
 	Username  string // Username for authentication (e.g., "root@pam")
@@ -62,74 +78,27 @@ type SSLOptions struct {
 
 // Validate checks if the options are valid.
 func (o *Options) Validate() error {
-	if o.Host == "" {
-		return errors.New("host is required")
+	err := o.validateHost()
+	if err != nil {
+		return err
 	}
 
-	if o.Username == "" && o.APIToken == "" && o.Ticket == "" {
-		return errors.New("authentication credentials required (username/password, API token, or ticket)")
+	err = o.validateAuthentication()
+	if err != nil {
+		return err
 	}
 
-	if o.Username != "" && o.Password == "" && o.Ticket == "" {
-		return errors.New("password required when using username authentication")
+	err = o.validateProtocol()
+	if err != nil {
+		return err
 	}
 
-	if o.Protocol != "" && o.Protocol != "http" && o.Protocol != "https" {
-		return fmt.Errorf("invalid protocol: %s (must be 'http' or 'https')", o.Protocol)
+	err = o.validatePort()
+	if err != nil {
+		return err
 	}
 
-	if o.Port < 0 || o.Port > 65535 {
-		return fmt.Errorf("invalid port: %d", o.Port)
-	}
-
-	if o.SSLOptions != nil {
-		if o.SSLOptions.ClientCert != "" && o.SSLOptions.ClientKey == "" {
-			return errors.New("client key required when client certificate is specified")
-		}
-		if o.SSLOptions.ClientKey != "" && o.SSLOptions.ClientCert == "" {
-			return errors.New("client certificate required when client key is specified")
-		}
-	}
-
-	return nil
-}
-
-// setDefaults sets default values for unspecified options.
-func (o *Options) setDefaults() {
-	if o.Protocol == "" {
-		o.Protocol = "https"
-	}
-
-	if o.Port == 0 {
-		if o.Protocol == "https" {
-			o.Port = 8006
-		} else {
-			o.Port = 8006 // PVE uses 8006 for both HTTP and HTTPS by default
-		}
-	}
-
-	if o.Timeout == 0 {
-		o.Timeout = 30 * time.Second
-	}
-
-	if o.KeepAlive == 0 {
-		o.KeepAlive = 10
-	}
-
-	if o.CookieName == "" {
-		o.CookieName = "PVEAuthCookie"
-	}
-
-	if o.CachedFingerprints == nil {
-		o.CachedFingerprints = make(map[string]bool)
-	}
-
-	if o.SSLOptions == nil && o.Protocol == "https" {
-		o.SSLOptions = &SSLOptions{
-			VerifyMode:     SSLVerifyPeer,
-			VerifyHostname: true,
-		}
-	}
+	return o.validateSSLOptions()
 }
 
 // GetBaseURL returns the base URL for API requests.
@@ -150,4 +119,89 @@ func (o *Options) IsUsingTicket() bool {
 // NeedsLogin returns true if login is required.
 func (o *Options) NeedsLogin() bool {
 	return !o.IsUsingAPIToken() && !o.IsUsingTicket() && o.Username != ""
+}
+
+func (o *Options) validateHost() error {
+	if o.Host == "" {
+		return ErrHostRequired
+	}
+
+	return nil
+}
+
+func (o *Options) validateAuthentication() error {
+	if o.Username == "" && o.APIToken == "" && o.Ticket == "" {
+		return ErrAuthenticationCredentialsRequired
+	}
+
+	if o.Username != "" && o.Password == "" && o.Ticket == "" {
+		return ErrPasswordRequiredForUsernameAuth
+	}
+
+	return nil
+}
+
+func (o *Options) validateProtocol() error {
+	if o.Protocol != "" && o.Protocol != ProtocolHTTP && o.Protocol != ProtocolHTTPS {
+		return fmt.Errorf("%w: %s (must be 'http' or 'https')", ErrInvalidProtocol, o.Protocol)
+	}
+
+	return nil
+}
+
+func (o *Options) validatePort() error {
+	if o.Port < 0 || o.Port > 65535 {
+		return fmt.Errorf("%w: %d", ErrInvalidPort, o.Port)
+	}
+
+	return nil
+}
+
+func (o *Options) validateSSLOptions() error {
+	if o.SSLOptions == nil {
+		return nil
+	}
+
+	if o.SSLOptions.ClientCert != "" && o.SSLOptions.ClientKey == "" {
+		return ErrClientKeyRequiredWithClientCertificate
+	}
+
+	if o.SSLOptions.ClientKey != "" && o.SSLOptions.ClientCert == "" {
+		return ErrClientCertificateRequiredWithClientKey
+	}
+
+	return nil
+}
+
+func (o *Options) setDefaults() {
+	if o.Protocol == "" {
+		o.Protocol = ProtocolHTTPS
+	}
+
+	if o.Port == 0 {
+		o.Port = constants.ProxmoxDefaultPort // PVE uses this port for both HTTP and HTTPS by default
+	}
+
+	if o.Timeout == 0 {
+		o.Timeout = constants.DefaultClientTimeout()
+	}
+
+	if o.KeepAlive == 0 {
+		o.KeepAlive = constants.DefaultMaxConcurrency
+	}
+
+	if o.CookieName == "" {
+		o.CookieName = "PVEAuthCookie"
+	}
+
+	if o.CachedFingerprints == nil {
+		o.CachedFingerprints = make(map[string]bool)
+	}
+
+	if o.SSLOptions == nil && o.Protocol == ProtocolHTTPS {
+		o.SSLOptions = &SSLOptions{
+			VerifyMode:     SSLVerifyPeer,
+			VerifyHostname: true,
+		}
+	}
 }

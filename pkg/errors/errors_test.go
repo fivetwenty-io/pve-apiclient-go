@@ -1,18 +1,23 @@
-package errors
+package errors_test
 
 import (
+	"errors"
 	"testing"
+
+	pveerr "github.com/fivetwenty-io/pve-apiclient-go/pkg/errors"
 )
 
 func TestAPIError_Error(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		err      APIError
+		err      pveerr.APIError
 		expected string
 	}{
 		{
 			name: "simple message",
-			err: APIError{
+			err: pveerr.APIError{
 				Message: "Something went wrong",
 				Code:    500,
 			},
@@ -20,7 +25,7 @@ func TestAPIError_Error(t *testing.T) {
 		},
 		{
 			name: "with errors map",
-			err: APIError{
+			err: pveerr.APIError{
 				Message: "Validation failed",
 				Code:    400,
 				Errors: map[string]string{
@@ -32,77 +37,87 @@ func TestAPIError_Error(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.err.Error()
-			if tt.err.Errors != nil {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := testCase.err.Error()
+			if testCase.err.Errors != nil {
 				// For errors with map, just check it contains the base message
 				if !contains(result, "Validation failed (code: 400, errors:") {
-					t.Errorf("Error() = %v, want containing %v", result, tt.expected)
+					t.Errorf("Error() = %v, want containing %v", result, testCase.expected)
 				}
-			} else if result != tt.expected {
-				t.Errorf("Error() = %v, want %v", result, tt.expected)
+			} else if result != testCase.expected {
+				t.Errorf("Error() = %v, want %v", result, testCase.expected)
 			}
 		})
 	}
 }
 
 func TestAPIError_StatusChecks(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
-		err        APIError
+		err        pveerr.APIError
 		isNotFound bool
 		isUnauth   bool
 		isForbid   bool
 	}{
 		{
 			name:       "404 not found",
-			err:        APIError{HTTPCode: 404},
+			err:        pveerr.APIError{HTTPCode: 404},
 			isNotFound: true,
 			isUnauth:   false,
 			isForbid:   false,
 		},
 		{
 			name:       "401 unauthorized",
-			err:        APIError{HTTPCode: 401},
+			err:        pveerr.APIError{HTTPCode: 401},
 			isNotFound: false,
 			isUnauth:   true,
 			isForbid:   false,
 		},
 		{
 			name:       "403 forbidden",
-			err:        APIError{HTTPCode: 403},
+			err:        pveerr.APIError{HTTPCode: 403},
 			isNotFound: false,
 			isUnauth:   false,
 			isForbid:   true,
 		},
 		{
 			name:       "500 server error",
-			err:        APIError{HTTPCode: 500},
+			err:        pveerr.APIError{HTTPCode: 500},
 			isNotFound: false,
 			isUnauth:   false,
 			isForbid:   false,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if result := tt.err.IsNotFound(); result != tt.isNotFound {
-				t.Errorf("IsNotFound() = %v, want %v", result, tt.isNotFound)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if result := testCase.err.IsNotFound(); result != testCase.isNotFound {
+				t.Errorf("IsNotFound() = %v, want %v", result, testCase.isNotFound)
 			}
-			if result := tt.err.IsUnauthorized(); result != tt.isUnauth {
-				t.Errorf("IsUnauthorized() = %v, want %v", result, tt.isUnauth)
+
+			if result := testCase.err.IsUnauthorized(); result != testCase.isUnauth {
+				t.Errorf("IsUnauthorized() = %v, want %v", result, testCase.isUnauth)
 			}
-			if result := tt.err.IsForbidden(); result != tt.isForbid {
-				t.Errorf("IsForbidden() = %v, want %v", result, tt.isForbid)
+
+			if result := testCase.err.IsForbidden(); result != testCase.isForbid {
+				t.Errorf("IsForbidden() = %v, want %v", result, testCase.isForbid)
 			}
 		})
 	}
 }
 
 func TestPermissionError_Error(t *testing.T) {
-	err := PermissionError{
-		APIError: APIError{
+	t.Parallel()
+
+	err := pveerr.PermissionError{
+		APIError: pveerr.APIError{
 			Message: "access denied",
 			Code:    403,
 		},
@@ -110,6 +125,7 @@ func TestPermissionError_Error(t *testing.T) {
 	}
 
 	expected := "permission denied for /vms/100: access denied (code: 403)"
+
 	result := err.Error()
 	if result != expected {
 		t.Errorf("Error() = %v, want %v", result, expected)
@@ -118,6 +134,7 @@ func TestPermissionError_Error(t *testing.T) {
 	// Test without What field
 	err.What = ""
 	expected = "permission denied: access denied (code: 403)"
+
 	result = err.Error()
 	if result != expected {
 		t.Errorf("Error() = %v, want %v", result, expected)
@@ -125,8 +142,10 @@ func TestPermissionError_Error(t *testing.T) {
 }
 
 func TestParameterError_Error(t *testing.T) {
-	err := ParameterError{
-		APIError: APIError{
+	t.Parallel()
+
+	err := pveerr.ParameterError{
+		APIError: pveerr.APIError{
 			Message: "invalid value",
 			Code:    400,
 		},
@@ -134,6 +153,7 @@ func TestParameterError_Error(t *testing.T) {
 	}
 
 	expected := "parameter error: invalid value (code: 400) (usage: must be between 1 and 100)"
+
 	result := err.Error()
 	if result != expected {
 		t.Errorf("Error() = %v, want %v", result, expected)
@@ -142,6 +162,7 @@ func TestParameterError_Error(t *testing.T) {
 	// Test without Usage field
 	err.Usage = ""
 	expected = "parameter error: invalid value (code: 400)"
+
 	result = err.Error()
 	if result != expected {
 		t.Errorf("Error() = %v, want %v", result, expected)
@@ -149,33 +170,35 @@ func TestParameterError_Error(t *testing.T) {
 }
 
 func TestAuthenticationError_Error(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		err      AuthenticationError
+		err      pveerr.AuthenticationError
 		expected string
 	}{
 		{
 			name:     "simple auth error",
-			err:      AuthenticationError{},
+			err:      pveerr.AuthenticationError{},
 			expected: "authentication failed",
 		},
 		{
 			name: "with realm",
-			err: AuthenticationError{
+			err: pveerr.AuthenticationError{
 				Realm: "pam",
 			},
 			expected: "authentication failed for realm pam",
 		},
 		{
 			name: "with TFA",
-			err: AuthenticationError{
+			err: pveerr.AuthenticationError{
 				TFA: true,
 			},
 			expected: "authentication failed (TFA required)",
 		},
 		{
 			name: "with realm and TFA",
-			err: AuthenticationError{
+			err: pveerr.AuthenticationError{
 				Realm: "pve",
 				TFA:   true,
 			},
@@ -183,8 +206,8 @@ func TestAuthenticationError_Error(t *testing.T) {
 		},
 		{
 			name: "with message",
-			err: AuthenticationError{
-				APIError: APIError{
+			err: pveerr.AuthenticationError{
+				APIError: pveerr.APIError{
 					Message: "invalid credentials",
 				},
 			},
@@ -192,22 +215,27 @@ func TestAuthenticationError_Error(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.err.Error()
-			if result != tt.expected {
-				t.Errorf("Error() = %v, want %v", result, tt.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := testCase.err.Error()
+			if result != testCase.expected {
+				t.Errorf("Error() = %v, want %v", result, testCase.expected)
 			}
 		})
 	}
 }
 
 func TestTFARequiredError_Error(t *testing.T) {
-	err := TFARequiredError{
+	t.Parallel()
+
+	err := pveerr.TFARequiredError{
 		Types: []string{"totp", "yubico"},
 	}
 
 	expected := "two-factor authentication required (available types: totp, yubico)"
+
 	result := err.Error()
 	if result != expected {
 		t.Errorf("Error() = %v, want %v", result, expected)
@@ -215,14 +243,19 @@ func TestTFARequiredError_Error(t *testing.T) {
 }
 
 func TestConnectionError(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Error message", func(t *testing.T) {
-		err := ConnectionError{
+		t.Parallel()
+
+		err := pveerr.ConnectionError{
 			Host:    "pve.example.com",
 			Port:    8006,
 			Message: "connection refused",
 		}
 
 		expected := "connection to pve.example.com:8006 failed: connection refused"
+
 		result := err.Error()
 		if result != expected {
 			t.Errorf("Error() = %v, want %v", result, expected)
@@ -230,28 +263,35 @@ func TestConnectionError(t *testing.T) {
 	})
 
 	t.Run("With cause", func(t *testing.T) {
-		cause := &APIError{Message: "timeout"}
-		err := ConnectionError{
+		t.Parallel()
+
+		cause := &pveerr.APIError{Message: "timeout"}
+		err := pveerr.ConnectionError{
 			Host:  "pve.example.com",
 			Port:  8006,
 			Cause: cause,
 		}
 
-		if err.Unwrap() != cause {
+		if !errors.Is(err.Unwrap(), cause) {
 			t.Errorf("Unwrap() = %v, want %v", err.Unwrap(), cause)
 		}
 	})
 }
 
 func TestSSLError(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Error message", func(t *testing.T) {
-		err := SSLError{
+		t.Parallel()
+
+		err := pveerr.SSLError{
 			Host:        "pve.example.com",
 			Fingerprint: "AA:BB:CC:DD",
 			Message:     "certificate verification failed",
 		}
 
 		expected := "SSL error for pve.example.com (fingerprint: AA:BB:CC:DD): certificate verification failed"
+
 		result := err.Error()
 		if result != expected {
 			t.Errorf("Error() = %v, want %v", result, expected)
@@ -259,25 +299,30 @@ func TestSSLError(t *testing.T) {
 	})
 
 	t.Run("With cause", func(t *testing.T) {
-		cause := &APIError{Message: "expired"}
-		err := SSLError{
+		t.Parallel()
+
+		cause := &pveerr.APIError{Message: "expired"}
+		err := pveerr.SSLError{
 			Host:  "pve.example.com",
 			Cause: cause,
 		}
 
-		if err.Unwrap() != cause {
+		if !errors.Is(err.Unwrap(), cause) {
 			t.Errorf("Unwrap() = %v, want %v", err.Unwrap(), cause)
 		}
 	})
 }
 
 func TestTimeoutError_Error(t *testing.T) {
-	err := TimeoutError{
+	t.Parallel()
+
+	err := pveerr.TimeoutError{
 		Operation: "login",
 		Duration:  "30s",
 	}
 
 	expected := "operation login timed out after 30s"
+
 	result := err.Error()
 	if result != expected {
 		t.Errorf("Error() = %v, want %v", result, expected)
@@ -285,75 +330,92 @@ func TestTimeoutError_Error(t *testing.T) {
 }
 
 func TestParseAPIError(t *testing.T) {
-	tests := []struct {
-		name       string
-		statusCode int
-		body       []byte
-		wantType   string
-	}{
+	t.Parallel()
+
+	tests := getParseAPIErrorTestCases()
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			runParseAPIErrorTest(t, testCase)
+		})
+	}
+}
+
+type parseAPIErrorTestCase struct {
+	name       string
+	statusCode int
+	body       []byte
+	wantType   string
+}
+
+func getParseAPIErrorTestCases() []parseAPIErrorTestCase {
+	return []parseAPIErrorTestCase{
 		{
 			name:       "401 authentication error",
 			statusCode: 401,
 			body:       []byte(`{"message": "unauthorized"}`),
-			wantType:   "*errors.AuthenticationError",
+			wantType:   "*pveerr.AuthenticationError",
 		},
 		{
 			name:       "403 permission error",
 			statusCode: 403,
 			body:       []byte(`{"message": "forbidden"}`),
-			wantType:   "*errors.PermissionError",
+			wantType:   "*pveerr.PermissionError",
 		},
 		{
 			name:       "400 parameter error",
 			statusCode: 400,
 			body:       []byte(`{"message": "bad request"}`),
-			wantType:   "*errors.ParameterError",
+			wantType:   "*pveerr.ParameterError",
 		},
 		{
 			name:       "500 generic error",
 			statusCode: 500,
 			body:       []byte(`{"message": "internal server error"}`),
-			wantType:   "*errors.APIError",
+			wantType:   "*pveerr.APIError",
 		},
 		{
 			name:       "TFA required",
 			statusCode: 401,
 			body:       []byte(`{"ticket": "partial", "types": ["totp"]}`),
-			wantType:   "*errors.TFARequiredError",
+			wantType:   "*pveerr.TFARequiredError",
 		},
 		{
 			name:       "invalid JSON",
 			statusCode: 500,
 			body:       []byte(`not json`),
-			wantType:   "*errors.APIError",
+			wantType:   "*pveerr.APIError",
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ParseAPIError(tt.statusCode, tt.body)
-			if err == nil {
-				t.Errorf("ParseAPIError() returned nil error")
-				return
-			}
+func runParseAPIErrorTest(t *testing.T, testCase parseAPIErrorTestCase) {
+	t.Helper()
 
-			// Check error type
-			gotType := typeOf(err)
-			if gotType != tt.wantType {
-				t.Errorf("ParseAPIError() returned type %v, want %v", gotType, tt.wantType)
-			}
-		})
+	err := pveerr.ParseAPIError(testCase.statusCode, testCase.body)
+	if err == nil {
+		t.Errorf("ParseAPIError() returned nil error")
+
+		return
+	}
+
+	// Check error type
+	gotType := typeOf(err)
+	if gotType != testCase.wantType {
+		t.Errorf("ParseAPIError() returned type %v, want %v", gotType, testCase.wantType)
 	}
 }
 
 func TestIsErrorType(t *testing.T) {
-	apiErr := &APIError{Message: "test"}
-	permErr := &PermissionError{APIError: APIError{Message: "test"}}
-	authErr := &AuthenticationError{APIError: APIError{Message: "test"}}
-	connErr := &ConnectionError{Message: "test"}
-	sslErr := &SSLError{Message: "test"}
-	timeoutErr := &TimeoutError{Operation: "test"}
-	tfaErr := &TFARequiredError{Types: []string{"totp"}}
+	t.Parallel()
+
+	apiErr := &pveerr.APIError{Message: "test"}
+	permErr := &pveerr.PermissionError{APIError: pveerr.APIError{Message: "test"}}
+	authErr := &pveerr.AuthenticationError{APIError: pveerr.APIError{Message: "test"}}
+	connErr := &pveerr.ConnectionError{Message: "test"}
+	sslErr := &pveerr.SSLError{Message: "test"}
+	timeoutErr := &pveerr.TimeoutError{Operation: "test"}
+	tfaErr := &pveerr.TFARequiredError{Types: []string{"totp"}}
 
 	tests := []struct {
 		name     string
@@ -361,36 +423,39 @@ func TestIsErrorType(t *testing.T) {
 		checkFn  func(error) bool
 		expected bool
 	}{
-		{"IsAPIError with APIError", apiErr, IsAPIError, true},
-		{"IsAPIError with PermissionError", permErr, IsAPIError, true},
-		{"IsAPIError with ConnectionError", connErr, IsAPIError, false},
-		{"IsConnectionError with ConnectionError", connErr, IsConnectionError, true},
-		{"IsConnectionError with APIError", apiErr, IsConnectionError, false},
-		{"IsSSLError with SSLError", sslErr, IsSSLError, true},
-		{"IsSSLError with APIError", apiErr, IsSSLError, false},
-		{"IsTimeoutError with TimeoutError", timeoutErr, IsTimeoutError, true},
-		{"IsTimeoutError with APIError", apiErr, IsTimeoutError, false},
-		{"IsTFARequired with TFARequiredError", tfaErr, IsTFARequired, true},
-		{"IsTFARequired with AuthenticationError", authErr, IsTFARequired, false},
+		{"IsAPIError with pveerr.APIError", apiErr, pveerr.IsAPIError, true},
+		{"IsAPIError with pveerr.PermissionError", permErr, pveerr.IsAPIError, true},
+		{"IsAPIError with ConnectionError", connErr, pveerr.IsAPIError, false},
+		{"IsConnectionError with ConnectionError", connErr, pveerr.IsConnectionError, true},
+		{"IsConnectionError with pveerr.APIError", apiErr, pveerr.IsConnectionError, false},
+		{"IsSSLError with SSLError", sslErr, pveerr.IsSSLError, true},
+		{"IsSSLError with pveerr.APIError", apiErr, pveerr.IsSSLError, false},
+		{"IsTimeoutError with TimeoutError", timeoutErr, pveerr.IsTimeoutError, true},
+		{"IsTimeoutError with pveerr.APIError", apiErr, pveerr.IsTimeoutError, false},
+		{"IsTFARequired with TFARequiredError", tfaErr, pveerr.IsTFARequired, true},
+		{"IsTFARequired with AuthenticationError", authErr, pveerr.IsTFARequired, false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.checkFn(tt.err)
-			if result != tt.expected {
-				t.Errorf("%s = %v, want %v", tt.name, result, tt.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := testCase.checkFn(testCase.err)
+			if result != testCase.expected {
+				t.Errorf("%s = %v, want %v", testCase.name, result, testCase.expected)
 			}
 		})
 	}
 }
 
-// Helper functions
+// Helper functions.
 func contains(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -398,17 +463,18 @@ func typeOf(v interface{}) string {
 	if v == nil {
 		return "nil"
 	}
+
 	switch v.(type) {
-	case *APIError:
-		return "*errors.APIError"
-	case *PermissionError:
-		return "*errors.PermissionError"
-	case *ParameterError:
-		return "*errors.ParameterError"
-	case *AuthenticationError:
-		return "*errors.AuthenticationError"
-	case *TFARequiredError:
-		return "*errors.TFARequiredError"
+	case *pveerr.APIError:
+		return "*pveerr.APIError"
+	case *pveerr.PermissionError:
+		return "*pveerr.PermissionError"
+	case *pveerr.ParameterError:
+		return "*pveerr.ParameterError"
+	case *pveerr.AuthenticationError:
+		return "*pveerr.AuthenticationError"
+	case *pveerr.TFARequiredError:
+		return "*pveerr.TFARequiredError"
 	default:
 		return "unknown"
 	}

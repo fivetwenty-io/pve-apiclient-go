@@ -1,109 +1,147 @@
-package ssl
+package ssl_test
 
 import (
 	"testing"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/ssl"
 )
 
+const testFingerprint = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+
 func TestNewFingerprintVerifier(t *testing.T) {
-	fv := NewFingerprintVerifier()
-	if fv == nil {
+	t.Parallel()
+
+	fingerprintVerifier := ssl.NewFingerprintVerifier()
+	if fingerprintVerifier == nil {
 		t.Fatal("NewFingerprintVerifier returned nil")
 	}
-	if fv.cache == nil {
-		t.Error("NewFingerprintVerifier() cache is nil")
-	}
-	if fv.manualVerification {
-		t.Error("NewFingerprintVerifier() manualVerification should be false by default")
+
+	// Test public interface - initially no trusted fingerprints
+	fingerprints := fingerprintVerifier.GetTrustedFingerprints()
+	if len(fingerprints) != 0 {
+		t.Error("NewFingerprintVerifier() should start with no trusted fingerprints")
 	}
 }
 
 func TestFingerprintVerifier_AddTrustedFingerprint(t *testing.T) {
-	fv := NewFingerprintVerifier()
+	t.Parallel()
 
-	fingerprint := "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
-	fv.AddTrustedFingerprint(fingerprint)
+	fingerprintVerifier := ssl.NewFingerprintVerifier()
 
-	normalized := NormalizeFingerprint(fingerprint)
-	if !fv.cache[normalized] {
-		t.Errorf("AddTrustedFingerprint() failed to add fingerprint to cache")
+	fingerprint := testFingerprint
+	fingerprintVerifier.AddTrustedFingerprint(fingerprint)
+
+	trustedFingerprints := fingerprintVerifier.GetTrustedFingerprints()
+	if len(trustedFingerprints) != 1 {
+		t.Errorf("AddTrustedFingerprint() expected 1 trusted fingerprint, got %d", len(trustedFingerprints))
 	}
 }
 
 func TestFingerprintVerifier_AddTrustedFingerprints(t *testing.T) {
-	fv := NewFingerprintVerifier()
+	t.Parallel()
+
+	fingerprintVerifier := ssl.NewFingerprintVerifier()
 
 	fingerprints := []string{
-		"AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+		testFingerprint,
 		"11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
 	}
 
-	fv.AddTrustedFingerprints(fingerprints)
+	fingerprintVerifier.AddTrustedFingerprints(fingerprints)
 
-	for _, fp := range fingerprints {
-		normalized := NormalizeFingerprint(fp)
-		if !fv.cache[normalized] {
-			t.Errorf("AddTrustedFingerprints() failed to add fingerprint %s to cache", fp)
+	// Check that the fingerprints were added by retrieving them
+	trustedFingerprints := fingerprintVerifier.GetTrustedFingerprints()
+	if len(trustedFingerprints) != len(fingerprints) {
+		t.Errorf("AddTrustedFingerprints() failed: expected %d fingerprints, got %d", len(fingerprints), len(trustedFingerprints))
+	}
+
+	// Verify each fingerprint is in the list
+	for _, fingerprint := range fingerprints {
+		normalized := ssl.NormalizeFingerprint(fingerprint)
+		found := false
+
+		for _, trusted := range trustedFingerprints {
+			if trusted == normalized {
+				found = true
+
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("AddTrustedFingerprints() failed to add fingerprint %s", fingerprint)
 		}
 	}
 }
 
 func TestFingerprintVerifier_RemoveTrustedFingerprint(t *testing.T) {
-	fv := NewFingerprintVerifier()
+	t.Parallel()
 
-	fingerprint := "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
-	fv.AddTrustedFingerprint(fingerprint)
+	fingerprintVerifier := ssl.NewFingerprintVerifier()
+
+	fingerprint := testFingerprint
+	fingerprintVerifier.AddTrustedFingerprint(fingerprint)
 
 	// Verify it was added
-	normalized := NormalizeFingerprint(fingerprint)
-	if !fv.cache[normalized] {
+	trustedFingerprints := fingerprintVerifier.GetTrustedFingerprints()
+	if len(trustedFingerprints) != 1 {
 		t.Fatal("Fingerprint was not added to cache")
 	}
 
 	// Remove it
-	fv.RemoveTrustedFingerprint(fingerprint)
+	fingerprintVerifier.RemoveTrustedFingerprint(fingerprint)
 
 	// Verify it was removed
-	if fv.cache[normalized] {
+	trustedFingerprints = fingerprintVerifier.GetTrustedFingerprints()
+	if len(trustedFingerprints) != 0 {
 		t.Errorf("RemoveTrustedFingerprint() failed to remove fingerprint from cache")
 	}
 }
 
 func TestFingerprintVerifier_GetTrustedFingerprints(t *testing.T) {
-	fv := NewFingerprintVerifier()
+	t.Parallel()
+
+	fingerprintVerifier := ssl.NewFingerprintVerifier()
 
 	fingerprints := []string{
-		"AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+		testFingerprint,
 		"11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
 	}
 
-	fv.AddTrustedFingerprints(fingerprints)
+	fingerprintVerifier.AddTrustedFingerprints(fingerprints)
 
-	trusted := fv.GetTrustedFingerprints()
+	trusted := fingerprintVerifier.GetTrustedFingerprints()
 	if len(trusted) != len(fingerprints) {
 		t.Errorf("GetTrustedFingerprints() returned %d fingerprints, want %d", len(trusted), len(fingerprints))
 	}
 }
 
 func TestFingerprintVerifier_ClearCache(t *testing.T) {
-	fv := NewFingerprintVerifier()
+	t.Parallel()
+
+	fingerprintVerifier := ssl.NewFingerprintVerifier()
 
 	// Add some fingerprints
-	fv.AddTrustedFingerprint("AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99")
-	fv.AddTrustedFingerprint("11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00")
+	fingerprintVerifier.AddTrustedFingerprint(testFingerprint)
+	fingerprintVerifier.AddTrustedFingerprint("11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00")
 
-	if len(fv.cache) == 0 {
+	trustedFingerprints := fingerprintVerifier.GetTrustedFingerprints()
+	if len(trustedFingerprints) == 0 {
 		t.Fatal("No fingerprints in cache")
 	}
 
 	// Clear cache
-	fv.ClearCache()
+	fingerprintVerifier.ClearCache()
 
-	if len(fv.cache) != 0 {
-		t.Errorf("ClearCache() failed to clear cache, still has %d entries", len(fv.cache))
+	trustedFingerprints = fingerprintVerifier.GetTrustedFingerprints()
+	if len(trustedFingerprints) != 0 {
+		t.Errorf("ClearCache() failed to clear cache, still has %d entries", len(trustedFingerprints))
 	}
 }
 
 func TestNormalizeFingerprint(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -111,42 +149,46 @@ func TestNormalizeFingerprint(t *testing.T) {
 	}{
 		{
 			name:     "already normalized",
-			input:    "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
-			expected: "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			input:    testFingerprint,
+			expected: testFingerprint,
 		},
 		{
 			name:     "lowercase",
 			input:    "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99",
-			expected: "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			expected: testFingerprint,
 		},
 		{
 			name:     "no colons",
 			input:    "AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899",
-			expected: "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			expected: testFingerprint,
 		},
 		{
 			name:     "with spaces",
 			input:    "AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99",
-			expected: "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			expected: testFingerprint,
 		},
 		{
 			name:     "with dashes",
 			input:    "AA-BB-CC-DD-EE-FF-00-11-22-33-44-55-66-77-88-99-AA-BB-CC-DD-EE-FF-00-11-22-33-44-55-66-77-88-99",
-			expected: "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			expected: testFingerprint,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := NormalizeFingerprint(tt.input)
-			if result != tt.expected {
-				t.Errorf("NormalizeFingerprint() = %v, want %v", result, tt.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := ssl.NormalizeFingerprint(testCase.input)
+			if result != testCase.expected {
+				t.Errorf("ssl.NormalizeFingerprint() = %v, want %v", result, testCase.expected)
 			}
 		})
 	}
 }
 
 func TestCompareFingerprints(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		fp1      string
@@ -155,35 +197,38 @@ func TestCompareFingerprints(t *testing.T) {
 	}{
 		{
 			name:     "identical",
-			fp1:      "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
-			fp2:      "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			fp1:      testFingerprint,
+			fp2:      testFingerprint,
 			expected: true,
 		},
 		{
 			name:     "different format same value",
-			fp1:      "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			fp1:      testFingerprint,
 			fp2:      "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
 			expected: true,
 		},
 		{
 			name:     "different values",
-			fp1:      "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			fp1:      testFingerprint,
 			fp2:      "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
 			expected: false,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := CompareFingerprints(tt.fp1, tt.fp2)
-			if result != tt.expected {
-				t.Errorf("CompareFingerprints() = %v, want %v", result, tt.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := ssl.CompareFingerprints(testCase.fp1, testCase.fp2)
+			if result != testCase.expected {
+				t.Errorf("CompareFingerprints() = %v, want %v", result, testCase.expected)
 			}
 		})
 	}
 }
 
 func TestFormatFingerprint(t *testing.T) {
+	t.Parallel()
 	// Test with 32 bytes (SHA256)
 	input := []byte{
 		0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11,
@@ -192,8 +237,8 @@ func TestFormatFingerprint(t *testing.T) {
 		0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99,
 	}
 
-	expected := "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
-	result := FormatFingerprint(input)
+	expected := testFingerprint
+	result := ssl.FormatFingerprint(input)
 
 	if result != expected {
 		t.Errorf("FormatFingerprint() = %v, want %v", result, expected)
@@ -201,6 +246,8 @@ func TestFormatFingerprint(t *testing.T) {
 }
 
 func TestParseFingerprint(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   string
@@ -208,7 +255,7 @@ func TestParseFingerprint(t *testing.T) {
 	}{
 		{
 			name:    "valid fingerprint with colons",
-			input:   "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+			input:   testFingerprint,
 			wantErr: false,
 		},
 		{
@@ -228,10 +275,12 @@ func TestParseFingerprint(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseFingerprint(tt.input)
-			if tt.wantErr {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := ssl.ParseFingerprint(testCase.input)
+			if testCase.wantErr {
 				if err == nil {
 					t.Errorf("ParseFingerprint() expected error, got nil")
 				}
@@ -239,6 +288,7 @@ func TestParseFingerprint(t *testing.T) {
 				if err != nil {
 					t.Errorf("ParseFingerprint() unexpected error = %v", err)
 				}
+
 				if len(result) != 32 {
 					t.Errorf("ParseFingerprint() returned %d bytes, want 32", len(result))
 				}

@@ -1,8 +1,25 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+var (
+	ErrInvalidAPIToken         = errors.New("invalid API token")
+	ErrEmptyTokenString        = errors.New("empty token string")
+	ErrInvalidTokenFormat      = errors.New("invalid token format")
+	ErrInvalidTokenIDFormat    = errors.New("invalid token ID format")
+	ErrTokenSecretEmpty        = errors.New("token secret cannot be empty")
+	ErrTokenIDEmpty            = errors.New("token ID cannot be empty")
+	ErrTokenIDMissingUserRealm = errors.New("token ID must contain user@realm")
+	ErrTokenIDMissingTokenID   = errors.New("token ID must contain !tokenid after realm")
+	ErrUserPartEmpty           = errors.New("user part cannot be empty")
+	ErrRealmPartEmpty          = errors.New("realm part cannot be empty")
+	ErrTokenNamePartEmpty      = errors.New("token name part cannot be empty")
 )
 
 // APITokenAuthenticator provides API token-based authentication for PVE.
@@ -18,12 +35,13 @@ func NewAPITokenAuthenticator(token *Token) *APITokenAuthenticator {
 }
 
 // NewAPITokenAuthenticatorFromString creates a new API token authenticator from a string.
-// The token string should be in the format: "user@realm!tokenid=secret"
+// The token string should be in the format: "user@realm!tokenid=secret".
 func NewAPITokenAuthenticatorFromString(tokenString string) (*APITokenAuthenticator, error) {
 	token, err := ParseAPIToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
+
 	return NewAPITokenAuthenticator(token), nil
 }
 
@@ -31,8 +49,9 @@ func NewAPITokenAuthenticatorFromString(tokenString string) (*APITokenAuthentica
 // For API tokens, this is a no-op as tokens don't require login.
 func (ata *APITokenAuthenticator) Authenticate() error {
 	if ata.token == nil || ata.token.ID == "" || ata.token.Secret == "" {
-		return fmt.Errorf("invalid API token")
+		return ErrInvalidAPIToken
 	}
+
 	return nil
 }
 
@@ -73,33 +92,33 @@ func (ata *APITokenAuthenticator) SetToken(token *Token) {
 }
 
 // ParseAPIToken parses an API token string into a Token struct.
-// Expected format: "user@realm!tokenid=secret"
+// Expected format: "user@realm!tokenid=secret".
 func ParseAPIToken(tokenString string) (*Token, error) {
 	if tokenString == "" {
-		return nil, fmt.Errorf("empty token string")
+		return nil, ErrEmptyTokenString
 	}
 
 	// Split on '=' to separate ID and secret
-	parts := strings.SplitN(tokenString, "=", 2)
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid token format: expected 'user@realm!tokenid=secret'")
+	parts := strings.SplitN(tokenString, "=", constants.ExpectedPartsCount)
+	if len(parts) != constants.ExpectedPartsCount {
+		return nil, fmt.Errorf("%w: expected 'user@realm!tokenid=secret'", ErrInvalidTokenFormat)
 	}
 
-	id := parts[0]
+	tokenID := parts[0]
 	secret := parts[1]
 
 	// Validate token ID format (should contain @ and !)
-	if !strings.Contains(id, "@") || !strings.Contains(id, "!") {
-		return nil, fmt.Errorf("invalid token ID format: expected 'user@realm!tokenid'")
+	if !strings.Contains(tokenID, "@") || !strings.Contains(tokenID, "!") {
+		return nil, fmt.Errorf("%w: expected 'user@realm!tokenid'", ErrInvalidTokenIDFormat)
 	}
 
 	// Validate secret is not empty
 	if secret == "" {
-		return nil, fmt.Errorf("token secret cannot be empty")
+		return nil, ErrTokenSecretEmpty
 	}
 
 	return &Token{
-		ID:     id,
+		ID:     tokenID,
 		Secret: secret,
 	}, nil
 }
@@ -109,42 +128,45 @@ func FormatAPIToken(token *Token) string {
 	if token == nil {
 		return ""
 	}
+
 	return fmt.Sprintf("%s=%s", token.ID, token.Secret)
 }
 
 // ValidateTokenID validates the format of a token ID.
-// Valid format: user@realm!tokenid
-func ValidateTokenID(id string) error {
-	if id == "" {
-		return fmt.Errorf("token ID cannot be empty")
+// Valid format: user@realm!tokenid.
+func ValidateTokenID(tokenID string) error {
+	if tokenID == "" {
+		return ErrTokenIDEmpty
 	}
 
 	// Check for @ sign (user@realm)
-	atIndex := strings.Index(id, "@")
+	atIndex := strings.Index(tokenID, "@")
 	if atIndex < 1 {
-		return fmt.Errorf("token ID must contain user@realm")
+		return ErrTokenIDMissingUserRealm
 	}
 
 	// Check for ! sign (realm!tokenid)
-	exclamIndex := strings.Index(id, "!")
+	exclamIndex := strings.Index(tokenID, "!")
 	if exclamIndex <= atIndex {
-		return fmt.Errorf("token ID must contain !tokenid after realm")
+		return ErrTokenIDMissingTokenID
 	}
 
 	// Extract parts
-	user := id[:atIndex]
-	realm := id[atIndex+1 : exclamIndex]
-	tokenName := id[exclamIndex+1:]
+	user := tokenID[:atIndex]
+	realm := tokenID[atIndex+1 : exclamIndex]
+	tokenName := tokenID[exclamIndex+1:]
 
 	// Validate parts
 	if user == "" {
-		return fmt.Errorf("user part cannot be empty")
+		return ErrUserPartEmpty
 	}
+
 	if realm == "" {
-		return fmt.Errorf("realm part cannot be empty")
+		return ErrRealmPartEmpty
 	}
+
 	if tokenName == "" {
-		return fmt.Errorf("token name part cannot be empty")
+		return ErrTokenNamePartEmpty
 	}
 
 	return nil

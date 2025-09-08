@@ -2,8 +2,11 @@ package errors
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
 )
 
 // APIError represents a general API error from PVE.
@@ -23,29 +26,32 @@ func (e *APIError) Error() string {
 		for field, msg := range e.Errors {
 			errStrs = append(errStrs, fmt.Sprintf("%s: %s", field, msg))
 		}
+
 		return fmt.Sprintf("%s (code: %d, errors: %s)", e.Message, e.Code, strings.Join(errStrs, ", "))
 	}
+
 	return fmt.Sprintf("%s (code: %d)", e.Message, e.Code)
 }
 
 // IsNotFound returns true if the error indicates a resource was not found.
 func (e *APIError) IsNotFound() bool {
-	return e.HTTPCode == 404 || e.Code == 404
+	return e.HTTPCode == constants.HTTPStatusNotFound || e.Code == constants.HTTPStatusNotFound
 }
 
 // IsUnauthorized returns true if the error indicates unauthorized access.
 func (e *APIError) IsUnauthorized() bool {
-	return e.HTTPCode == 401 || e.Code == 401
+	return e.HTTPCode == constants.HTTPStatusUnauthorized || e.Code == constants.HTTPStatusUnauthorized
 }
 
 // IsForbidden returns true if the error indicates forbidden access.
 func (e *APIError) IsForbidden() bool {
-	return e.HTTPCode == 403 || e.Code == 403
+	return e.HTTPCode == constants.HTTPStatusForbidden || e.Code == constants.HTTPStatusForbidden
 }
 
 // PermissionError represents a permission-related error.
 type PermissionError struct {
 	APIError
+
 	What string `json:"what"` // What resource/action was denied
 }
 
@@ -54,12 +60,14 @@ func (e *PermissionError) Error() string {
 	if e.What != "" {
 		return fmt.Sprintf("permission denied for %s: %s", e.What, e.APIError.Error())
 	}
-	return fmt.Sprintf("permission denied: %s", e.APIError.Error())
+
+	return "permission denied: " + e.APIError.Error()
 }
 
 // ParameterError represents a parameter validation error.
 type ParameterError struct {
 	APIError
+
 	Usage string `json:"usage"` // Expected parameter usage
 }
 
@@ -68,12 +76,14 @@ func (e *ParameterError) Error() string {
 	if e.Usage != "" {
 		return fmt.Sprintf("parameter error: %s (usage: %s)", e.APIError.Error(), e.Usage)
 	}
-	return fmt.Sprintf("parameter error: %s", e.APIError.Error())
+
+	return "parameter error: " + e.APIError.Error()
 }
 
 // AuthenticationError represents an authentication failure.
 type AuthenticationError struct {
 	APIError
+
 	Realm string `json:"realm,omitempty"` // Authentication realm
 	TFA   bool   `json:"tfa,omitempty"`   // Whether TFA is required
 }
@@ -82,14 +92,17 @@ type AuthenticationError struct {
 func (e *AuthenticationError) Error() string {
 	msg := "authentication failed"
 	if e.Realm != "" {
-		msg += fmt.Sprintf(" for realm %s", e.Realm)
+		msg += " for realm " + e.Realm
 	}
+
 	if e.TFA {
 		msg += " (TFA required)"
 	}
+
 	if e.Message != "" {
 		msg += ": " + e.Message
 	}
+
 	return msg
 }
 
@@ -119,9 +132,11 @@ func (e *ConnectionError) Error() string {
 	if e.Message != "" {
 		msg += ": " + e.Message
 	}
+
 	if e.Cause != nil {
 		msg += fmt.Sprintf(" (caused by: %v)", e.Cause)
 	}
+
 	return msg
 }
 
@@ -140,16 +155,19 @@ type SSLError struct {
 
 // Error implements the error interface.
 func (e *SSLError) Error() string {
-	msg := fmt.Sprintf("SSL error for %s", e.Host)
+	msg := "SSL error for " + e.Host
 	if e.Fingerprint != "" {
 		msg += fmt.Sprintf(" (fingerprint: %s)", e.Fingerprint)
 	}
+
 	if e.Message != "" {
 		msg += ": " + e.Message
 	}
+
 	if e.Cause != nil {
 		msg += fmt.Sprintf(" (caused by: %v)", e.Cause)
 	}
+
 	return msg
 }
 
@@ -174,7 +192,8 @@ func ParseAPIError(statusCode int, body []byte) error {
 	var apiErr APIError
 
 	// Try to parse JSON error response
-	if err := json.Unmarshal(body, &apiErr); err != nil {
+	err := json.Unmarshal(body, &apiErr)
+	if err != nil {
 		// If JSON parsing fails, create a generic error
 		return &APIError{
 			Message:  string(body),
@@ -187,16 +206,17 @@ func ParseAPIError(statusCode int, body []byte) error {
 
 	// Determine specific error type based on status code and content
 	switch statusCode {
-	case 401:
+	case constants.HTTPStatusUnauthorized:
 		// Check if it's a TFA requirement
 		var tfaErr TFARequiredError
 		if json.Unmarshal(body, &tfaErr) == nil && tfaErr.Ticket != "" {
 			return &tfaErr
 		}
+
 		return &AuthenticationError{APIError: apiErr}
-	case 403:
+	case constants.HTTPStatusForbidden:
 		return &PermissionError{APIError: apiErr}
-	case 400:
+	case constants.HTTPStatusBadRequest:
 		return &ParameterError{APIError: apiErr}
 	default:
 		return &apiErr
@@ -205,34 +225,43 @@ func ParseAPIError(statusCode int, body []byte) error {
 
 // IsAPIError checks if an error is an APIError or one of its subtypes.
 func IsAPIError(err error) bool {
-	switch err.(type) {
-	case *APIError, *PermissionError, *ParameterError, *AuthenticationError:
-		return true
-	default:
-		return false
-	}
+	var (
+		apiErr   *APIError
+		permErr  *PermissionError
+		paramErr *ParameterError
+		authErr  *AuthenticationError
+	)
+
+	return errors.As(err, &apiErr) ||
+		errors.As(err, &permErr) ||
+		errors.As(err, &paramErr) ||
+		errors.As(err, &authErr)
 }
 
 // IsConnectionError checks if an error is a ConnectionError.
 func IsConnectionError(err error) bool {
-	_, ok := err.(*ConnectionError)
-	return ok
+	var connErr *ConnectionError
+
+	return errors.As(err, &connErr)
 }
 
 // IsSSLError checks if an error is an SSLError.
 func IsSSLError(err error) bool {
-	_, ok := err.(*SSLError)
-	return ok
+	var sslErr *SSLError
+
+	return errors.As(err, &sslErr)
 }
 
 // IsTimeoutError checks if an error is a TimeoutError.
 func IsTimeoutError(err error) bool {
-	_, ok := err.(*TimeoutError)
-	return ok
+	var timeoutErr *TimeoutError
+
+	return errors.As(err, &timeoutErr)
 }
 
 // IsTFARequired checks if an error indicates TFA is required.
 func IsTFARequired(err error) bool {
-	_, ok := err.(*TFARequiredError)
-	return ok
+	var tfaErr *TFARequiredError
+
+	return errors.As(err, &tfaErr)
 }

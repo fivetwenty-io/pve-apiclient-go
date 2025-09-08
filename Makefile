@@ -85,7 +85,17 @@ vet: ## Run go vet on all source files
 	@echo "$(GREEN)✓ Vet analysis complete$(RESET)"
 
 .PHONY: lint
-lint: fmt vet ## Run fmt and vet
+lint: ## Run golangci-lint
+	@echo "$(GREEN)Running golangci-lint...$(RESET)"
+	@command -v golangci-lint --max-same-issues 50 >/dev/null 2>&1 || { \
+		echo "$(YELLOW)Installing golangci-lint...$(RESET)"; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin; \
+	}
+	@golangci-lint run --timeout=5m ./...
+	@echo "$(GREEN)✓ Lint check complete$(RESET)"
+
+.PHONY: golangci
+golangci: lint ## Alias for lint (runs golangci-lint)
 
 .PHONY: govulncheck
 govulncheck: ## Run vulnerability check on dependencies

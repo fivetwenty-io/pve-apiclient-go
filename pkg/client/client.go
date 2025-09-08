@@ -1,8 +1,14 @@
 package client
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"time"
+
+	pvehttp "github.com/fivetwenty-io/pve-apiclient-go/internal/http"
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/auth"
+	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/pkg/metrics"
 )
 
 // Client defines the interface for interacting with the PVE API.
@@ -17,6 +23,19 @@ type Client interface {
 	Delete(path string, params map[string]interface{}) (interface{}, error)
 	DeleteRaw(path string, params map[string]interface{}) (*Response, error)
 
+	// Context-aware HTTP Methods
+	GetCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error)
+	GetRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error)
+	PostCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error)
+	PostRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error)
+	PutCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error)
+	PutRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error)
+	DeleteCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error)
+	DeleteRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error)
+
+	// Upload
+	UploadCtx(ctx context.Context, path string, fields map[string]string, fileField, filename string, file io.Reader) (*Response, error)
+
 	// Authentication
 	Login() error
 	Logout() error
@@ -26,6 +45,18 @@ type Client interface {
 	// Configuration
 	SetTimeout(timeout time.Duration)
 	SetKeepAlive(connections int)
+
+	// Logging configuration
+	SetLogger(l Logger)
+	SetLogConfig(cfg LogConfig)
+	AddLogHook(h Hook)
+	GetLogConfig() LogConfig
+
+	// Metrics configuration
+	SetMetrics(m *pmetrics.DefaultMetrics)
+
+	// Two-Factor Authentication
+	SetTFAHandler(h TFAHandler)
 }
 
 // Response represents a response from the PVE API.
@@ -39,15 +70,24 @@ type Response struct {
 type client struct {
 	options    *Options
 	httpClient HTTPClient
-	auth       Authenticator
 }
 
 // HTTPClient defines the interface for HTTP operations.
 type HTTPClient interface {
 	Do(method, path string, params map[string]interface{}) (*Response, error)
+	DoCtx(ctx context.Context, method, path string, params map[string]interface{}) (*Response, error)
+	UploadCtx(ctx context.Context, path string, fields map[string]string, fileField, filename string, file io.Reader) (*Response, error)
 	SetHeader(key, value string)
 	RemoveHeader(key string)
 }
+
+// Re-export logging types for the public API.
+type (
+	Logger     = pvehttp.Logger
+	LogConfig  = pvehttp.LogConfig
+	Hook       = pvehttp.Hook
+	TFAHandler = auth.TFAHandler
+)
 
 // Authenticator defines the interface for authentication operations.
 type Authenticator interface {
@@ -58,8 +98,9 @@ type Authenticator interface {
 }
 
 // NewClient creates a new PVE API client with the given options.
-func NewClient(opts Options) (Client, error) {
-	if err := opts.Validate(); err != nil {
+func NewClient(opts Options) (Client, error) { //nolint:ireturn // Factory function pattern
+	err := opts.Validate()
+	if err != nil {
 		return nil, err
 	}
 
@@ -71,23 +112,9 @@ func NewClient(opts Options) (Client, error) {
 		return nil, err
 	}
 
-	// Create the authenticator
-	auth, err := createAuthenticator(&opts, httpClient)
-	if err != nil {
-		return nil, err
-	}
-
 	c := &client{
 		options:    &opts,
 		httpClient: httpClient,
-		auth:       auth,
-	}
-
-	// Perform initial login if credentials are provided
-	if opts.NeedsLogin() {
-		if err := c.Login(); err != nil {
-			return nil, err
-		}
 	}
 
 	return c, nil
@@ -99,12 +126,35 @@ func (c *client) Get(path string, params map[string]interface{}) (interface{}, e
 	if err != nil {
 		return nil, err
 	}
+
 	return resp.Data, nil
+}
+
+// SetMetrics attaches a Prometheus-friendly metrics collector. Optional.
+func (c *client) SetMetrics(m *pmetrics.DefaultMetrics) {
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		a.inner.SetMetrics(m)
+	}
 }
 
 // GetRaw performs a GET request and returns the raw response.
 func (c *client) GetRaw(path string, params map[string]interface{}) (*Response, error) {
 	return c.call("GET", path, params)
+}
+
+// GetRawCtx performs a GET request with context and returns the raw response.
+func (c *client) GetRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error) {
+	return c.callCtx(ctx, "GET", path, params)
+}
+
+// GetCtx performs a GET request with context to the specified path.
+func (c *client) GetCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
+	resp, err := c.GetRawCtx(ctx, path, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
 }
 
 // Post performs a POST request to the specified path.
@@ -113,6 +163,7 @@ func (c *client) Post(path string, params map[string]interface{}) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
+
 	return resp.Data, nil
 }
 
@@ -121,12 +172,28 @@ func (c *client) PostRaw(path string, params map[string]interface{}) (*Response,
 	return c.call("POST", path, params)
 }
 
+// PostRawCtx performs a POST request with context and returns the raw response.
+func (c *client) PostRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error) {
+	return c.callCtx(ctx, "POST", path, params)
+}
+
+// PostCtx performs a POST request with context to the specified path.
+func (c *client) PostCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
+	resp, err := c.PostRawCtx(ctx, path, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
 // Put performs a PUT request to the specified path.
 func (c *client) Put(path string, params map[string]interface{}) (interface{}, error) {
 	resp, err := c.PutRaw(path, params)
 	if err != nil {
 		return nil, err
 	}
+
 	return resp.Data, nil
 }
 
@@ -135,12 +202,28 @@ func (c *client) PutRaw(path string, params map[string]interface{}) (*Response, 
 	return c.call("PUT", path, params)
 }
 
+// PutRawCtx performs a PUT request with context and returns the raw response.
+func (c *client) PutRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error) {
+	return c.callCtx(ctx, "PUT", path, params)
+}
+
+// PutCtx performs a PUT request with context to the specified path.
+func (c *client) PutCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
+	resp, err := c.PutRawCtx(ctx, path, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
 // Delete performs a DELETE request to the specified path.
 func (c *client) Delete(path string, params map[string]interface{}) (interface{}, error) {
 	resp, err := c.DeleteRaw(path, params)
 	if err != nil {
 		return nil, err
 	}
+
 	return resp.Data, nil
 }
 
@@ -149,34 +232,51 @@ func (c *client) DeleteRaw(path string, params map[string]interface{}) (*Respons
 	return c.call("DELETE", path, params)
 }
 
+// DeleteRawCtx performs a DELETE request with context and returns the raw response.
+func (c *client) DeleteRawCtx(ctx context.Context, path string, params map[string]interface{}) (*Response, error) {
+	return c.callCtx(ctx, "DELETE", path, params)
+}
+
+// DeleteCtx performs a DELETE request with context to the specified path.
+func (c *client) DeleteCtx(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
+	resp, err := c.DeleteRawCtx(ctx, path, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// UploadCtx uploads a file with context.
+func (c *client) UploadCtx(ctx context.Context, path string, fields map[string]string, fileField, filename string, file io.Reader) (*Response, error) {
+	resp, err := c.httpClient.UploadCtx(ctx, path, fields, fileField, filename, file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload file %q to path %q: %w", filename, path, err)
+	}
+
+	return resp, nil
+}
+
 // Login authenticates with the PVE API.
 func (c *client) Login() error {
-	if c.auth == nil {
-		return fmt.Errorf("no authenticator configured")
-	}
-
-	ticket, csrf, err := c.auth.Login(c.options.Username, c.options.Password)
-	if err != nil {
-		return fmt.Errorf("login failed: %w", err)
-	}
-
-	c.options.Ticket = ticket
-	c.options.CSRFToken = csrf
-
+	// Authentication is handled by the internal HTTP client middleware.
+	// Keep method for API compatibility.
 	return nil
 }
 
 // Logout logs out from the PVE API.
 func (c *client) Logout() error {
-	if c.auth == nil {
-		return nil
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		err := a.inner.Logout()
+		if err != nil {
+			return fmt.Errorf("failed to logout from PVE API: %w", err)
+		}
 	}
 
-	err := c.auth.Logout(c.options.Ticket)
 	c.options.Ticket = ""
 	c.options.CSRFToken = ""
 
-	return err
+	return nil
 }
 
 // UpdateTicket updates the authentication ticket.
@@ -199,143 +299,144 @@ func (c *client) SetKeepAlive(connections int) {
 	c.options.KeepAlive = connections
 }
 
-// call is the central request handler.
-func (c *client) call(method, path string, params map[string]interface{}) (*Response, error) {
-	// Ensure we're authenticated if needed
-	if c.auth != nil && !c.options.IsUsingAPIToken() {
-		// For ticket-based auth, check if we need to re-authenticate
-		if !c.auth.IsValid() {
-			if err := c.Login(); err != nil {
-				return nil, err
-			}
-		}
+// SetLogger installs a structured logger for HTTP requests.
+func (c *client) SetLogger(l Logger) {
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		a.inner.SetLogger(l)
+	}
+}
+
+// SetLogConfig configures logging behavior (redaction, body sampling, etc.).
+func (c *client) SetLogConfig(cfg LogConfig) {
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		a.inner.SetLogConfig(cfg)
+	}
+}
+
+// AddLogHook adds a logging event hook.
+func (c *client) AddLogHook(h Hook) {
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		a.inner.AddHook(h)
+	}
+}
+
+// GetLogConfig returns the current logging config snapshot.
+func (c *client) GetLogConfig() LogConfig {
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		return a.inner.LogConfig()
 	}
 
+	var zero LogConfig
+
+	return zero
+}
+
+// SetTFAHandler installs a TFA handler used by the underlying HTTP client to auto-complete challenges.
+func (c *client) SetTFAHandler(h TFAHandler) {
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		a.inner.SetTFAHandler(h)
+	}
+}
+
+func (c *client) call(method, path string, params map[string]interface{}) (*Response, error) {
 	// Make the HTTP request
 	resp, err := c.httpClient.Do(method, path, params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute %s request to %q: %w", method, path, err)
+	}
+
+	return resp, nil
+}
+
+func (c *client) callCtx(ctx context.Context, method, path string, params map[string]interface{}) (*Response, error) {
+	resp, err := c.httpClient.DoCtx(ctx, method, path, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute %s request to %q with context: %w", method, path, err)
 	}
 
 	return resp, nil
 }
 
 // createHTTPClient creates the HTTP client based on options.
-func createHTTPClient(opts *Options) (HTTPClient, error) {
-	// This will use the internal HTTP client implementation
-	// For now, return a simple implementation
-	return &simpleHTTPClient{
-		baseURL: opts.GetBaseURL(),
-		options: opts,
-	}, nil
-}
-
-// createAuthenticator creates the authenticator based on options.
-func createAuthenticator(opts *Options, httpClient HTTPClient) (Authenticator, error) {
-	if opts.APIToken != "" {
-		// Use API token authentication
-		return &simpleTokenAuth{
-			token: opts.APIToken,
-		}, nil
+func createHTTPClient(opts *Options) (HTTPClient, error) { //nolint:ireturn // Factory function pattern
+	// Wire to the internal HTTP client implementation
+	ihc, err := internalHTTPNew(opts)
+	if err != nil {
+		return nil, err
 	}
 
-	if opts.Username != "" {
-		// Use ticket authentication
-		return &simpleTicketAuth{
-			username: opts.Username,
-			password: opts.Password,
-			ticket:   opts.Ticket,
-			csrf:     opts.CSRFToken,
-		}, nil
-	}
-
-	// No authentication configured
-	return nil, nil
+	return &internalHTTPAdapter{inner: ihc}, nil
 }
 
 // simpleHTTPClient is a basic HTTP client implementation.
-type simpleHTTPClient struct {
-	baseURL string
-	options *Options
-}
+// internalHTTPAdapter adapts the internal HTTP client to this package's HTTPClient interface.
+type internalHTTPAdapter struct{ inner *pvehttp.Client }
 
-func (s *simpleHTTPClient) Do(method, path string, params map[string]interface{}) (*Response, error) {
-	// This would use the internal/http package
-	// For now, return a basic response
-	return &Response{
-		Data: map[string]interface{}{
-			"status": "ok",
-		},
-		Code: 200,
-	}, nil
-}
-
-func (s *simpleHTTPClient) SetHeader(key, value string) {
-	// Implementation would store headers
-}
-
-func (s *simpleHTTPClient) RemoveHeader(key string) {
-	// Implementation would remove headers
-}
-
-// simpleTokenAuth is a basic API token authenticator.
-type simpleTokenAuth struct {
-	token string
-}
-
-func (s *simpleTokenAuth) Login(username, password string) (string, string, error) {
-	// API tokens don't need login
-	return "", "", nil
-}
-
-func (s *simpleTokenAuth) Logout(ticket string) error {
-	// API tokens don't need logout
-	return nil
-}
-
-func (s *simpleTokenAuth) IsValid() bool {
-	return s.token != ""
-}
-
-func (s *simpleTokenAuth) GetHeaders() map[string]string {
-	return map[string]string{
-		"Authorization": "PVEAPIToken=" + s.token,
+func (a *internalHTTPAdapter) Do(method, path string, params map[string]interface{}) (*Response, error) {
+	r, err := a.inner.Do(method, path, params)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP %s request to %q failed: %w", method, path, err)
 	}
+
+	return &Response{Data: r.Data, Errors: r.Errors, Code: r.Code}, nil
 }
 
-// simpleTicketAuth is a basic ticket authenticator.
-type simpleTicketAuth struct {
-	username string
-	password string
-	ticket   string
-	csrf     string
-}
-
-func (s *simpleTicketAuth) Login(username, password string) (string, string, error) {
-	// This would perform actual login
-	// For now, return dummy values
-	s.ticket = "PVE:dummy:ticket"
-	s.csrf = "dummy:csrf:token"
-	return s.ticket, s.csrf, nil
-}
-
-func (s *simpleTicketAuth) Logout(ticket string) error {
-	s.ticket = ""
-	s.csrf = ""
-	return nil
-}
-
-func (s *simpleTicketAuth) IsValid() bool {
-	return s.ticket != ""
-}
-
-func (s *simpleTicketAuth) GetHeaders() map[string]string {
-	headers := make(map[string]string)
-	if s.ticket != "" {
-		headers["Cookie"] = "PVEAuthCookie=" + s.ticket
+func (a *internalHTTPAdapter) DoCtx(ctx context.Context, method, path string, params map[string]interface{}) (*Response, error) {
+	r, err := a.inner.DoWithContext(ctx, method, path, params)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP %s request to %q with context failed: %w", method, path, err)
 	}
-	if s.csrf != "" {
-		headers["CSRFPreventionToken"] = s.csrf
+
+	return &Response{Data: r.Data, Errors: r.Errors, Code: r.Code}, nil
+}
+
+func (a *internalHTTPAdapter) UploadCtx(ctx context.Context, path string, fields map[string]string, fileField, filename string, file io.Reader) (*Response, error) {
+	r, err := a.inner.UploadWithContext(ctx, path, fields, fileField, filename, file)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP upload to %q failed for file %q: %w", path, filename, err)
 	}
-	return headers
+
+	return &Response{Data: r.Data, Errors: r.Errors, Code: r.Code}, nil
+}
+func (a *internalHTTPAdapter) SetHeader(key, value string) {}
+func (a *internalHTTPAdapter) RemoveHeader(key string)     {}
+
+// internalHTTPNew constructs the real internal HTTP client.
+func internalHTTPNew(opts *Options) (*pvehttp.Client, error) {
+	// Map client.Options to internal/http.Options
+	var ssl *pvehttp.SSLOptions
+	if opts.SSLOptions != nil {
+		ssl = &pvehttp.SSLOptions{
+			VerifyHostname: opts.SSLOptions.VerifyHostname,
+			VerifyMode:     pvehttp.SSLVerifyMode(opts.SSLOptions.VerifyMode),
+			CACert:         opts.SSLOptions.CACert,
+			ClientCert:     opts.SSLOptions.ClientCert,
+			ClientKey:      opts.SSLOptions.ClientKey,
+		}
+	}
+
+	iopts := &pvehttp.Options{
+		Host:                        opts.Host,
+		Port:                        opts.Port,
+		Protocol:                    opts.Protocol,
+		Username:                    opts.Username,
+		Password:                    opts.Password,
+		APIToken:                    opts.APIToken,
+		SSLOptions:                  ssl,
+		Timeout:                     opts.Timeout,
+		KeepAlive:                   opts.KeepAlive,
+		CookieName:                  opts.CookieName,
+		PVENewFormat:                opts.PVENewFormat,
+		CachedFingerprints:          opts.CachedFingerprints,
+		ManualVerification:          opts.ManualVerification,
+		RegisterFingerprintCallback: opts.RegisterFingerprintCallback,
+		VerifyFingerprintCallback:   opts.VerifyFingerprintCallback,
+	}
+
+	c, err := pvehttp.NewClient(iopts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create internal HTTP client: %w", err)
+	}
+
+	return c, nil
 }

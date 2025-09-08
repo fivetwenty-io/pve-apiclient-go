@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
 )
 
 // Collector collects metrics for the PVE API client.
@@ -38,6 +40,7 @@ func NewCollector(prefix string) *Collector {
 func (c *Collector) SetLabels(labels map[string]string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	c.labels = labels
 }
 
@@ -80,6 +83,7 @@ func (c *Collector) NewCounter(name, help string) *Counter {
 		labels: make(map[string]string),
 	}
 	c.counters[fullName] = counter
+
 	return counter
 }
 
@@ -132,6 +136,7 @@ func (c *Collector) NewGauge(name, help string) *Gauge {
 		labels: make(map[string]string),
 	}
 	c.gauges[fullName] = gauge
+
 	return gauge
 }
 
@@ -148,37 +153,38 @@ type Histogram struct {
 }
 
 // Observe adds a value to the histogram.
-func (h *Histogram) Observe(v float64) {
+func (h *Histogram) Observe(value float64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	// Find the right bucket
 	for i, bucket := range h.buckets {
-		if v <= bucket {
+		if value <= bucket {
 			atomic.AddInt64(&h.counts[i], 1)
+
 			break
 		}
 	}
 
 	// Update sum and count
-	atomic.AddInt64(&h.sum, int64(v*1000)) // Store as milliseconds
+	atomic.AddInt64(&h.sum, int64(value*constants.MillisecondsPerSecond)) // Store as milliseconds
 	atomic.AddInt64(&h.count, 1)
 }
 
 // GetStats returns histogram statistics.
-func (h *Histogram) GetStats() (count int64, sum float64, buckets map[float64]int64) {
+func (h *Histogram) GetStats() (int64, float64, map[float64]int64) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	count = atomic.LoadInt64(&h.count)
-	sum = float64(atomic.LoadInt64(&h.sum)) / 1000.0
+	count := atomic.LoadInt64(&h.count)
+	sum := float64(atomic.LoadInt64(&h.sum)) / float64(constants.MillisecondsPerSecond)
 
-	buckets = make(map[float64]int64)
+	buckets := make(map[float64]int64)
 	for i, bucket := range h.buckets {
 		buckets[bucket] = atomic.LoadInt64(&h.counts[i])
 	}
 
-	return
+	return count, sum, buckets
 }
 
 // NewHistogram creates or gets a histogram metric.
@@ -204,6 +210,7 @@ func (c *Collector) NewHistogram(name, help string, buckets []float64) *Histogra
 		labels:  make(map[string]string),
 	}
 	c.histograms[fullName] = histogram
+
 	return histogram
 }
 
@@ -219,28 +226,17 @@ type Summary struct {
 }
 
 // Observe adds a value to the summary.
-func (s *Summary) Observe(v float64) {
+func (s *Summary) Observe(value float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	now := time.Now()
-	s.values = append(s.values, v)
+
+	s.values = append(s.values, value)
 	s.timestamps = append(s.timestamps, now)
 
 	// Clean old values
 	s.cleanOld(now)
-}
-
-func (s *Summary) cleanOld(now time.Time) {
-	cutoff := now.Add(-s.maxAge)
-	i := 0
-	for i < len(s.timestamps) && s.timestamps[i].Before(cutoff) {
-		i++
-	}
-	if i > 0 {
-		s.values = s.values[i:]
-		s.timestamps = s.timestamps[i:]
-	}
 }
 
 // GetQuantiles returns the quantiles.
@@ -253,6 +249,7 @@ func (s *Summary) GetQuantiles(quantiles []float64) map[float64]float64 {
 		for _, q := range quantiles {
 			result[q] = 0
 		}
+
 		return result
 	}
 
@@ -281,7 +278,7 @@ func (c *Collector) NewSummary(name, help string, maxAge time.Duration) *Summary
 	}
 
 	if maxAge == 0 {
-		maxAge = 10 * time.Minute
+		maxAge = constants.SummaryMaxAge()
 	}
 
 	summary := &Summary{
@@ -293,133 +290,36 @@ func (c *Collector) NewSummary(name, help string, maxAge time.Duration) *Summary
 		labels:     make(map[string]string),
 	}
 	c.summaries[fullName] = summary
+
 	return summary
 }
 
 // Export exports metrics in Prometheus format.
-func (c *Collector) Export(w io.Writer) error {
+func (c *Collector) Export(writer io.Writer) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	// Export counters
-	for name, counter := range c.counters {
-		if _, err := fmt.Fprintf(w, "# HELP %s %s\n", name, counter.help); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(w, "# TYPE %s counter\n", name); err != nil {
-			return err
-		}
-		labels := c.formatLabels(counter.labels)
-		if _, err := fmt.Fprintf(w, "%s%s %d\n", name, labels, counter.Get()); err != nil {
-			return err
-		}
+	err := c.exportCounters(writer)
+	if err != nil {
+		return err
 	}
 
-	// Export gauges
-	for name, gauge := range c.gauges {
-		if _, err := fmt.Fprintf(w, "# HELP %s %s\n", name, gauge.help); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(w, "# TYPE %s gauge\n", name); err != nil {
-			return err
-		}
-		labels := c.formatLabels(gauge.labels)
-		if _, err := fmt.Fprintf(w, "%s%s %d\n", name, labels, gauge.Get()); err != nil {
-			return err
-		}
+	err = c.exportGauges(writer)
+	if err != nil {
+		return err
 	}
 
-	// Export histograms
-	for name, histogram := range c.histograms {
-		if _, err := fmt.Fprintf(w, "# HELP %s %s\n", name, histogram.help); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(w, "# TYPE %s histogram\n", name); err != nil {
-			return err
-		}
-
-		count, sum, buckets := histogram.GetStats()
-		labels := c.formatLabels(histogram.labels)
-
-		// Export buckets
-		cumulative := int64(0)
-		for _, bucket := range histogram.buckets {
-			cumulative += buckets[bucket]
-			bucketLabel := fmt.Sprintf("%s,le=\"%.3f\"", labels, bucket)
-			if labels == "" {
-				bucketLabel = fmt.Sprintf("{le=\"%.3f\"}", bucket)
-			}
-			if _, err := fmt.Fprintf(w, "%s_bucket%s %d\n", name, bucketLabel, cumulative); err != nil {
-				return err
-			}
-		}
-
-		// Export +Inf bucket
-		infLabel := fmt.Sprintf("%s,le=\"+Inf\"", labels)
-		if labels == "" {
-			infLabel = "{le=\"+Inf\"}"
-		}
-		if _, err := fmt.Fprintf(w, "%s_bucket%s %d\n", name, infLabel, count); err != nil {
-			return err
-		}
-
-		// Export sum and count
-		if _, err := fmt.Fprintf(w, "%s_sum%s %.3f\n", name, labels, sum); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(w, "%s_count%s %d\n", name, labels, count); err != nil {
-			return err
-		}
+	err = c.exportHistograms(writer)
+	if err != nil {
+		return err
 	}
 
-	// Export summaries
-	for name, summary := range c.summaries {
-		if _, err := fmt.Fprintf(w, "# HELP %s %s\n", name, summary.help); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(w, "# TYPE %s summary\n", name); err != nil {
-			return err
-		}
-
-		quantiles := summary.GetQuantiles([]float64{0.5, 0.9, 0.99})
-		labels := c.formatLabels(summary.labels)
-
-		for q, v := range quantiles {
-			quantileLabel := fmt.Sprintf("%s,quantile=\"%.2f\"", labels, q)
-			if labels == "" {
-				quantileLabel = fmt.Sprintf("{quantile=\"%.2f\"}", q)
-			}
-			if _, err := fmt.Fprintf(w, "%s%s %.3f\n", name, quantileLabel, v); err != nil {
-				return err
-			}
-		}
+	err = c.exportSummaries(writer)
+	if err != nil {
+		return err
 	}
 
 	return nil
-}
-
-func (c *Collector) formatLabels(metricLabels map[string]string) string {
-	if len(c.labels) == 0 && len(metricLabels) == 0 {
-		return ""
-	}
-
-	// Merge labels
-	merged := make(map[string]string)
-	for k, v := range c.labels {
-		merged[k] = v
-	}
-	for k, v := range metricLabels {
-		merged[k] = v
-	}
-
-	// Format as Prometheus labels
-	var parts []string
-	for k, v := range merged {
-		parts = append(parts, fmt.Sprintf("%s=\"%s\"", k, v))
-	}
-	sort.Strings(parts)
-
-	return "{" + strings.Join(parts, ",") + "}"
 }
 
 // Reset resets all metrics.
@@ -437,9 +337,11 @@ func (c *Collector) Reset() {
 
 	for _, histogram := range c.histograms {
 		histogram.mu.Lock()
+
 		for i := range histogram.counts {
 			atomic.StoreInt64(&histogram.counts[i], 0)
 		}
+
 		atomic.StoreInt64(&histogram.sum, 0)
 		atomic.StoreInt64(&histogram.count, 0)
 		histogram.mu.Unlock()
@@ -451,6 +353,212 @@ func (c *Collector) Reset() {
 		summary.timestamps = make([]time.Time, 0)
 		summary.mu.Unlock()
 	}
+}
+
+func (s *Summary) cleanOld(now time.Time) {
+	cutoff := now.Add(-s.maxAge)
+
+	index := 0
+	for index < len(s.timestamps) && s.timestamps[index].Before(cutoff) {
+		index++
+	}
+
+	if index > 0 {
+		s.values = s.values[index:]
+		s.timestamps = s.timestamps[index:]
+	}
+}
+
+func (c *Collector) exportCounters(writer io.Writer) error {
+	for name, counter := range c.counters {
+		err := c.writeMetricHeader(writer, name, counter.help, "counter")
+		if err != nil {
+			return err
+		}
+
+		labels := c.formatLabels(counter.labels)
+
+		_, err = fmt.Fprintf(writer, "%s%s %d\n", name, labels, counter.Get())
+		if err != nil {
+			return fmt.Errorf("failed to write counter metric: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) exportGauges(writer io.Writer) error {
+	for name, gauge := range c.gauges {
+		err := c.writeMetricHeader(writer, name, gauge.help, "gauge")
+		if err != nil {
+			return err
+		}
+
+		labels := c.formatLabels(gauge.labels)
+
+		_, err = fmt.Fprintf(writer, "%s%s %d\n", name, labels, gauge.Get())
+		if err != nil {
+			return fmt.Errorf("failed to write gauge metric: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) exportHistograms(writer io.Writer) error {
+	for name, histogram := range c.histograms {
+		err := c.writeMetricHeader(writer, name, histogram.help, "histogram")
+		if err != nil {
+			return err
+		}
+
+		err = c.exportHistogramData(writer, name, histogram)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) exportSummaries(writer io.Writer) error {
+	for name, summary := range c.summaries {
+		err := c.writeMetricHeader(writer, name, summary.help, "summary")
+		if err != nil {
+			return err
+		}
+
+		err = c.exportSummaryData(writer, name, summary)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) writeMetricHeader(writer io.Writer, name, help, metricType string) error {
+	_, err := fmt.Fprintf(writer, "# HELP %s %s\n", name, help)
+	if err != nil {
+		return fmt.Errorf("failed to write metric help header: %w", err)
+	}
+
+	_, err = fmt.Fprintf(writer, "# TYPE %s %s\n", name, metricType)
+	if err != nil {
+		return fmt.Errorf("failed to write metric type header: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Collector) exportHistogramData(writer io.Writer, name string, histogram *Histogram) error {
+	count, sum, buckets := histogram.GetStats()
+	labels := c.formatLabels(histogram.labels)
+
+	// Export buckets
+	cumulative := int64(0)
+
+	var err error
+
+	for _, bucket := range histogram.buckets {
+		cumulative += buckets[bucket]
+
+		bucketLabel := c.formatBucketLabel(labels, bucket)
+
+		_, err = fmt.Fprintf(writer, "%s_bucket%s %d\n", name, bucketLabel, cumulative)
+		if err != nil {
+			return fmt.Errorf("failed to write histogram bucket: %w", err)
+		}
+	}
+
+	// Export +Inf bucket
+	infLabel := c.formatBucketLabel(labels, -1) // Special case for +Inf
+
+	_, err = fmt.Fprintf(writer, "%s_bucket%s %d\n", name, infLabel, count)
+	if err != nil {
+		return fmt.Errorf("failed to write histogram +Inf bucket: %w", err)
+	}
+
+	// Export sum and count
+	_, err = fmt.Fprintf(writer, "%s_sum%s %.3f\n", name, labels, sum)
+	if err != nil {
+		return fmt.Errorf("failed to write histogram sum: %w", err)
+	}
+
+	_, err = fmt.Fprintf(writer, "%s_count%s %d\n", name, labels, count)
+	if err != nil {
+		return fmt.Errorf("failed to write histogram count: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Collector) exportSummaryData(writer io.Writer, name string, summary *Summary) error {
+	quantiles := summary.GetQuantiles([]float64{0.5, 0.9, 0.99})
+	labels := c.formatLabels(summary.labels)
+
+	var err error
+
+	for q, value := range quantiles {
+		quantileLabel := c.formatQuantileLabel(labels, q)
+
+		_, err = fmt.Fprintf(writer, "%s%s %.3f\n", name, quantileLabel, value)
+		if err != nil {
+			return fmt.Errorf("failed to write summary quantile: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) formatBucketLabel(labels string, bucket float64) string {
+	if bucket == -1 { // +Inf case
+		if labels == "" {
+			return "{le=\"+Inf\"}"
+		}
+
+		return labels + ",le=\"+Inf\""
+	}
+
+	if labels == "" {
+		return fmt.Sprintf("{le=\"%.3f\"}", bucket)
+	}
+
+	return fmt.Sprintf("%s,le=\"%.3f\"", labels, bucket)
+}
+
+func (c *Collector) formatQuantileLabel(labels string, quantile float64) string {
+	if labels == "" {
+		return fmt.Sprintf("{quantile=\"%.2f\"}", quantile)
+	}
+
+	return fmt.Sprintf("%s,quantile=\"%.2f\"", labels, quantile)
+}
+
+func (c *Collector) formatLabels(metricLabels map[string]string) string {
+	if len(c.labels) == 0 && len(metricLabels) == 0 {
+		return ""
+	}
+
+	// Merge labels
+	merged := make(map[string]string)
+	for k, v := range c.labels {
+		merged[k] = v
+	}
+
+	for k, v := range metricLabels {
+		merged[k] = v
+	}
+
+	// Format as Prometheus labels
+	parts := make([]string, 0, len(merged))
+	for k, v := range merged {
+		parts = append(parts, fmt.Sprintf("%s=\"%s\"", k, v))
+	}
+
+	sort.Strings(parts)
+
+	return "{" + strings.Join(parts, ",") + "}"
 }
 
 // DefaultMetrics provides default metrics for the PVE API client.

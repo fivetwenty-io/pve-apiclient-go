@@ -3,10 +3,17 @@ package pool
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+var (
+	ErrPoolClosed = errors.New("pool is closed")
 )
 
 // Config represents the connection pool configuration.
@@ -33,11 +40,11 @@ type Config struct {
 // DefaultConfig returns the default pool configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		MaxConnections:        100,
-		MaxConnectionsPerHost: 10,
-		IdleTimeout:           90 * time.Second,
-		ConnectionTimeout:     30 * time.Second,
-		MaxIdleTime:           600 * time.Second,
+		MaxConnections:        constants.MaxConnections,
+		MaxConnectionsPerHost: constants.MaxConnectionsPerHost,
+		IdleTimeout:           constants.LongTimeout(),
+		ConnectionTimeout:     constants.DefaultClientTimeout(),
+		MaxIdleTime:           constants.MaxIdleTimeout(),
 		EnableHTTP2:           true,
 	}
 }
@@ -72,23 +79,55 @@ func New(config *Config) *Pool {
 	}
 
 	transport := &http.Transport{
-		MaxIdleConns:          config.MaxConnections,
-		MaxIdleConnsPerHost:   config.MaxConnectionsPerHost,
-		IdleConnTimeout:       config.IdleTimeout,
-		ResponseHeaderTimeout: config.ConnectionTimeout,
-		DisableCompression:    false,
-		DisableKeepAlives:     false,
-		ForceAttemptHTTP2:     config.EnableHTTP2,
+		Proxy:                  nil,
+		OnProxyConnectResponse: nil,
+		DialContext:            nil,
+		Dial:                   nil,
+		DialTLSContext:         nil,
+		DialTLS:                nil,
+		TLSClientConfig:        nil,
+		TLSHandshakeTimeout:    time.Duration(0),
+		DisableKeepAlives:      false,
+		DisableCompression:     false,
+		MaxIdleConns:           config.MaxConnections,
+		MaxIdleConnsPerHost:    config.MaxConnectionsPerHost,
+		MaxConnsPerHost:        0,
+		IdleConnTimeout:        config.IdleTimeout,
+		ResponseHeaderTimeout:  config.ConnectionTimeout,
+		ExpectContinueTimeout:  time.Duration(0),
+		TLSNextProto:           nil,
+		ProxyConnectHeader:     nil,
+		GetProxyConnectHeader:  nil,
+		MaxResponseHeaderBytes: 0,
+		WriteBufferSize:        0,
+		ReadBufferSize:         0,
+		ForceAttemptHTTP2:      config.EnableHTTP2,
+		HTTP2:                  nil,
+		Protocols:              nil,
 	}
 
 	return &Pool{
 		config:    config,
 		transport: transport,
 		client: &http.Client{
-			Transport: transport,
-			Timeout:   config.ConnectionTimeout,
+			Transport:     transport,
+			CheckRedirect: nil,
+			Jar:           nil,
+			Timeout:       config.ConnectionTimeout,
 		},
-		stats: &Stats{},
+		mu: sync.RWMutex{},
+		stats: &Stats{
+			ActiveConnections:   0,
+			IdleConnections:     0,
+			TotalConnections:    0,
+			FailedConnections:   0,
+			RequestsServed:      0,
+			BytesSent:           0,
+			BytesReceived:       0,
+			AverageResponseTime: time.Duration(0),
+			mu:                  sync.RWMutex{},
+		},
+		closed: false,
 	}
 }
 
@@ -98,7 +137,7 @@ func (p *Pool) Get() (*http.Client, error) {
 	defer p.mu.RUnlock()
 
 	if p.closed {
-		return nil, fmt.Errorf("pool is closed")
+		return nil, ErrPoolClosed
 	}
 
 	p.stats.mu.Lock()
@@ -142,10 +181,12 @@ func (p *Pool) DoWithContext(ctx context.Context, req *http.Request) (*http.Resp
 
 	// Track request
 	p.stats.mu.Lock()
+
 	p.stats.RequestsServed++
 	if req.ContentLength > 0 {
 		p.stats.BytesSent += req.ContentLength
 	}
+
 	p.stats.mu.Unlock()
 
 	resp, err := client.Do(req)
@@ -153,12 +194,15 @@ func (p *Pool) DoWithContext(ctx context.Context, req *http.Request) (*http.Resp
 		p.stats.mu.Lock()
 		p.stats.FailedConnections++
 		p.stats.mu.Unlock()
-		return nil, err
+
+		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 
 	// Track response
 	elapsed := time.Since(start)
+
 	p.stats.mu.Lock()
+
 	if resp.ContentLength > 0 {
 		p.stats.BytesReceived += resp.ContentLength
 	}
@@ -166,8 +210,9 @@ func (p *Pool) DoWithContext(ctx context.Context, req *http.Request) (*http.Resp
 	if p.stats.AverageResponseTime == 0 {
 		p.stats.AverageResponseTime = elapsed
 	} else {
-		p.stats.AverageResponseTime = (p.stats.AverageResponseTime + elapsed) / 2
+		p.stats.AverageResponseTime = (p.stats.AverageResponseTime + elapsed) / constants.AverageResponseTimeDivisor
 	}
+
 	p.stats.mu.Unlock()
 
 	return resp, nil
@@ -187,6 +232,7 @@ func (p *Pool) Stats() Stats {
 		BytesSent:           p.stats.BytesSent,
 		BytesReceived:       p.stats.BytesReceived,
 		AverageResponseTime: p.stats.AverageResponseTime,
+		mu:                  sync.RWMutex{},
 	}
 }
 
@@ -201,25 +247,26 @@ func (p *Pool) Close() error {
 
 	p.closed = true
 	p.transport.CloseIdleConnections()
+
 	return nil
 }
 
 // SetMaxConnections updates the maximum number of connections.
-func (p *Pool) SetMaxConnections(max int) {
+func (p *Pool) SetMaxConnections(maxConns int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.config.MaxConnections = max
-	p.transport.MaxIdleConns = max
+	p.config.MaxConnections = maxConns
+	p.transport.MaxIdleConns = maxConns
 }
 
 // SetMaxConnectionsPerHost updates the maximum connections per host.
-func (p *Pool) SetMaxConnectionsPerHost(max int) {
+func (p *Pool) SetMaxConnectionsPerHost(maxConnsPerHost int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.config.MaxConnectionsPerHost = max
-	p.transport.MaxIdleConnsPerHost = max
+	p.config.MaxConnectionsPerHost = maxConnsPerHost
+	p.transport.MaxIdleConnsPerHost = maxConnsPerHost
 }
 
 // IsHealthy checks if the pool is healthy.
@@ -235,7 +282,7 @@ func (p *Pool) IsHealthy() bool {
 	// Consider unhealthy if too many failures
 	if stats.TotalConnections > 0 {
 		failureRate := float64(stats.FailedConnections) / float64(stats.TotalConnections)
-		if failureRate > 0.5 {
+		if failureRate > constants.FailureRateThreshold {
 			return false
 		}
 	}

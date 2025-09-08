@@ -5,13 +5,26 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
 	"github.com/gorilla/websocket"
+)
+
+var (
+	errHostRequired             = errors.New("host is required")
+	errAlreadyConnected         = errors.New("already connected")
+	errFailedToConnect          = errors.New("failed to connect after %d attempts")
+	errNotConnected             = errors.New("not connected")
+	errPanicInReadLoop          = errors.New("panic in read loop")
+	errDisconnectedReconnecting = errors.New("disconnected, attempting to reconnect")
+	errReconnected              = errors.New("reconnected after %d attempts")
+	errFailedToReconnect        = errors.New("failed to reconnect after %d attempts")
 )
 
 // Client represents a WebSocket client for PVE events.
@@ -72,16 +85,18 @@ type Config struct {
 // DefaultConfig returns the default WebSocket configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		Port:                 8006,
+		Host:                 "",
+		Port:                 constants.ProxmoxDefaultPort,
 		Path:                 "/api2/json/nodes/localhost/console",
 		Secure:               true,
-		HandshakeTimeout:     30 * time.Second,
-		ReadTimeout:          30 * time.Second,
-		WriteTimeout:         10 * time.Second,
-		PingInterval:         30 * time.Second,
-		ReconnectInterval:    5 * time.Second,
-		MaxReconnectAttempts: 10,
-		BufferSize:           4096,
+		TLSConfig:            nil,
+		HandshakeTimeout:     constants.WebSocketHandshakeTimeout(),
+		ReadTimeout:          constants.DefaultClientTimeout(),
+		WriteTimeout:         constants.ShortTimeout(),
+		PingInterval:         constants.DefaultClientTimeout(),
+		ReconnectInterval:    constants.WebSocketReconnectInterval(),
+		MaxReconnectAttempts: constants.WebSocketMaxReconnectAttempts,
+		BufferSize:           constants.LargeBufferSize,
 	}
 }
 
@@ -108,7 +123,7 @@ func New(config *Config) (*Client, error) {
 	}
 
 	if config.Host == "" {
-		return nil, fmt.Errorf("host is required")
+		return nil, errHostRequired
 	}
 
 	// Build WebSocket URL
@@ -118,28 +133,48 @@ func New(config *Config) (*Client, error) {
 	}
 
 	wsURL := &url.URL{
-		Scheme: scheme,
-		Host:   fmt.Sprintf("%s:%d", config.Host, config.Port),
-		Path:   config.Path,
+		Scheme:      scheme,
+		Opaque:      "",
+		User:        nil,
+		Host:        fmt.Sprintf("%s:%d", config.Host, config.Port),
+		Path:        config.Path,
+		RawPath:     "",
+		OmitHost:    false,
+		ForceQuery:  false,
+		RawQuery:    "",
+		Fragment:    "",
+		RawFragment: "",
 	}
 
 	// Create dialer
 	dialer := &websocket.Dialer{
-		HandshakeTimeout: config.HandshakeTimeout,
-		ReadBufferSize:   config.BufferSize,
-		WriteBufferSize:  config.BufferSize,
-		TLSClientConfig:  config.TLSConfig,
+		NetDial:           nil,
+		NetDialContext:    nil,
+		NetDialTLSContext: nil,
+		Proxy:             nil,
+		TLSClientConfig:   config.TLSConfig,
+		HandshakeTimeout:  config.HandshakeTimeout,
+		ReadBufferSize:    config.BufferSize,
+		WriteBufferSize:   config.BufferSize,
+		WriteBufferPool:   nil,
+		Subprotocols:      nil,
+		EnableCompression: false,
+		Jar:               nil,
 	}
 
 	return &Client{
-		config:    config,
-		url:       wsURL,
-		headers:   make(http.Header),
-		dialer:    dialer,
-		handlers:  make(map[string][]EventHandler),
-		closeChan: make(chan struct{}),
-		errorChan: make(chan error, 10),
-		reconnect: true,
+		conn:       nil,
+		config:     config,
+		url:        wsURL,
+		headers:    make(http.Header),
+		dialer:     dialer,
+		handlers:   make(map[string][]EventHandler),
+		mu:         sync.RWMutex{},
+		closed:     false,
+		closeChan:  make(chan struct{}),
+		errorChan:  make(chan error, constants.ErrorChannelSize),
+		reconnect:  true,
+		pingTicker: nil,
 	}, nil
 }
 
@@ -147,6 +182,7 @@ func New(config *Config) (*Client, error) {
 func (c *Client) SetHeaders(headers http.Header) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	c.headers = headers
 }
 
@@ -156,10 +192,11 @@ func (c *Client) SetAuth(ticket, csrfToken string) {
 	defer c.mu.Unlock()
 
 	if ticket != "" {
-		c.headers.Set("Cookie", fmt.Sprintf("PVEAuthCookie=%s", ticket))
+		c.headers.Set("Cookie", "PVEAuthCookie="+ticket)
 	}
+
 	if csrfToken != "" {
-		c.headers.Set("CSRFPreventionToken", csrfToken)
+		c.headers.Set("Csrfpreventiontoken", csrfToken)
 	}
 }
 
@@ -169,7 +206,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	defer c.mu.Unlock()
 
 	if c.conn != nil {
-		return fmt.Errorf("already connected")
+		return errAlreadyConnected
 	}
 
 	// Connect with context
@@ -178,6 +215,7 @@ func (c *Client) Connect(ctx context.Context) error {
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
+
 		return fmt.Errorf("failed to connect: %w", err)
 	}
 
@@ -186,12 +224,15 @@ func (c *Client) Connect(ctx context.Context) error {
 
 	// Set timeouts
 	if c.config.ReadTimeout > 0 {
-		if err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout)); err != nil {
-			return err
+		err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout))
+		if err != nil {
+			return fmt.Errorf("failed to set read deadline: %w", err)
 		}
 	}
+
 	if c.config.WriteTimeout > 0 {
-		if err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout)); err != nil {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
+		if err != nil {
 			return fmt.Errorf("failed to set write deadline: %w", err)
 		}
 	}
@@ -199,10 +240,12 @@ func (c *Client) Connect(ctx context.Context) error {
 	// Set pong handler
 	c.conn.SetPongHandler(func(string) error {
 		if c.config.ReadTimeout > 0 {
-			if err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout)); err != nil {
+			err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout))
+			if err != nil {
 				return fmt.Errorf("failed to set read deadline: %w", err)
 			}
 		}
+
 		return nil
 	})
 
@@ -213,7 +256,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	}
 
 	// Start read loop
-	go c.readLoop()
+	go c.readLoop(ctx)
 
 	return nil
 }
@@ -221,6 +264,7 @@ func (c *Client) Connect(ctx context.Context) error {
 // ConnectWithRetry connects with automatic retry on failure.
 func (c *Client) ConnectWithRetry(ctx context.Context) error {
 	attempts := 0
+
 	maxAttempts := c.config.MaxReconnectAttempts
 	if maxAttempts <= 0 {
 		maxAttempts = 1
@@ -230,7 +274,7 @@ func (c *Client) ConnectWithRetry(ctx context.Context) error {
 		if attempts > 0 {
 			select {
 			case <-ctx.Done():
-				return ctx.Err()
+				return fmt.Errorf("context cancelled during reconnect: %w", ctx.Err())
 			case <-time.After(c.config.ReconnectInterval):
 			}
 		}
@@ -246,7 +290,7 @@ func (c *Client) ConnectWithRetry(ctx context.Context) error {
 		}
 	}
 
-	return fmt.Errorf("failed to connect after %d attempts", maxAttempts)
+	return fmt.Errorf("%w: %d", errFailedToConnect, maxAttempts)
 }
 
 // Disconnect closes the WebSocket connection.
@@ -272,7 +316,12 @@ func (c *Client) Disconnect() error {
 		_ = c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		err := c.conn.Close()
 		c.conn = nil
-		return err
+
+		if err != nil {
+			return fmt.Errorf("failed to close websocket connection: %w", err)
+		}
+
+		return nil
 	}
 
 	return nil
@@ -305,17 +354,23 @@ func (c *Client) Send(data interface{}) error {
 	defer c.mu.RUnlock()
 
 	if c.conn == nil {
-		return fmt.Errorf("not connected")
+		return errNotConnected
 	}
 
 	// Set write deadline
 	if c.config.WriteTimeout > 0 {
-		if err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout)); err != nil {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
+		if err != nil {
 			return fmt.Errorf("failed to set write deadline: %w", err)
 		}
 	}
 
-	return c.conn.WriteJSON(data)
+	err := c.conn.WriteJSON(data)
+	if err != nil {
+		return fmt.Errorf("failed to send JSON message: %w", err)
+	}
+
+	return nil
 }
 
 // SendText sends a text message to the server.
@@ -324,17 +379,23 @@ func (c *Client) SendText(text string) error {
 	defer c.mu.RUnlock()
 
 	if c.conn == nil {
-		return fmt.Errorf("not connected")
+		return errNotConnected
 	}
 
 	// Set write deadline
 	if c.config.WriteTimeout > 0 {
-		if err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout)); err != nil {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
+		if err != nil {
 			return fmt.Errorf("failed to set write deadline: %w", err)
 		}
 	}
 
-	return c.conn.WriteMessage(websocket.TextMessage, []byte(text))
+	err := c.conn.WriteMessage(websocket.TextMessage, []byte(text))
+	if err != nil {
+		return fmt.Errorf("failed to send text message: %w", err)
+	}
+
+	return nil
 }
 
 // Errors returns the error channel.
@@ -346,161 +407,8 @@ func (c *Client) Errors() <-chan error {
 func (c *Client) IsConnected() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
 	return c.conn != nil && !c.closed
-}
-
-func (c *Client) readLoop() {
-	defer func() {
-		if r := recover(); r != nil {
-			c.sendError(fmt.Errorf("panic in read loop: %v", r))
-		}
-		c.handleDisconnect()
-	}()
-
-	for {
-		select {
-		case <-c.closeChan:
-			return
-		default:
-			// Set read deadline
-			if c.config.ReadTimeout > 0 {
-				if err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout)); err != nil {
-					c.sendError(fmt.Errorf("failed to set read deadline: %w", err))
-					continue
-				}
-			}
-
-			messageType, data, err := c.conn.ReadMessage()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-					c.sendError(fmt.Errorf("read error: %w", err))
-				}
-				return
-			}
-
-			if messageType == websocket.TextMessage || messageType == websocket.BinaryMessage {
-				c.handleMessage(data)
-			}
-		}
-	}
-}
-
-func (c *Client) pingLoop() {
-	defer c.pingTicker.Stop()
-
-	for {
-		select {
-		case <-c.closeChan:
-			return
-		case <-c.pingTicker.C:
-			c.mu.RLock()
-			conn := c.conn
-			c.mu.RUnlock()
-
-			if conn == nil {
-				return
-			}
-
-			// Set write deadline
-			if c.config.WriteTimeout > 0 {
-				if err := conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout)); err != nil {
-					c.sendError(fmt.Errorf("failed to set write deadline: %w", err))
-					return
-				}
-			}
-
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				c.sendError(fmt.Errorf("ping error: %w", err))
-				return
-			}
-		}
-	}
-}
-
-func (c *Client) handleMessage(data []byte) {
-	var event Event
-	if err := json.Unmarshal(data, &event); err != nil {
-		// Try to handle as raw message
-		event = Event{
-			Type:      "raw",
-			Timestamp: time.Now(),
-			Data: map[string]interface{}{
-				"message": string(data),
-			},
-		}
-	}
-
-	// Set timestamp if not provided
-	if event.Timestamp.IsZero() {
-		event.Timestamp = time.Now()
-	}
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	// Call specific handlers
-	if handlers, ok := c.handlers[event.Type]; ok {
-		for _, handler := range handlers {
-			go handler(&event)
-		}
-	}
-
-	// Call wildcard handlers
-	if handlers, ok := c.handlers["*"]; ok {
-		for _, handler := range handlers {
-			go handler(&event)
-		}
-	}
-}
-
-func (c *Client) handleDisconnect() {
-	c.mu.Lock()
-	wasConnected := c.conn != nil
-	c.conn = nil
-	shouldReconnect := c.reconnect && !c.closed
-	c.mu.Unlock()
-
-	if wasConnected && shouldReconnect {
-		c.sendError(fmt.Errorf("disconnected, attempting to reconnect"))
-		go c.reconnectLoop()
-	}
-}
-
-func (c *Client) reconnectLoop() {
-	attempts := 0
-	maxAttempts := c.config.MaxReconnectAttempts
-
-	for attempts < maxAttempts {
-		select {
-		case <-c.closeChan:
-			return
-		case <-time.After(c.config.ReconnectInterval):
-			attempts++
-
-			ctx, cancel := context.WithTimeout(context.Background(), c.config.HandshakeTimeout)
-			err := c.Connect(ctx)
-			cancel()
-
-			if err == nil {
-				c.sendError(fmt.Errorf("reconnected after %d attempts", attempts))
-				return
-			}
-
-			if attempts < maxAttempts {
-				c.sendError(fmt.Errorf("reconnection attempt %d failed: %w", attempts, err))
-			}
-		}
-	}
-
-	c.sendError(fmt.Errorf("failed to reconnect after %d attempts", maxAttempts))
-}
-
-func (c *Client) sendError(err error) {
-	select {
-	case c.errorChan <- err:
-	default:
-		// Channel is full, drop the error
-	}
 }
 
 // Subscription manages event subscriptions.
@@ -577,6 +485,179 @@ func (c *Client) NewStream(bufferSize int) *Stream {
 	c.OnAll(handler)
 
 	return stream
+}
+
+func (c *Client) readLoop(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			c.sendError(fmt.Errorf("%w: %v", errPanicInReadLoop, r))
+		}
+
+		c.handleDisconnect(ctx)
+	}()
+
+	for {
+		select {
+		case <-c.closeChan:
+			return
+		default:
+			// Set read deadline
+			if c.config.ReadTimeout > 0 {
+				err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout))
+				if err != nil {
+					c.sendError(fmt.Errorf("failed to set read deadline: %w", err))
+
+					continue
+				}
+			}
+
+			messageType, data, err := c.conn.ReadMessage()
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+					c.sendError(fmt.Errorf("read error: %w", err))
+				}
+
+				return
+			}
+
+			if messageType == websocket.TextMessage || messageType == websocket.BinaryMessage {
+				c.handleMessage(data)
+			}
+		}
+	}
+}
+
+func (c *Client) pingLoop() {
+	defer c.pingTicker.Stop()
+
+	for {
+		select {
+		case <-c.closeChan:
+			return
+		case <-c.pingTicker.C:
+			c.mu.RLock()
+			conn := c.conn
+			c.mu.RUnlock()
+
+			if conn == nil {
+				return
+			}
+
+			// Set write deadline
+			if c.config.WriteTimeout > 0 {
+				err := conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
+				if err != nil {
+					c.sendError(fmt.Errorf("failed to set write deadline: %w", err))
+
+					return
+				}
+			}
+
+			err := conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				c.sendError(fmt.Errorf("ping error: %w", err))
+
+				return
+			}
+		}
+	}
+}
+
+func (c *Client) handleMessage(data []byte) {
+	var event Event
+
+	err := json.Unmarshal(data, &event)
+	if err != nil {
+		// Try to handle as raw message
+		event = Event{
+			Type:      "raw",
+			ID:        "",
+			Timestamp: time.Now(),
+			Node:      "",
+			Resource:  "",
+			Action:    "",
+			User:      "",
+			Status:    "",
+			Data: map[string]interface{}{
+				"message": string(data),
+			},
+		}
+	}
+
+	// Set timestamp if not provided
+	if event.Timestamp.IsZero() {
+		event.Timestamp = time.Now()
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	// Call specific handlers
+	if handlers, ok := c.handlers[event.Type]; ok {
+		for _, handler := range handlers {
+			go handler(&event)
+		}
+	}
+
+	// Call wildcard handlers
+	if handlers, ok := c.handlers["*"]; ok {
+		for _, handler := range handlers {
+			go handler(&event)
+		}
+	}
+}
+
+func (c *Client) handleDisconnect(ctx context.Context) {
+	c.mu.Lock()
+	wasConnected := c.conn != nil
+	c.conn = nil
+	shouldReconnect := c.reconnect && !c.closed
+	c.mu.Unlock()
+
+	if wasConnected && shouldReconnect {
+		c.sendError(errDisconnectedReconnecting)
+
+		go c.reconnectLoop(ctx)
+	}
+}
+
+func (c *Client) reconnectLoop(ctx context.Context) {
+	attempts := 0
+	maxAttempts := c.config.MaxReconnectAttempts
+
+	for attempts < maxAttempts {
+		select {
+		case <-c.closeChan:
+			return
+		case <-time.After(c.config.ReconnectInterval):
+			attempts++
+
+			connectCtx, cancel := context.WithTimeout(ctx, c.config.HandshakeTimeout)
+			err := c.Connect(connectCtx)
+
+			cancel()
+
+			if err == nil {
+				c.sendError(fmt.Errorf("%w: %d", errReconnected, attempts))
+
+				return
+			}
+
+			if attempts < maxAttempts {
+				c.sendError(fmt.Errorf("reconnection attempt %d failed: %w", attempts, err))
+			}
+		}
+	}
+
+	c.sendError(fmt.Errorf("%w: %d", errFailedToReconnect, maxAttempts))
+}
+
+func (c *Client) sendError(err error) {
+	select {
+	case c.errorChan <- err:
+	default:
+		// Channel is full, drop the error
+	}
 }
 
 // Events returns the event channel.

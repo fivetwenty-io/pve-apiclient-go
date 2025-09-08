@@ -1,0 +1,97 @@
+package network
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+)
+
+// Service defines network helpers.
+type Service interface {
+	EnsureBridge(ctx context.Context, node, bridge string, params map[string]interface{}) error
+	DeleteBridge(ctx context.Context, node, bridge string) error
+	BridgeExists(ctx context.Context, node, bridge string) (bool, error)
+	Reload(ctx context.Context, node string) error
+}
+
+type service struct{ c client.Client }
+
+// New returns a new network service.
+func New(c client.Client) Service { return &service{c: c} } //nolint:ireturn // Factory function pattern
+
+func (s *service) EnsureBridge(ctx context.Context, node, bridge string, params map[string]interface{}) error {
+	exists, err := s.BridgeExists(ctx, node, bridge)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return nil
+	}
+
+	if params == nil {
+		params = map[string]interface{}{}
+	}
+
+	if _, ok := params["type"]; !ok {
+		params["type"] = "bridge"
+	}
+
+	if _, ok := params["iface"]; !ok {
+		params["iface"] = bridge
+	}
+
+	_, err = s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/network", node), params)
+	if err != nil {
+		return fmt.Errorf("failed to create bridge: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) DeleteBridge(ctx context.Context, node, bridge string) error {
+	exists, err := s.BridgeExists(ctx, node, bridge)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	_, err = s.c.DeleteCtx(ctx, fmt.Sprintf("/nodes/%s/network/%s", node, bridge), nil)
+	if err != nil {
+		return fmt.Errorf("failed to delete bridge: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) BridgeExists(ctx context.Context, node, bridge string) (bool, error) {
+	data, err := s.c.GetCtx(ctx, fmt.Sprintf("/nodes/%s/network", node), nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to get network interfaces for node %q: %w", node, err)
+	}
+	// Expect a list of maps
+	if list, ok := data.([]interface{}); ok {
+		for _, it := range list {
+			if m, ok := it.(map[string]interface{}); ok {
+				if iface, _ := m["iface"].(string); iface == bridge {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func (s *service) Reload(ctx context.Context, node string) error {
+	_, err := s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/network", node), map[string]interface{}{"reload": 1})
+	if err != nil {
+		return fmt.Errorf("failed to reload network configuration for node %q: %w", node, err)
+	}
+
+	return nil
+}

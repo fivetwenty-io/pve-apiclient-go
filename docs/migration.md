@@ -35,7 +35,7 @@ apt-get install libpve-apiclient-perl
 
 **Go Client:**
 ```bash
-go get github.com/fivetwenty-io/pve-apicilent-go
+go get github.com/fivetwenty-io/pve-apiclient-go
 ```
 
 ### Initialization
@@ -54,15 +54,19 @@ my $conn = PVE::APIClient::LWP->new(
 
 **Go:**
 ```go
-import "github.com/fivetwenty-io/pve-apicilent-go/pkg/client"
+import pve "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
 
-client, err := client.NewClient(&client.Options{
+cli, err := pve.NewClient(pve.Options{
     Host:     "pve.example.com",
     Port:     8006,
-    TokenID:  "USER@REALM!TOKENID",
-    Secret:   "SECRET",
-    VerifySSL: true,
+    Protocol: "https",
+    // Either API token...
+    APIToken: "USER@REALM!TOKENID=SECRET",
+    // ...or username/password
+    // Username: "root@pam",
+    // Password: "secret",
 })
+if err != nil { /* handle */ }
 ```
 
 ## Authentication Migration
@@ -82,15 +86,13 @@ $conn->login();
 
 **Go:**
 ```go
-client, err := client.NewClient(&client.Options{
+cli, err := pve.NewClient(pve.Options{
     Host:     "pve.example.com",
+    Protocol: "https",
     Username: "root@pam",
     Password: "secret",
 })
-
-if err := client.Login(ctx); err != nil {
-    log.Fatal(err)
-}
+// No explicit Login required; auth is handled automatically by middleware.
 ```
 
 ### API Token Authentication
@@ -105,10 +107,10 @@ my $conn = PVE::APIClient::LWP->new(
 
 **Go:**
 ```go
-client, err := client.NewClient(&client.Options{
-    Host:    "pve.example.com",
-    TokenID: "root@pam!mytoken",
-    Secret:  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+cli, err := pve.NewClient(pve.Options{
+    Host:     "pve.example.com",
+    Protocol: "https",
+    APIToken: "root@pam!mytoken=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 })
 ```
 
@@ -123,18 +125,9 @@ $conn->login();
 
 **Go:**
 ```go
-// Automatic TFA handling with callback
-client, err := client.NewClient(&client.Options{
-    Host:     "pve.example.com",
-    Username: "user@pve",
-    Password: "secret",
-    TFAHandler: func() (string, error) {
-        fmt.Print("Enter TFA code: ")
-        var code string
-        fmt.Scanln(&code)
-        return code, nil
-    },
-})
+// TFA is negotiated by the auth middleware. If the server requires TFA,
+// it returns a typed error (errors.TFARequiredError) describing the challenge.
+// Your program can catch it and prompt for a code, then retry using ticket flow.
 ```
 
 ## API Call Migration
@@ -151,14 +144,15 @@ foreach my $node (@$nodes) {
 
 **Go:**
 ```go
-var nodes []map[string]interface{}
-err := client.Get(ctx, "/nodes", &nodes)
-if err != nil {
-    log.Fatal(err)
-}
+ctx := context.Background()
+data, err := cli.GetCtx(ctx, "/nodes", nil)
+if err != nil { log.Fatal(err) }
 
-for _, node := range nodes {
-    fmt.Printf("Node: %s\n", node["node"])
+// Response data is interface{}; assert to list of maps when calling generic endpoints
+list, _ := data.([]interface{})
+for _, it := range list {
+    m, _ := it.(map[string]interface{})
+    fmt.Printf("Node: %v\n", m["node"])
 }
 ```
 
@@ -176,15 +170,11 @@ my $result = $conn->post('/nodes/pve/qemu', {
 
 **Go:**
 ```go
-params := map[string]interface{}{
-    "vmid":   100,
-    "name":   "test-vm",
-    "memory": 2048,
-    "cores":  2,
-}
-
-var result map[string]interface{}
-err := client.Post(ctx, "/nodes/pve/qemu", params, &result)
+params := map[string]interface{}{"vmid":100, "name":"test-vm", "memory":2048, "cores":2}
+data, err := cli.PostCtx(ctx, "/nodes/pve/qemu", params)
+if err != nil { log.Fatal(err) }
+// Most async ops return a UPID string
+upid, _ := data.(string)
 ```
 
 ### PUT Requests
@@ -199,12 +189,7 @@ $conn->put('/nodes/pve/qemu/100/config', {
 
 **Go:**
 ```go
-params := map[string]interface{}{
-    "memory": 4096,
-    "cores":  4,
-}
-
-err := client.Put(ctx, "/nodes/pve/qemu/100/config", params, nil)
+_, err := cli.PutCtx(ctx, "/nodes/pve/qemu/100/config", map[string]interface{}{"memory":4096, "cores":4})
 ```
 
 ### DELETE Requests
@@ -216,7 +201,7 @@ $conn->delete('/nodes/pve/qemu/100');
 
 **Go:**
 ```go
-err := client.Delete(ctx, "/nodes/pve/qemu/100", nil)
+_, err := cli.DeleteCtx(ctx, "/nodes/pve/qemu/100", nil)
 ```
 
 ## Error Handling
@@ -235,7 +220,7 @@ if ($@) {
 ### Go Error Handling
 
 ```go
-result, err := client.Get(ctx, "/nodes", nil)
+result, err := cli.GetCtx(ctx, "/nodes", nil)
 if err != nil {
     switch e := err.(type) {
     case *errors.APIError:
@@ -253,22 +238,14 @@ if err != nil {
 ### Connection Pooling (Go Only)
 
 ```go
-import "github.com/fivetwenty-io/pve-apicilent-go/pkg/pool"
-
-// Create connection pool
-pool, err := pool.New(&pool.Config{
-    MaxConnections: 10,
-    MaxIdle:        5,
-    IdleTimeout:    30 * time.Second,
-})
-
-client.SetTransport(pool.Transport())
+// The internal HTTP client already uses a tuned http.Transport with keep-alives.
+// Connection pooling is enabled by default; you can adjust KeepAlive in Options.
 ```
 
 ### Request Batching (Go Only)
 
 ```go
-import "github.com/fivetwenty-io/pve-apicilent-go/pkg/batch"
+import "github.com/fivetwenty-io/pve-apiclient-go/pkg/batch"
 
 // Create batch
 batch := batch.New(nil)
@@ -289,7 +266,7 @@ result, err := executor.Execute(ctx, batch)
 ### Response Streaming (Go Only)
 
 ```go
-import "github.com/fivetwenty-io/pve-apicilent-go/pkg/stream"
+import "github.com/fivetwenty-io/pve-apiclient-go/pkg/stream"
 
 // Stream large responses
 resp, err := client.GetRaw(ctx, "/nodes/pve/tasks")
@@ -308,7 +285,7 @@ for {
 ### WebSocket Support (Go Only)
 
 ```go
-import "github.com/fivetwenty-io/pve-apicilent-go/pkg/websocket"
+import "github.com/fivetwenty-io/pve-apiclient-go/pkg/websocket"
 
 // Create WebSocket client
 ws, err := websocket.New(&websocket.Config{
@@ -534,7 +511,7 @@ client, err := client.NewClient(&client.Options{
 
 - [API Documentation](https://pve.proxmox.com/pve-docs/api-viewer/)
 - [Go Client Examples](examples/)
-- [Issue Tracker](https://github.com/fivetwenty-io/pve-apicilent-go/issues)
+- [Issue Tracker](https://github.com/fivetwenty-io/pve-apiclient-go/issues)
 - [Proxmox Forum](https://forum.proxmox.com/)
 
 ## Next Steps

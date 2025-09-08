@@ -4,10 +4,19 @@ package batch
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+var (
+	ErrBatchSizeLimitReached    = errors.New("batch size limit reached")
+	ErrDuplicateRequestID       = errors.New("duplicate request ID")
+	ErrBatchStoppedHighFailures = errors.New("batch execution stopped due to high failure rate")
 )
 
 // Request represents a single request in a batch.
@@ -67,11 +76,11 @@ type Config struct {
 // DefaultConfig returns the default batch configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		MaxBatchSize:        100,
-		MaxConcurrency:      10,
-		Timeout:             5 * time.Minute,
+		MaxBatchSize:        constants.DefaultMaxBatchSize,
+		MaxConcurrency:      constants.DefaultMaxConcurrency,
+		Timeout:             constants.BatchTimeout(),
 		RetryFailedRequests: true,
-		MaxRetries:          3,
+		MaxRetries:          constants.DefaultMaxRetries,
 	}
 }
 
@@ -85,6 +94,7 @@ func New(config *Config) *Batch {
 		requests:  make([]*Request, 0),
 		responses: make(map[string]*Response),
 		config:    config,
+		mu:        sync.Mutex{},
 	}
 }
 
@@ -94,7 +104,7 @@ func (b *Batch) Add(req *Request) error {
 	defer b.mu.Unlock()
 
 	if len(b.requests) >= b.config.MaxBatchSize {
-		return fmt.Errorf("batch size limit (%d) reached", b.config.MaxBatchSize)
+		return fmt.Errorf("%w (%d)", ErrBatchSizeLimitReached, b.config.MaxBatchSize)
 	}
 
 	if req.ID == "" {
@@ -104,21 +114,24 @@ func (b *Batch) Add(req *Request) error {
 	// Check for duplicate ID
 	for _, existing := range b.requests {
 		if existing.ID == req.ID {
-			return fmt.Errorf("duplicate request ID: %s", req.ID)
+			return fmt.Errorf("%w: %s", ErrDuplicateRequestID, req.ID)
 		}
 	}
 
 	b.requests = append(b.requests, req)
+
 	return nil
 }
 
 // AddMultiple adds multiple requests to the batch.
 func (b *Batch) AddMultiple(requests ...*Request) error {
 	for _, req := range requests {
-		if err := b.Add(req); err != nil {
+		err := b.Add(req)
+		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -126,6 +139,7 @@ func (b *Batch) AddMultiple(requests ...*Request) error {
 func (b *Batch) Size() int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	return len(b.requests)
 }
 
@@ -133,6 +147,7 @@ func (b *Batch) Size() int {
 func (b *Batch) Clear() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	b.requests = make([]*Request, 0)
 	b.responses = make(map[string]*Response)
 }
@@ -171,84 +186,109 @@ type CallbackFunc func(req *Request, resp *Response)
 // ExecuteWithCallback executes a batch with a callback for each response.
 func (e *Executor) ExecuteWithCallback(ctx context.Context, batch *Batch, callback CallbackFunc) (*Result, error) {
 	if batch.Size() == 0 {
-		return &Result{
-			Responses: make(map[string]*Response),
-		}, nil
+		return e.createEmptyResult(), nil
 	}
 
-	// Create context with timeout
-	if e.config.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, e.config.Timeout)
+	ctx, cancel := e.createContextWithTimeout(ctx)
+	if cancel != nil {
 		defer cancel()
 	}
 
 	start := time.Now()
-	result := &Result{
-		Responses: make(map[string]*Response),
-	}
+	result := e.createEmptyResult()
 
-	// Create semaphore for concurrency control
 	sem := make(chan struct{}, e.config.MaxConcurrency)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
 
-	// Execute requests
+	var (
+		waitGroup sync.WaitGroup
+		mutex     sync.Mutex
+	)
+
 	for _, req := range batch.requests {
-		wg.Add(1)
-		go func(r *Request) {
-			defer wg.Done()
+		waitGroup.Add(1)
 
-			// Acquire semaphore
+		go func(request *Request) {
+			defer waitGroup.Done()
+
 			select {
 			case sem <- struct{}{}:
 				defer func() { <-sem }()
+
+				e.processRequest(ctx, request, result, &mutex, callback)
 			case <-ctx.Done():
-				mu.Lock()
-				result.Responses[r.ID] = &Response{
-					ID:    r.ID,
-					Error: ctx.Err().Error(),
-				}
-				result.FailureCount++
-				mu.Unlock()
-				return
-			}
-
-			// Execute request with retries
-			resp := e.executeWithRetry(ctx, r)
-
-			// Store response
-			mu.Lock()
-			result.Responses[r.ID] = resp
-			if resp.Error == "" {
-				result.SuccessCount++
-			} else {
-				result.FailureCount++
-			}
-			mu.Unlock()
-
-			// Call callback if provided
-			if callback != nil {
-				callback(r, resp)
+				e.handleContextCancellation(ctx, request, result, &mutex)
 			}
 		}(req)
 	}
 
-	// Wait for all requests to complete
-	wg.Wait()
+	waitGroup.Wait()
 
 	result.TotalTime = time.Since(start)
+
 	return result, nil
+}
+
+func (e *Executor) createEmptyResult() *Result {
+	return &Result{
+		Responses:    make(map[string]*Response),
+		TotalTime:    time.Duration(0),
+		SuccessCount: 0,
+		FailureCount: 0,
+	}
+}
+
+func (e *Executor) createContextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if e.config.Timeout > 0 {
+		return context.WithTimeout(ctx, e.config.Timeout)
+	}
+
+	return ctx, nil
+}
+
+func (e *Executor) processRequest(ctx context.Context, request *Request, result *Result, mutex *sync.Mutex, callback CallbackFunc) {
+	resp := e.executeWithRetry(ctx, request)
+
+	mutex.Lock()
+
+	result.Responses[request.ID] = resp
+	if resp.Error == "" {
+		result.SuccessCount++
+	} else {
+		result.FailureCount++
+	}
+
+	mutex.Unlock()
+
+	if callback != nil {
+		callback(request, resp)
+	}
+}
+
+func (e *Executor) handleContextCancellation(ctx context.Context, request *Request, result *Result, mutex *sync.Mutex) {
+	mutex.Lock()
+
+	result.Responses[request.ID] = &Response{
+		ID:         request.ID,
+		StatusCode: 0,
+		Headers:    nil,
+		Body:       nil,
+		Error:      ctx.Err().Error(),
+		Duration:   time.Duration(0),
+	}
+	result.FailureCount++
+
+	mutex.Unlock()
 }
 
 func (e *Executor) executeWithRetry(ctx context.Context, req *Request) *Response {
 	var lastResp *Response
+
 	maxAttempts := 1
 	if e.config.RetryFailedRequests {
 		maxAttempts = e.config.MaxRetries + 1
 	}
 
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for attempt := range maxAttempts {
 		if attempt > 0 {
 			// Exponential backoff
 			backoff := time.Duration(attempt*attempt) * time.Second
@@ -256,8 +296,12 @@ func (e *Executor) executeWithRetry(ctx context.Context, req *Request) *Response
 			case <-time.After(backoff):
 			case <-ctx.Done():
 				return &Response{
-					ID:    req.ID,
-					Error: ctx.Err().Error(),
+					ID:         req.ID,
+					StatusCode: 0,
+					Headers:    nil,
+					Body:       nil,
+					Error:      ctx.Err().Error(),
+					Duration:   time.Duration(0),
 				}
 			}
 		}
@@ -281,9 +325,12 @@ func (e *Executor) executeRequest(ctx context.Context, req *Request) *Response {
 	httpReq, err := http.NewRequestWithContext(ctx, req.Method, req.Path, nil)
 	if err != nil {
 		return &Response{
-			ID:       req.ID,
-			Error:    err.Error(),
-			Duration: time.Since(start),
+			ID:         req.ID,
+			StatusCode: 0,
+			Headers:    nil,
+			Body:       nil,
+			Error:      err.Error(),
+			Duration:   time.Since(start),
 		}
 	}
 
@@ -296,16 +343,24 @@ func (e *Executor) executeRequest(ctx context.Context, req *Request) *Response {
 	httpResp, err := e.client.Do(httpReq)
 	if err != nil {
 		return &Response{
-			ID:       req.ID,
-			Error:    err.Error(),
-			Duration: time.Since(start),
+			ID:         req.ID,
+			StatusCode: 0,
+			Headers:    nil,
+			Body:       nil,
+			Error:      err.Error(),
+			Duration:   time.Since(start),
 		}
 	}
-	defer httpResp.Body.Close()
+
+	defer func() {
+		_ = httpResp.Body.Close()
+	}()
 
 	// Read response body
 	var body json.RawMessage
-	if err := json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
+
+	err = json.NewDecoder(httpResp.Body).Decode(&body)
+	if err != nil {
 		// If JSON decode fails, treat as plain text
 		body = json.RawMessage(`""`)
 	}
@@ -315,6 +370,7 @@ func (e *Executor) executeRequest(ctx context.Context, req *Request) *Response {
 		StatusCode: httpResp.StatusCode,
 		Headers:    httpResp.Header,
 		Body:       body,
+		Error:      "",
 		Duration:   time.Since(start),
 	}
 }
@@ -339,19 +395,28 @@ func NewBuilder(config *Config) *Builder {
 // AddRequest adds a request to the batch being built.
 func (b *Builder) AddRequest(method, path string) *Builder {
 	_ = b.batch.Add(&Request{
-		Method: method,
-		Path:   path,
+		ID:      "",
+		Method:  method,
+		Path:    path,
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
 	})
+
 	return b
 }
 
 // AddRequestWithParams adds a request with parameters.
 func (b *Builder) AddRequestWithParams(method, path string, params map[string]interface{}) *Builder {
 	_ = b.batch.Add(&Request{
-		Method: method,
-		Path:   path,
-		Params: params,
+		ID:      "",
+		Method:  method,
+		Path:    path,
+		Params:  params,
+		Headers: nil,
+		Body:    nil,
 	})
+
 	return b
 }
 
@@ -377,6 +442,7 @@ func NewPipeline(executor *Executor) *Pipeline {
 // AddBatch adds a batch to the pipeline.
 func (p *Pipeline) AddBatch(batch *Batch) *Pipeline {
 	p.batches = append(p.batches, batch)
+
 	return p
 }
 
@@ -389,11 +455,12 @@ func (p *Pipeline) Execute(ctx context.Context) ([]*Result, error) {
 		if err != nil {
 			return results, err
 		}
+
 		results = append(results, result)
 
 		// Stop if too many failures
 		if result.FailureCount > result.SuccessCount {
-			return results, fmt.Errorf("batch execution stopped due to high failure rate")
+			return results, ErrBatchStoppedHighFailures
 		}
 	}
 

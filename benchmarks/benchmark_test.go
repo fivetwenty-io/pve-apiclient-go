@@ -1,8 +1,9 @@
-package benchmarks
+package benchmarks_test
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,18 +11,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apicilent-go/pkg/batch"
-	"github.com/fivetwenty-io/pve-apicilent-go/pkg/client"
-	"github.com/fivetwenty-io/pve-apicilent-go/pkg/pool"
-	"github.com/fivetwenty-io/pve-apicilent-go/pkg/stream"
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/batch"
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/pool"
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/stream"
 )
 
-// Mock server for benchmarking
+var errEOF = errors.New("EOF")
+
+// Mock server for benchmarking.
 func createMockServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api2/json/access/ticket":
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(writer).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"ticket":              "PVE:test@pve:1234567890::abcdef",
 					"CSRFPreventionToken": "1234567890:abcdef",
@@ -33,10 +36,10 @@ func createMockServer() *httptest.Server {
 				{"node": "pve2", "status": "online", "cpu": 0.25},
 				{"node": "pve3", "status": "online", "cpu": 0.10},
 			}
-			json.NewEncoder(w).Encode(map[string]interface{}{"data": nodes})
+			_ = json.NewEncoder(writer).Encode(map[string]interface{}{"data": nodes})
 		case "/api2/json/cluster/resources":
 			resources := make([]map[string]interface{}, 100)
-			for i := 0; i < 100; i++ {
+			for i := range 100 {
 				resources[i] = map[string]interface{}{
 					"vmid":   100 + i,
 					"name":   fmt.Sprintf("vm-%d", 100+i),
@@ -46,14 +49,15 @@ func createMockServer() *httptest.Server {
 					"mem":    1073741824,
 				}
 			}
-			json.NewEncoder(w).Encode(map[string]interface{}{"data": resources})
+
+			_ = json.NewEncoder(writer).Encode(map[string]interface{}{"data": resources})
 		default:
-			json.NewEncoder(w).Encode(map[string]interface{}{"data": "ok"})
+			_ = json.NewEncoder(writer).Encode(map[string]interface{}{"data": "ok"})
 		}
 	}))
 }
 
-// BenchmarkSimpleGet benchmarks a simple GET request
+// BenchmarkSimpleGet benchmarks a simple GET request.
 func BenchmarkSimpleGet(b *testing.B) {
 	server := createMockServer()
 	defer server.Close()
@@ -67,7 +71,8 @@ func BenchmarkSimpleGet(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_, err := client.Get("/nodes", nil)
 		if err != nil {
 			b.Fatal(err)
@@ -75,7 +80,7 @@ func BenchmarkSimpleGet(b *testing.B) {
 	}
 }
 
-// BenchmarkConcurrentRequests benchmarks concurrent API requests
+// BenchmarkConcurrentRequests benchmarks concurrent API requests.
 func BenchmarkConcurrentRequests(b *testing.B) {
 	server := createMockServer()
 	defer server.Close()
@@ -91,20 +96,24 @@ func BenchmarkConcurrentRequests(b *testing.B) {
 	concurrency := 10
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var wg sync.WaitGroup
-		for j := 0; j < concurrency; j++ {
-			wg.Add(1)
+
+	for range b.N {
+		var waitGroup sync.WaitGroup
+		for range concurrency {
+			waitGroup.Add(1)
+
 			go func() {
-				defer wg.Done()
-				client.Get("/nodes", nil)
+				defer waitGroup.Done()
+
+				_, _ = client.Get("/nodes", nil)
 			}()
 		}
-		wg.Wait()
+
+		waitGroup.Wait()
 	}
 }
 
-// BenchmarkConnectionPool benchmarks connection pooling
+// BenchmarkConnectionPool benchmarks connection pooling.
 func BenchmarkConnectionPool(b *testing.B) {
 	server := createMockServer()
 	defer server.Close()
@@ -128,8 +137,10 @@ func BenchmarkConnectionPool(b *testing.B) {
 
 	// Note: Connection pool created but not used as Client doesn't expose SetTransport method
 	_ = connPool
+
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_, err := client.Get("/nodes", nil)
 		if err != nil {
 			b.Fatal(err)
@@ -137,12 +148,13 @@ func BenchmarkConnectionPool(b *testing.B) {
 	}
 
 	b.StopTimer()
+
 	stats := connPool.Stats()
 	b.Logf("Pool stats - Active: %d, Idle: %d, Total: %d",
 		stats.ActiveConnections, stats.IdleConnections, stats.TotalConnections)
 }
 
-// BenchmarkBatchRequests benchmarks batch request processing
+// BenchmarkBatchRequests benchmarks batch request processing.
 func BenchmarkBatchRequests(b *testing.B) {
 	server := createMockServer()
 	defer server.Close()
@@ -157,11 +169,12 @@ func BenchmarkBatchRequests(b *testing.B) {
 	ctx := context.Background()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		// Create batch with 50 requests
 		batchReq := batch.New(nil)
-		for j := 0; j < 50; j++ {
-			batchReq.Add(&batch.Request{
+		for j := range 50 {
+			_ = batchReq.Add(&batch.Request{
 				ID:     fmt.Sprintf("req-%d", j),
 				Method: "GET",
 				Path:   server.URL + "/api2/json/nodes",
@@ -172,28 +185,35 @@ func BenchmarkBatchRequests(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+
 		if result.FailureCount > 0 {
 			b.Fatalf("Batch had %d failures", result.FailureCount)
 		}
 	}
 }
 
-// BenchmarkStreamProcessing benchmarks stream processing
+// BenchmarkStreamProcessing benchmarks stream processing.
 func BenchmarkStreamProcessing(b *testing.B) {
 	// Create mock streaming response
 	data := make([]string, 1000)
-	for i := 0; i < 1000; i++ {
+	for itemIndex := range 1000 {
 		item := map[string]interface{}{
-			"id":    i,
-			"name":  fmt.Sprintf("item-%d", i),
-			"value": i * 100,
+			"id":    itemIndex,
+			"name":  fmt.Sprintf("item-%d", itemIndex),
+			"value": itemIndex * 100,
 		}
-		jsonData, _ := json.Marshal(item)
-		data[i] = string(jsonData)
+
+		jsonData, err := json.Marshal(item)
+		if err != nil {
+			b.Fatalf("json.Marshal failed: %v", err)
+		}
+
+		data[itemIndex] = string(jsonData)
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		// Simulate streaming response
 		reader := &mockReader{
 			data: data,
@@ -201,17 +221,21 @@ func BenchmarkStreamProcessing(b *testing.B) {
 		}
 
 		stream := stream.New(reader, nil)
-		defer stream.Close()
+
+		defer func() { _ = stream.Close() }()
 
 		count := 0
+
 		for {
 			item, err := stream.Read()
 			if err != nil {
 				break
 			}
+
 			if item != nil {
 				count++
 			}
+
 			if count >= 1000 {
 				break
 			}
@@ -219,20 +243,21 @@ func BenchmarkStreamProcessing(b *testing.B) {
 	}
 }
 
-// mockReader implements io.ReadCloser for testing
+// mockReader implements io.ReadCloser for testing.
 type mockReader struct {
 	data []string
 	pos  int
 }
 
-func (r *mockReader) Read(p []byte) (n int, err error) {
+func (r *mockReader) Read(buffer []byte) (int, error) {
 	if r.pos >= len(r.data) {
-		return 0, fmt.Errorf("EOF")
+		return 0, errEOF
 	}
 
 	line := r.data[r.pos] + "\n"
-	n = copy(p, []byte(line))
+	n := copy(buffer, []byte(line))
 	r.pos++
+
 	return n, nil
 }
 
@@ -240,7 +265,7 @@ func (r *mockReader) Close() error {
 	return nil
 }
 
-// BenchmarkJSONMarshaling benchmarks JSON marshaling/unmarshaling
+// BenchmarkJSONMarshaling benchmarks JSON marshaling/unmarshaling.
 func BenchmarkJSONMarshaling(b *testing.B) {
 	type VMConfig struct {
 		VMID     int                    `json:"vmid"`
@@ -274,7 +299,8 @@ func BenchmarkJSONMarshaling(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		// Marshal
 		data, err := json.Marshal(config)
 		if err != nil {
@@ -283,6 +309,7 @@ func BenchmarkJSONMarshaling(b *testing.B) {
 
 		// Unmarshal
 		var result VMConfig
+
 		err = json.Unmarshal(data, &result)
 		if err != nil {
 			b.Fatal(err)
@@ -290,7 +317,7 @@ func BenchmarkJSONMarshaling(b *testing.B) {
 	}
 }
 
-// BenchmarkErrorHandling benchmarks error handling performance
+// BenchmarkErrorHandling benchmarks error handling performance.
 func BenchmarkErrorHandling(b *testing.B) {
 	server := createMockServer()
 	defer server.Close()
@@ -304,7 +331,8 @@ func BenchmarkErrorHandling(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_, err := client.Get("/nonexistent", nil)
 		if err != nil {
 			// Error is expected, just checking performance
@@ -313,7 +341,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 	}
 }
 
-// BenchmarkMemoryAllocation benchmarks memory allocation patterns
+// BenchmarkMemoryAllocation benchmarks memory allocation patterns.
 func BenchmarkMemoryAllocation(b *testing.B) {
 	server := createMockServer()
 	defer server.Close()
@@ -328,7 +356,8 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_, err := client.Get("/cluster/resources", nil)
 		if err != nil {
 			b.Fatal(err)
@@ -338,7 +367,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 
 // Comparative benchmarks with simulated Perl client behavior
 
-// BenchmarkSequentialVsConcurrent compares sequential vs concurrent execution
+// BenchmarkSequentialVsConcurrent compares sequential vs concurrent execution.
 func BenchmarkSequentialVsConcurrent(b *testing.B) {
 	server := createMockServer()
 	defer server.Close()
@@ -354,35 +383,38 @@ func BenchmarkSequentialVsConcurrent(b *testing.B) {
 	nodes := []string{"pve1", "pve2", "pve3", "pve4", "pve5"}
 
 	b.Run("Sequential", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			for _, node := range nodes {
-				client.Get(fmt.Sprintf("/nodes/%s/status", node), nil)
+				_, _ = client.Get(fmt.Sprintf("/nodes/%s/status", node), nil)
 			}
 		}
 	})
 
 	b.Run("Concurrent", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			var wg sync.WaitGroup
+		for range b.N {
+			var waitGroup sync.WaitGroup
 			for _, node := range nodes {
-				wg.Add(1)
+				waitGroup.Add(1)
+
 				go func(n string) {
-					defer wg.Done()
-					client.Get(fmt.Sprintf("/nodes/%s/status", n), nil)
+					defer waitGroup.Done()
+
+					_, _ = client.Get(fmt.Sprintf("/nodes/%s/status", n), nil)
 				}(node)
 			}
-			wg.Wait()
+
+			waitGroup.Wait()
 		}
 	})
 }
 
-// BenchmarkLargePayload benchmarks handling of large response payloads
+// BenchmarkLargePayload benchmarks handling of large response payloads.
 func BenchmarkLargePayload(b *testing.B) {
 	// Create server with large response
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {
 		// Generate 10MB response
 		data := make([]map[string]interface{}, 10000)
-		for i := 0; i < 10000; i++ {
+		for i := range 10000 {
 			data[i] = map[string]interface{}{
 				"id":          i,
 				"name":        fmt.Sprintf("resource-%d", i),
@@ -394,7 +426,8 @@ func BenchmarkLargePayload(b *testing.B) {
 				},
 			}
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": data})
+
+		_ = json.NewEncoder(writer).Encode(map[string]interface{}{"data": data})
 	}))
 	defer server.Close()
 
@@ -407,7 +440,8 @@ func BenchmarkLargePayload(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_, err := client.Get("/large", nil)
 		if err != nil {
 			b.Fatal(err)
@@ -415,7 +449,7 @@ func BenchmarkLargePayload(b *testing.B) {
 	}
 }
 
-// Results structure for performance comparison
+// Results structure for performance comparison.
 type BenchmarkResults struct {
 	Operation      string
 	RequestsPerSec float64
@@ -426,8 +460,10 @@ type BenchmarkResults struct {
 	Allocations    int64
 }
 
-// RunComparisonBenchmark runs a comprehensive comparison benchmark
+// RunComparisonBenchmark runs a comprehensive comparison benchmark.
 func RunComparisonBenchmark(b *testing.B) {
+	b.Helper()
+
 	results := []BenchmarkResults{}
 
 	// Add benchmark results
@@ -439,19 +475,19 @@ func RunComparisonBenchmark(b *testing.B) {
 	results = append(results, result)
 
 	// Print comparison table
-	fmt.Println("\nPerformance Comparison (Go Client)")
-	fmt.Println("=====================================")
-	fmt.Printf("%-20s | %-15s | %-15s\n", "Operation", "Requests/sec", "Avg Latency")
-	fmt.Println("---------------------|-----------------|----------------")
+	b.Logf("\nPerformance Comparison (Go Client)")
+	b.Logf("=====================================")
+	b.Logf("%-20s | %-15s | %-15s\n", "Operation", "Requests/sec", "Avg Latency")
+	b.Logf("---------------------|-----------------|----------------")
 
 	for _, r := range results {
-		fmt.Printf("%-20s | %-15.2f | %-15s\n",
+		b.Logf("%-20s | %-15.2f | %-15s\n",
 			r.Operation, r.RequestsPerSec, r.AvgLatency)
 	}
 
-	fmt.Println("\nNote: Perl client typically achieves:")
-	fmt.Println("- Simple GET: ~100-200 req/sec")
-	fmt.Println("- No connection pooling")
-	fmt.Println("- Sequential execution only")
-	fmt.Println("- Higher memory usage (~50-100MB)")
+	b.Logf("\nNote: Perl client typically achieves:")
+	b.Logf("- Simple GET: ~100-200 req/sec")
+	b.Logf("- No connection pooling")
+	b.Logf("- Sequential execution only")
+	b.Logf("- Higher memory usage (~50-100MB)")
 }

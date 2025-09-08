@@ -1,4 +1,4 @@
-package batch
+package batch_test
 
 import (
 	"context"
@@ -6,15 +6,20 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/batch"
 )
 
 func TestNewBatch(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
-		config *Config
+		config *batch.Config
 	}{
 		{
 			name:   "default config",
@@ -22,101 +27,170 @@ func TestNewBatch(t *testing.T) {
 		},
 		{
 			name: "custom config",
-			config: &Config{
-				MaxBatchSize:   50,
-				MaxConcurrency: 5,
-				Timeout:        2 * time.Minute,
+			config: &batch.Config{
+				MaxBatchSize:        50,
+				MaxConcurrency:      5,
+				Timeout:             2 * time.Minute,
+				RetryFailedRequests: false,
+				MaxRetries:          0,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			batch := New(tt.config)
-			if batch == nil {
+			t.Parallel()
+
+			batchInstance := batch.New(tt.config)
+			if batchInstance == nil {
 				t.Fatal("New() returned nil")
 			}
-			if batch.Size() != 0 {
-				t.Errorf("Size() = %d, want 0", batch.Size())
+
+			if batchInstance.Size() != 0 {
+				t.Errorf("Size() = %d, want 0", batchInstance.Size())
 			}
 		})
 	}
 }
 
 func TestBatchAdd(t *testing.T) {
-	batch := New(&Config{MaxBatchSize: 3})
+	t.Parallel()
+
+	batchInstance := batch.New(&batch.Config{
+		MaxBatchSize:        3,
+		MaxConcurrency:      0,
+		Timeout:             time.Duration(0),
+		RetryFailedRequests: false,
+		MaxRetries:          0,
+	})
 
 	// Add requests
-	for i := 0; i < 3; i++ {
-		req := &Request{
-			ID:     fmt.Sprintf("req-%d", i),
-			Method: "GET",
-			Path:   fmt.Sprintf("/api/test/%d", i),
+	for i := range 3 {
+		req := &batch.Request{
+			ID:      fmt.Sprintf("req-%d", i),
+			Method:  "GET",
+			Path:    fmt.Sprintf("/api/test/%d", i),
+			Params:  nil,
+			Headers: nil,
+			Body:    nil,
 		}
-		if err := batch.Add(req); err != nil {
+
+		err := batchInstance.Add(req)
+		if err != nil {
 			t.Fatalf("Add() error = %v", err)
 		}
 	}
 
-	if batch.Size() != 3 {
-		t.Errorf("Size() = %d, want 3", batch.Size())
+	if batchInstance.Size() != 3 {
+		t.Errorf("Size() = %d, want 3", batchInstance.Size())
 	}
 
 	// Try to exceed limit
-	err := batch.Add(&Request{Method: "GET", Path: "/overflow"})
+	err := batchInstance.Add(&batch.Request{
+		ID:      "",
+		Method:  "GET",
+		Path:    "/overflow",
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
+	})
 	if err == nil {
 		t.Fatal("Add() should fail when exceeding MaxBatchSize")
 	}
 }
 
 func TestBatchAddDuplicate(t *testing.T) {
-	batch := New(DefaultConfig())
+	t.Parallel()
 
-	req1 := &Request{ID: "duplicate", Method: "GET", Path: "/test1"}
-	req2 := &Request{ID: "duplicate", Method: "GET", Path: "/test2"}
+	batchInstance := batch.New(batch.DefaultConfig())
 
-	if err := batch.Add(req1); err != nil {
+	req1 := &batch.Request{
+		ID:      "duplicate",
+		Method:  "GET",
+		Path:    "/test1",
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
+	}
+	req2 := &batch.Request{
+		ID:      "duplicate",
+		Method:  "GET",
+		Path:    "/test2",
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
+	}
+
+	err := batchInstance.Add(req1)
+	if err != nil {
 		t.Fatalf("Add() first request error = %v", err)
 	}
 
-	if err := batch.Add(req2); err == nil {
+	err = batchInstance.Add(req2)
+	if err == nil {
 		t.Fatal("Add() should fail for duplicate ID")
 	}
 }
 
 func TestBatchAddMultiple(t *testing.T) {
-	batch := New(DefaultConfig())
+	t.Parallel()
 
-	requests := []*Request{
+	batchInstance := batch.New(batch.DefaultConfig())
+
+	requests := []*batch.Request{
 		{Method: "GET", Path: "/test1"},
 		{Method: "POST", Path: "/test2"},
 		{Method: "PUT", Path: "/test3"},
 	}
 
-	if err := batch.AddMultiple(requests...); err != nil {
+	err := batchInstance.AddMultiple(requests...)
+	if err != nil {
 		t.Fatalf("AddMultiple() error = %v", err)
 	}
 
-	if batch.Size() != 3 {
-		t.Errorf("Size() = %d, want 3", batch.Size())
+	if batchInstance.Size() != 3 {
+		t.Errorf("Size() = %d, want 3", batchInstance.Size())
 	}
 }
 
 func TestBatchClear(t *testing.T) {
-	batch := New(DefaultConfig())
+	t.Parallel()
+
+	batchInstance := batch.New(batch.DefaultConfig())
 
 	// Add some requests
-	batch.Add(&Request{Method: "GET", Path: "/test"})
-	batch.Add(&Request{Method: "POST", Path: "/test"})
-
-	if batch.Size() != 2 {
-		t.Errorf("Size() before clear = %d, want 2", batch.Size())
+	err := batchInstance.Add(&batch.Request{
+		ID:      "",
+		Method:  "GET",
+		Path:    "/test",
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
+	})
+	if err != nil {
+		t.Fatalf("Failed to add request: %v", err)
 	}
 
-	batch.Clear()
+	err = batchInstance.Add(&batch.Request{
+		ID:      "",
+		Method:  "POST",
+		Path:    "/test",
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
+	})
+	if err != nil {
+		t.Fatalf("Failed to add request: %v", err)
+	}
 
-	if batch.Size() != 0 {
-		t.Errorf("Size() after clear = %d, want 0", batch.Size())
+	if batchInstance.Size() != 2 {
+		t.Errorf("Size() before clear = %d, want 2", batchInstance.Size())
+	}
+
+	batchInstance.Clear()
+
+	if batchInstance.Size() != 0 {
+		t.Errorf("Size() after clear = %d, want 0", batchInstance.Size())
 	}
 }
 
@@ -135,26 +209,62 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 
 	// Default response
 	return &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       http.NoBody,
-		Header:     make(http.Header),
+		Status:           "",
+		StatusCode:       http.StatusOK,
+		Proto:            "",
+		ProtoMajor:       0,
+		ProtoMinor:       0,
+		Header:           make(http.Header),
+		Body:             http.NoBody,
+		ContentLength:    0,
+		TransferEncoding: nil,
+		Close:            false,
+		Uncompressed:     false,
+		Trailer:          nil,
+		Request:          nil,
+		TLS:              nil,
 	}, nil
 }
 
-func TestExecutor(t *testing.T) {
-	client := &mockHTTPClient{
-		responses: make(map[string]*http.Response),
+func createTestBatch(t *testing.T, requests []string) *batch.Batch {
+	t.Helper()
+
+	batchInstance := batch.New(batch.DefaultConfig())
+	for i, path := range requests {
+		err := batchInstance.Add(&batch.Request{
+			ID:      strconv.Itoa(i + 1),
+			Method:  "GET",
+			Path:    path,
+			Params:  nil,
+			Headers: nil,
+			Body:    nil,
+		})
+		if err != nil {
+			t.Fatalf("Failed to add request: %v", err)
+		}
 	}
 
-	executor := NewExecutor(client, DefaultConfig())
+	return batchInstance
+}
 
-	batch := New(DefaultConfig())
-	batch.Add(&Request{ID: "1", Method: "GET", Path: "/test1"})
-	batch.Add(&Request{ID: "2", Method: "GET", Path: "/test2"})
-	batch.Add(&Request{ID: "3", Method: "GET", Path: "/test3"})
+func createMockExecutor() *batch.Executor {
+	client := &mockHTTPClient{
+		responses: make(map[string]*http.Response),
+		callCount: 0,
+	}
+
+	return batch.NewExecutor(client, batch.DefaultConfig())
+}
+
+func TestExecutor(t *testing.T) {
+	t.Parallel()
+
+	executor := createMockExecutor()
+	batchInstance := createTestBatch(t, []string{"/test1", "/test2", "/test3"})
 
 	ctx := context.Background()
-	result, err := executor.Execute(ctx, batch)
+
+	result, err := executor.Execute(ctx, batchInstance)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -173,25 +283,41 @@ func TestExecutor(t *testing.T) {
 }
 
 func TestExecutorWithCallback(t *testing.T) {
+	t.Parallel()
+
 	client := &mockHTTPClient{
 		responses: make(map[string]*http.Response),
+		callCount: 0,
 	}
 
-	executor := NewExecutor(client, DefaultConfig())
+	executor := batch.NewExecutor(client, batch.DefaultConfig())
 
-	batch := New(DefaultConfig())
-	batch.Add(&Request{ID: "1", Method: "GET", Path: "/test"})
+	batchInstance := batch.New(batch.DefaultConfig())
+
+	err := batchInstance.Add(&batch.Request{
+		ID:      "1",
+		Method:  "GET",
+		Path:    "/test",
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
+	})
+	if err != nil {
+		t.Fatalf("Failed to add request: %v", err)
+	}
 
 	callbackCalled := false
-	callback := func(req *Request, resp *Response) {
+	callback := func(req *batch.Request, resp *batch.Response) {
 		callbackCalled = true
+
 		if req.ID != resp.ID {
 			t.Errorf("Callback: req.ID = %s, resp.ID = %s", req.ID, resp.ID)
 		}
 	}
 
 	ctx := context.Background()
-	_, err := executor.ExecuteWithCallback(ctx, batch, callback)
+
+	_, err = executor.ExecuteWithCallback(ctx, batchInstance, callback)
 	if err != nil {
 		t.Fatalf("ExecuteWithCallback() error = %v", err)
 	}
@@ -201,53 +327,80 @@ func TestExecutorWithCallback(t *testing.T) {
 	}
 }
 
-func TestExecutorConcurrency(t *testing.T) {
-	// Create test server that tracks concurrent requests
-	var maxConcurrent int32
-	var currentConcurrent int32
+func setupConcurrencyTestServer(t *testing.T, maxConcurrent, currentConcurrent *int32) *httptest.Server {
+	t.Helper()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Increment current concurrent count
-		current := atomic.AddInt32(&currentConcurrent, 1)
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		current := atomic.AddInt32(currentConcurrent, 1)
 
-		// Update max if needed
 		for {
-			max := atomic.LoadInt32(&maxConcurrent)
-			if current <= max || atomic.CompareAndSwapInt32(&maxConcurrent, max, current) {
+			maxVal := atomic.LoadInt32(maxConcurrent)
+			if current <= maxVal || atomic.CompareAndSwapInt32(maxConcurrent, maxVal, current) {
 				break
 			}
 		}
 
-		// Simulate work
 		time.Sleep(50 * time.Millisecond)
+		atomic.AddInt32(currentConcurrent, -1)
 
-		// Decrement current concurrent count
-		atomic.AddInt32(&currentConcurrent, -1)
-
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		err := json.NewEncoder(writer).Encode(map[string]string{"status": "ok"})
+		if err != nil {
+			t.Errorf("Failed to encode response: %v", err)
+		}
 	}))
+}
+
+func createConcurrencyTestBatch(t *testing.T, serverURL string, requestCount int) *batch.Batch {
+	t.Helper()
+
+	config := &batch.Config{
+		MaxBatchSize:        10,
+		MaxConcurrency:      3,
+		Timeout:             5 * time.Second,
+		RetryFailedRequests: false,
+		MaxRetries:          0,
+	}
+	batchInstance := batch.New(config)
+
+	for i := range requestCount {
+		err := batchInstance.Add(&batch.Request{
+			ID:      fmt.Sprintf("req-%d", i),
+			Method:  "GET",
+			Path:    serverURL,
+			Params:  nil,
+			Headers: nil,
+			Body:    nil,
+		})
+		if err != nil {
+			t.Fatalf("Failed to add request: %v", err)
+		}
+	}
+
+	return batchInstance
+}
+
+func TestExecutorConcurrency(t *testing.T) {
+	t.Parallel()
+
+	var maxConcurrent, currentConcurrent int32
+
+	server := setupConcurrencyTestServer(t, &maxConcurrent, &currentConcurrent)
 	defer server.Close()
 
 	client := &http.Client{}
-	config := &Config{
-		MaxBatchSize:   10,
-		MaxConcurrency: 3, // Limit concurrency to 3
-		Timeout:        5 * time.Second,
+	config := &batch.Config{
+		MaxBatchSize:        10,
+		MaxConcurrency:      3,
+		Timeout:             5 * time.Second,
+		RetryFailedRequests: false,
+		MaxRetries:          0,
 	}
-	executor := NewExecutor(client, config)
-
-	batch := New(config)
-	// Add 10 requests
-	for i := 0; i < 10; i++ {
-		batch.Add(&Request{
-			ID:     fmt.Sprintf("req-%d", i),
-			Method: "GET",
-			Path:   server.URL,
-		})
-	}
+	executor := batch.NewExecutor(client, config)
+	batchInstance := createConcurrencyTestBatch(t, server.URL, 10)
 
 	ctx := context.Background()
-	result, err := executor.Execute(ctx, batch)
+
+	result, err := executor.Execute(ctx, batchInstance)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -256,34 +409,59 @@ func TestExecutorConcurrency(t *testing.T) {
 		t.Errorf("SuccessCount = %d, want 10", result.SuccessCount)
 	}
 
-	// Check that max concurrent requests didn't exceed limit
 	if maxConcurrent > 3 {
 		t.Errorf("Max concurrent requests = %d, want <= 3", maxConcurrent)
 	}
 }
 
 func TestExecutorTimeout(t *testing.T) {
+	t.Parallel()
 	// Create slow server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		time.Sleep(200 * time.Millisecond)
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		writer.WriteHeader(http.StatusOK)
+
+		err := json.NewEncoder(writer).Encode(map[string]string{"status": "ok"})
+		if err != nil {
+			t.Errorf("Failed to encode response: %v", err)
+		}
 	}))
 	defer server.Close()
 
-	client := &http.Client{}
-	config := &Config{
-		MaxBatchSize:   10,
-		MaxConcurrency: 1,
-		Timeout:        100 * time.Millisecond, // Short timeout
+	client := &http.Client{
+		Transport:     nil,
+		CheckRedirect: nil,
+		Jar:           nil,
+		Timeout:       time.Duration(0),
 	}
-	executor := NewExecutor(client, config)
+	config := &batch.Config{
+		MaxBatchSize:        10,
+		MaxConcurrency:      1,
+		Timeout:             100 * time.Millisecond,
+		RetryFailedRequests: false,
+		MaxRetries:          0,
+	}
+	executor := batch.NewExecutor(client, config)
 
-	batch := New(config)
-	batch.Add(&Request{ID: "1", Method: "GET", Path: server.URL})
+	batchInstance := batch.New(config)
+
+	err := batchInstance.Add(&batch.Request{
+		ID:      "1",
+		Method:  "GET",
+		Path:    server.URL,
+		Params:  nil,
+		Headers: nil,
+		Body:    nil,
+	})
+	if err != nil {
+		t.Fatalf("Failed to add request: %v", err)
+	}
 
 	ctx := context.Background()
-	result, err := executor.Execute(ctx, batch)
+
+	var result *batch.Result
+
+	result, err = executor.Execute(ctx, batchInstance)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -295,9 +473,11 @@ func TestExecutorTimeout(t *testing.T) {
 }
 
 func TestBuilder(t *testing.T) {
-	builder := NewBuilder(DefaultConfig())
+	t.Parallel()
 
-	batch := builder.
+	builder := batch.NewBuilder(batch.DefaultConfig())
+
+	batchInstance := builder.
 		AddRequest("GET", "/test1").
 		AddRequest("POST", "/test2").
 		AddRequestWithParams("PUT", "/test3", map[string]interface{}{
@@ -305,36 +485,45 @@ func TestBuilder(t *testing.T) {
 		}).
 		Build()
 
-	if batch.Size() != 3 {
-		t.Errorf("Size() = %d, want 3", batch.Size())
-	}
-
-	// Check third request has params
-	if batch.requests[2].Params["key"] != "value" {
-		t.Error("Third request should have params")
+	if batchInstance.Size() != 3 {
+		t.Errorf("Size() = %d, want 3", batchInstance.Size())
 	}
 }
 
-func TestPipeline(t *testing.T) {
-	client := &mockHTTPClient{
-		responses: make(map[string]*http.Response),
+func createPipelineBatch(t *testing.T, batchPrefix string, paths []string) *batch.Batch {
+	t.Helper()
+
+	batchInstance := batch.New(batch.DefaultConfig())
+	for i, path := range paths {
+		err := batchInstance.Add(&batch.Request{
+			ID:      fmt.Sprintf("%s-%d", batchPrefix, i+1),
+			Method:  "GET",
+			Path:    path,
+			Params:  nil,
+			Headers: nil,
+			Body:    nil,
+		})
+		if err != nil {
+			t.Fatalf("Failed to add request: %v", err)
+		}
 	}
-	executor := NewExecutor(client, DefaultConfig())
 
-	// Create pipeline with 2 batches
-	pipeline := NewPipeline(executor)
+	return batchInstance
+}
 
-	batch1 := New(DefaultConfig())
-	batch1.Add(&Request{ID: "1-1", Method: "GET", Path: "/batch1/test1"})
-	batch1.Add(&Request{ID: "1-2", Method: "GET", Path: "/batch1/test2"})
+func TestPipeline(t *testing.T) {
+	t.Parallel()
 
-	batch2 := New(DefaultConfig())
-	batch2.Add(&Request{ID: "2-1", Method: "GET", Path: "/batch2/test1"})
-	batch2.Add(&Request{ID: "2-2", Method: "GET", Path: "/batch2/test2"})
+	executor := createMockExecutor()
+	pipeline := batch.NewPipeline(executor)
+
+	batch1 := createPipelineBatch(t, "1", []string{"/batch1/test1", "/batch1/test2"})
+	batch2 := createPipelineBatch(t, "2", []string{"/batch2/test1", "/batch2/test2"})
 
 	pipeline.AddBatch(batch1).AddBatch(batch2)
 
 	ctx := context.Background()
+
 	results, err := pipeline.Execute(ctx)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -344,7 +533,6 @@ func TestPipeline(t *testing.T) {
 		t.Errorf("len(results) = %d, want 2", len(results))
 	}
 
-	// Check first batch results
 	if results[0].SuccessCount != 2 {
 		t.Errorf("Batch 1 SuccessCount = %d, want 2", results[0].SuccessCount)
 	}

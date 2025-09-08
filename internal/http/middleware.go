@@ -2,11 +2,18 @@ package http
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+var (
+	ErrRequestTimeout = errors.New("request timeout")
 )
 
 // MiddlewareFunc is a function that wraps an HTTP handler.
@@ -29,6 +36,7 @@ func (c *Chain) Then(handler http.Handler) http.Handler {
 	for i := len(c.middlewares) - 1; i >= 0; i-- {
 		handler = c.middlewares[i](handler)
 	}
+
 	return handler
 }
 
@@ -37,6 +45,7 @@ func (c *Chain) Append(middlewares ...MiddlewareFunc) *Chain {
 	newMiddlewares := make([]MiddlewareFunc, len(c.middlewares)+len(middlewares))
 	copy(newMiddlewares, c.middlewares)
 	copy(newMiddlewares[len(c.middlewares):], middlewares)
+
 	return &Chain{middlewares: newMiddlewares}
 }
 
@@ -66,6 +75,7 @@ func (rl *RateLimitMiddleware) Apply(req *http.Request, next Handler) (*http.Res
 
 	// Add tokens based on elapsed time
 	tokensToAdd := int(elapsed.Seconds() * float64(rl.requestsPerSecond))
+
 	rl.tokens += tokensToAdd
 	if rl.tokens > rl.burst {
 		rl.tokens = rl.burst
@@ -76,6 +86,7 @@ func (rl *RateLimitMiddleware) Apply(req *http.Request, next Handler) (*http.Res
 		// Wait for a token to become available
 		waitTime := time.Second / time.Duration(rl.requestsPerSecond)
 		time.Sleep(waitTime)
+
 		rl.tokens = 1
 	}
 
@@ -98,10 +109,11 @@ func NewLoggingMiddleware(logger *log.Logger) *LoggingMiddleware {
 	if logger == nil {
 		logger = log.New(log.Writer(), "[PVE] ", log.LstdFlags)
 	}
+
 	return &LoggingMiddleware{
 		logger:     logger,
 		logBody:    false,
-		maxBodyLog: 1024,
+		maxBodyLog: constants.DefaultBufferSize,
 	}
 }
 
@@ -121,6 +133,7 @@ func (lm *LoggingMiddleware) Apply(req *http.Request, next Handler) (*http.Respo
 			} else {
 				lm.logger.Printf("  Body: %s", body)
 			}
+
 			req.Body = io.NopCloser(bytes.NewReader(body))
 		}
 	}
@@ -132,6 +145,7 @@ func (lm *LoggingMiddleware) Apply(req *http.Request, next Handler) (*http.Respo
 	// Log response
 	if err != nil {
 		lm.logger.Printf("← ERROR after %v: %v", duration, err)
+
 		return nil, err
 	}
 
@@ -146,6 +160,7 @@ func (lm *LoggingMiddleware) Apply(req *http.Request, next Handler) (*http.Respo
 			} else {
 				lm.logger.Printf("  Body: %s", body)
 			}
+
 			resp.Body = io.NopCloser(bytes.NewReader(body))
 		}
 	}
@@ -232,11 +247,12 @@ func (tm *TimeoutMiddleware) Apply(req *http.Request, next Handler) (*http.Respo
 		resp *http.Response
 		err  error
 	}
+
 	resultChan := make(chan result, 1)
 
 	// Execute request in goroutine
 	go func() {
-		resp, err := next(req)
+		resp, err := next(req) //nolint:bodyclose // Middleware passes response body through
 		resultChan <- result{resp, err}
 	}()
 
@@ -245,7 +261,15 @@ func (tm *TimeoutMiddleware) Apply(req *http.Request, next Handler) (*http.Respo
 	case res := <-resultChan:
 		return res.resp, res.err
 	case <-time.After(tm.timeout):
-		return nil, fmt.Errorf("request timeout after %v", tm.timeout)
+		// Clean up any response that might arrive later
+		go func() {
+			res := <-resultChan
+			if res.resp != nil && res.resp.Body != nil {
+				_ = res.resp.Body.Close()
+			}
+		}()
+
+		return nil, fmt.Errorf("%w after %v", ErrRequestTimeout, tm.timeout)
 	}
 }
 

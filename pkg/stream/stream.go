@@ -5,12 +5,22 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+)
+
+var (
+	ErrStreamClosed           = errors.New("stream is closed")
+	ErrItemSizeExceedsMaximum = errors.New("item size exceeds maximum")
+	ErrEmptyData              = errors.New("no data to decode")
+	ErrNilItem                = errors.New("item is nil")
 )
 
 // Stream represents a streaming response handler.
@@ -47,9 +57,9 @@ type Config struct {
 // DefaultConfig returns the default stream configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		BufferSize:  4096,
-		MaxItemSize: 1024 * 1024, // 1MB
-		ReadTimeout: 30 * time.Second,
+		BufferSize:  constants.LargeBufferSize,
+		MaxItemSize: constants.StreamMaxItemSize, // 1MB
+		ReadTimeout: constants.DefaultClientTimeout(),
 		Format:      "jsonlines",
 		Delimiter:   "\n",
 	}
@@ -76,9 +86,12 @@ type JSONDecoder struct{}
 
 func (d *JSONDecoder) Decode(data []byte) (interface{}, error) {
 	var result interface{}
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, err
+
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON data: %w", err)
 	}
+
 	return result, nil
 }
 
@@ -93,13 +106,16 @@ func (d *JSONLinesDecoder) Decode(data []byte) (interface{}, error) {
 	// Trim whitespace
 	data = []byte(strings.TrimSpace(string(data)))
 	if len(data) == 0 {
-		return nil, nil
+		return nil, ErrEmptyData
 	}
 
 	var result interface{}
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, err
+
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON Lines data: %w", err)
 	}
+
 	return result, nil
 }
 
@@ -115,6 +131,7 @@ func New(reader io.ReadCloser, config *Config) *Stream {
 
 	// Select decoder based on format
 	var decoder Decoder
+
 	switch config.Format {
 	case "json":
 		decoder = &JSONDecoder{}
@@ -126,7 +143,7 @@ func New(reader io.ReadCloser, config *Config) *Stream {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	s := &Stream{
+	stream := &Stream{
 		reader:     reader,
 		decoder:    decoder,
 		buffer:     bufio.NewReaderSize(reader, config.BufferSize),
@@ -137,9 +154,9 @@ func New(reader io.ReadCloser, config *Config) *Stream {
 	}
 
 	// Start metrics collector if needed
-	go s.collectMetrics(ctx)
+	go stream.collectMetrics(ctx)
 
-	return s
+	return stream
 }
 
 // NewFromResponse creates a stream from an HTTP response.
@@ -149,66 +166,34 @@ func NewFromResponse(resp *http.Response, config *Config) *Stream {
 
 // Read reads the next item from the stream.
 func (s *Stream) Read() (interface{}, error) {
-	s.mu.RLock()
-	if s.closed {
-		s.mu.RUnlock()
-		return nil, fmt.Errorf("stream is closed")
-	}
-	s.mu.RUnlock()
-
-	start := time.Now()
-	defer func() {
-		s.metrics.mu.Lock()
-		s.metrics.ReadTime += time.Since(start)
-		s.metrics.LastReadTime = time.Now()
-		s.metrics.mu.Unlock()
-	}()
-
-	// Read based on format
-	var data []byte
-	var err error
-
-	if s.config.Format == "jsonlines" || s.decoder.SupportsPartial() {
-		// Read line by line
-		data, err = s.buffer.ReadBytes('\n')
-		if err != nil && err != io.EOF {
-			s.recordError(err)
-			return nil, err
-		}
-	} else {
-		// Read entire content
-		data, err = io.ReadAll(s.buffer)
-		if err != nil {
-			s.recordError(err)
-			return nil, err
-		}
-	}
-
-	// Check size limit
-	if len(data) > s.config.MaxItemSize {
-		err := fmt.Errorf("item size %d exceeds maximum %d", len(data), s.config.MaxItemSize)
-		s.recordError(err)
+	err := s.checkStreamState()
+	if err != nil {
 		return nil, err
 	}
 
-	// Update metrics
-	s.metrics.mu.Lock()
-	s.metrics.BytesRead += int64(len(data))
-	s.metrics.mu.Unlock()
+	start := time.Now()
+	defer s.updateReadMetrics(start)
 
-	// Decode
-	item, decodeErr := s.decoder.Decode(data)
-	if decodeErr != nil {
-		s.recordError(decodeErr)
-		return nil, decodeErr
+	data, err := s.readStreamData()
+	if err != nil {
+		return nil, err
 	}
 
-	// Update metrics
-	s.metrics.mu.Lock()
-	s.metrics.ItemsRead++
-	s.metrics.mu.Unlock()
+	err = s.validateDataSize(data)
+	if err != nil {
+		return nil, err
+	}
 
-	return item, err
+	s.updateBytesRead(int64(len(data)))
+
+	item, err := s.decodeStreamData(data)
+	if err != nil {
+		return nil, err
+	}
+
+	s.updateItemsRead()
+
+	return item, nil
 }
 
 // ReadAll reads all items from the stream.
@@ -217,12 +202,14 @@ func (s *Stream) ReadAll() ([]interface{}, error) {
 
 	for {
 		item, err := s.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
+
 		if err != nil {
 			return items, err
 		}
+
 		if item != nil {
 			items = append(items, item)
 		}
@@ -235,14 +222,16 @@ func (s *Stream) ReadAll() ([]interface{}, error) {
 func (s *Stream) ReadN(n int) ([]interface{}, error) {
 	items := make([]interface{}, 0, n)
 
-	for i := 0; i < n; i++ {
+	for range n {
 		item, err := s.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
+
 		if err != nil {
 			return items, err
 		}
+
 		if item != nil {
 			items = append(items, item)
 		}
@@ -253,10 +242,10 @@ func (s *Stream) ReadN(n int) ([]interface{}, error) {
 
 // Channel returns a channel that yields items from the stream.
 func (s *Stream) Channel(ctx context.Context) <-chan interface{} {
-	ch := make(chan interface{})
+	channel := make(chan interface{})
 
 	go func() {
-		defer close(ch)
+		defer close(channel)
 
 		for {
 			select {
@@ -264,20 +253,23 @@ func (s *Stream) Channel(ctx context.Context) <-chan interface{} {
 				return
 			default:
 				item, err := s.Read()
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					return
 				}
+
 				if err != nil {
 					// Send error to error channel
 					select {
 					case s.errorChan <- err:
 					default:
 					}
+
 					return
 				}
+
 				if item != nil {
 					select {
-					case ch <- item:
+					case channel <- item:
 					case <-ctx.Done():
 						return
 					}
@@ -286,25 +278,28 @@ func (s *Stream) Channel(ctx context.Context) <-chan interface{} {
 		}
 	}()
 
-	return ch
+	return channel
 }
 
 // Process processes items with a callback function.
-func (s *Stream) Process(ctx context.Context, fn func(interface{}) error) error {
+func (s *Stream) Process(ctx context.Context, processFunc func(interface{}) error) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context cancelled during processing: %w", ctx.Err())
 		default:
 			item, err := s.Read()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
+
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read item for processing: %w", err)
 			}
+
 			if item != nil {
-				if err := fn(item); err != nil {
+				err := processFunc(item)
+				if err != nil {
 					return err
 				}
 			}
@@ -313,7 +308,7 @@ func (s *Stream) Process(ctx context.Context, fn func(interface{}) error) error 
 }
 
 // ProcessBatch processes items in batches.
-func (s *Stream) ProcessBatch(ctx context.Context, batchSize int, fn func([]interface{}) error) error {
+func (s *Stream) ProcessBatch(ctx context.Context, batchSize int, processFunc func([]interface{}) error) error {
 	batch := make([]interface{}, 0, batchSize)
 
 	for {
@@ -321,27 +316,33 @@ func (s *Stream) ProcessBatch(ctx context.Context, batchSize int, fn func([]inte
 		case <-ctx.Done():
 			// Process remaining batch
 			if len(batch) > 0 {
-				return fn(batch)
+				return processFunc(batch)
 			}
-			return ctx.Err()
+
+			return fmt.Errorf("context cancelled during batch processing: %w", ctx.Err())
 		default:
 			item, err := s.Read()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				// Process final batch
 				if len(batch) > 0 {
-					return fn(batch)
+					return processFunc(batch)
 				}
+
 				return nil
 			}
+
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to process batch item: %w", err)
 			}
+
 			if item != nil {
 				batch = append(batch, item)
 				if len(batch) >= batchSize {
-					if err := fn(batch); err != nil {
+					err := processFunc(batch)
+					if err != nil {
 						return err
 					}
+
 					batch = make([]interface{}, 0, batchSize)
 				}
 			}
@@ -380,7 +381,93 @@ func (s *Stream) Close() error {
 	s.closed = true
 	s.cancelFunc()
 	close(s.errorChan)
-	return s.reader.Close()
+
+	err := s.reader.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close stream reader: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Stream) checkStreamState() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.closed {
+		return ErrStreamClosed
+	}
+
+	return nil
+}
+
+func (s *Stream) updateReadMetrics(start time.Time) {
+	s.metrics.mu.Lock()
+	defer s.metrics.mu.Unlock()
+
+	s.metrics.ReadTime += time.Since(start)
+	s.metrics.LastReadTime = time.Now()
+}
+
+func (s *Stream) readStreamData() ([]byte, error) {
+	var (
+		data []byte
+		err  error
+	)
+
+	if s.config.Format == "jsonlines" || s.decoder.SupportsPartial() {
+		data, err = s.buffer.ReadBytes('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			s.recordError(err)
+
+			return nil, fmt.Errorf("failed to read stream line: %w", err)
+		}
+	} else {
+		data, err = io.ReadAll(s.buffer)
+		if err != nil {
+			s.recordError(err)
+
+			return nil, fmt.Errorf("failed to read stream content: %w", err)
+		}
+	}
+
+	return data, nil
+}
+
+func (s *Stream) validateDataSize(data []byte) error {
+	if len(data) > s.config.MaxItemSize {
+		err := fmt.Errorf("%w: %d exceeds maximum %d", ErrItemSizeExceedsMaximum, len(data), s.config.MaxItemSize)
+		s.recordError(err)
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *Stream) updateBytesRead(bytes int64) {
+	s.metrics.mu.Lock()
+	defer s.metrics.mu.Unlock()
+
+	s.metrics.BytesRead += bytes
+}
+
+func (s *Stream) decodeStreamData(data []byte) (interface{}, error) {
+	item, err := s.decoder.Decode(data)
+	if err != nil {
+		s.recordError(err)
+
+		return nil, fmt.Errorf("failed to decode stream data: %w", err)
+	}
+
+	return item, nil
+}
+
+func (s *Stream) updateItemsRead() {
+	s.metrics.mu.Lock()
+	defer s.metrics.mu.Unlock()
+
+	s.metrics.ItemsRead++
 }
 
 func (s *Stream) recordError(err error) {
@@ -396,7 +483,7 @@ func (s *Stream) recordError(err error) {
 }
 
 func (s *Stream) collectMetrics(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(constants.StreamTickerDuration())
 	defer ticker.Stop()
 
 	for {
@@ -420,7 +507,7 @@ func NewReader(stream *Stream) *Reader {
 }
 
 // Read implements io.Reader interface.
-func (r *Reader) Read(p []byte) (n int, err error) {
+func (r *Reader) Read(buffer []byte) (int, error) {
 	item, err := r.stream.Read()
 	if err != nil {
 		return 0, err
@@ -429,10 +516,11 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	// Convert item to bytes
 	data, err := json.Marshal(item)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to marshal item to JSON: %w", err)
 	}
 
-	n = copy(p, data)
+	n := copy(buffer, data)
+
 	return n, nil
 }
 
@@ -458,7 +546,7 @@ func (t *Transform) Read() (interface{}, error) {
 	}
 
 	if item == nil {
-		return nil, nil
+		return nil, ErrNilItem
 	}
 
 	return t.fn(item)

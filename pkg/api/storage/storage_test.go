@@ -1,0 +1,74 @@
+package storage_test
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/api/storage"
+	pveclient "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+)
+
+func optsFromServerURL(u string) pveclient.Options {
+	parsed, _ := url.Parse(u)
+	host := strings.Split(parsed.Host, ":")[0]
+	port := 0
+
+	if parts := strings.Split(parsed.Host, ":"); len(parts) == 2 {
+		p, _ := strconv.Atoi(parts[1])
+		port = p
+	}
+
+	return pveclient.Options{Host: host, Port: port, Protocol: "http", APIToken: "user@pam!tok=sec"}
+}
+
+func TestExistsNotFound(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	cli, err := pveclient.NewClient(optsFromServerURL(srv.URL))
+	if err != nil {
+		t.Fatalf("client: %v", err)
+	}
+
+	svc := storage.New(cli)
+
+	ok, err := svc.Exists(context.Background(), "node1", "local", "vol/doesnotexist")
+	if err != nil {
+		t.Fatalf("exists err: %v", err)
+	}
+
+	if ok {
+		t.Fatalf("expected false")
+	}
+}
+
+func TestDeleteVolumeIgnoresNotFound(t *testing.T) {
+	t.Parallel()
+
+	// DELETE returns 404 Not Found
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	cli, err := pveclient.NewClient(optsFromServerURL(srv.URL))
+	if err != nil {
+		t.Fatalf("client: %v", err)
+	}
+
+	svc := storage.New(cli)
+
+	err = svc.DeleteVolume(context.Background(), "node1", "local", "does/not/exist")
+	if err != nil {
+		t.Fatalf("delete should ignore 404, got: %v", err)
+	}
+}

@@ -1,20 +1,32 @@
-package client
+package client_test
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
 )
 
-func TestNewClient(t *testing.T) {
-	tests := []struct {
-		name    string
-		opts    Options
-		wantErr bool
-		errMsg  string
-	}{
+const (
+	testVersionEndpoint = "/api2/json/version"
+)
+
+type newClientTest struct {
+	name    string
+	opts    client.Options
+	wantErr bool
+	errMsg  string
+}
+
+func getValidTestCases() []newClientTest {
+	return []newClientTest{
 		{
 			name: "valid with username/password",
-			opts: Options{
+			opts: client.Options{
 				Host:     "pve.example.com",
 				Username: "root@pam",
 				Password: "secret",
@@ -23,15 +35,20 @@ func TestNewClient(t *testing.T) {
 		},
 		{
 			name: "valid with API token",
-			opts: Options{
+			opts: client.Options{
 				Host:     "pve.example.com",
 				APIToken: "root@pam!token=secret",
 			},
 			wantErr: false,
 		},
+	}
+}
+
+func getInvalidTestCases() []newClientTest {
+	return []newClientTest{
 		{
 			name: "missing host",
-			opts: Options{
+			opts: client.Options{
 				Username: "root@pam",
 				Password: "secret",
 			},
@@ -40,7 +57,7 @@ func TestNewClient(t *testing.T) {
 		},
 		{
 			name: "missing credentials",
-			opts: Options{
+			opts: client.Options{
 				Host: "pve.example.com",
 			},
 			wantErr: true,
@@ -48,7 +65,7 @@ func TestNewClient(t *testing.T) {
 		},
 		{
 			name: "username without password",
-			opts: Options{
+			opts: client.Options{
 				Host:     "pve.example.com",
 				Username: "root@pam",
 			},
@@ -57,7 +74,7 @@ func TestNewClient(t *testing.T) {
 		},
 		{
 			name: "invalid protocol",
-			opts: Options{
+			opts: client.Options{
 				Host:     "pve.example.com",
 				Username: "root@pam",
 				Password: "secret",
@@ -68,7 +85,7 @@ func TestNewClient(t *testing.T) {
 		},
 		{
 			name: "invalid port",
-			opts: Options{
+			opts: client.Options{
 				Host:     "pve.example.com",
 				Username: "root@pam",
 				Password: "secret",
@@ -78,44 +95,74 @@ func TestNewClient(t *testing.T) {
 			errMsg:  "invalid port",
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(tt.opts)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("NewClient() expected error, got nil")
-				} else if tt.errMsg != "" && err.Error() != tt.errMsg {
-					if !contains(err.Error(), tt.errMsg) {
-						t.Errorf("NewClient() error = %v, want containing %v", err, tt.errMsg)
-					}
-				}
-			} else {
-				if err != nil {
-					t.Errorf("NewClient() unexpected error = %v", err)
-				}
-				if client == nil {
-					t.Errorf("NewClient() returned nil client")
-				}
-			}
+func getNewClientTestCases() []newClientTest {
+	tests := getValidTestCases()
+	tests = append(tests, getInvalidTestCases()...)
+
+	return tests
+}
+
+func runNewClientTest(t *testing.T, testCase newClientTest) {
+	t.Helper()
+
+	cli, err := client.NewClient(testCase.opts)
+
+	if testCase.wantErr {
+		if err == nil {
+			t.Errorf("NewClient() expected error, got nil")
+
+			return
+		}
+
+		if testCase.errMsg != "" && err.Error() != testCase.errMsg && !contains(err.Error(), testCase.errMsg) {
+			t.Errorf("NewClient() error = %v, want containing %v", err, testCase.errMsg)
+		}
+
+		return
+	}
+
+	if err != nil {
+		t.Errorf("NewClient() unexpected error = %v", err)
+
+		return
+	}
+
+	if cli == nil {
+		t.Errorf("NewClient() returned nil client")
+	}
+}
+
+func TestNewClient(t *testing.T) {
+	t.Parallel()
+
+	tests := getNewClientTestCases()
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			runNewClientTest(t, testCase)
 		})
 	}
 }
 
 func TestClient_UpdateTicket(t *testing.T) {
-	opts := Options{
+	t.Parallel()
+
+	opts := client.Options{
 		Host:     "pve.example.com",
 		Username: "root@pam",
 		Password: "secret",
 	}
 
-	client, err := NewClient(opts)
+	cli, err := client.NewClient(opts)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 
 	testTicket := "PVE:test:ticket"
-	client.UpdateTicket(testTicket)
+	cli.UpdateTicket(testTicket)
 
 	// We can't directly test the internal state without type assertion working
 	// This is a limitation of the current design where client is a private type
@@ -127,117 +174,160 @@ func TestClient_UpdateTicket(t *testing.T) {
 }
 
 func TestClient_UpdateCSRFToken(t *testing.T) {
-	opts := Options{
+	t.Parallel()
+
+	opts := client.Options{
 		Host:     "pve.example.com",
 		Username: "root@pam",
 		Password: "secret",
 	}
 
-	client, err := NewClient(opts)
+	cli, err := client.NewClient(opts)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 
-	testToken := "test:csrf:token"
-	client.UpdateCSRFToken(testToken)
+	testToken := "test:csrf:token" //nolint:gosec // Test credential
+	cli.UpdateCSRFToken(testToken)
 
 	// See comment in TestClient_UpdateTicket about testing private state
 }
 
 func TestClient_SetTimeout(t *testing.T) {
-	opts := Options{
+	t.Parallel()
+
+	opts := client.Options{
 		Host:     "pve.example.com",
 		Username: "root@pam",
 		Password: "secret",
 	}
 
-	client, err := NewClient(opts)
+	cli, err := client.NewClient(opts)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 
 	newTimeout := 60 * time.Second
-	client.SetTimeout(newTimeout)
+	cli.SetTimeout(newTimeout)
 
 	// See comment in TestClient_UpdateTicket about testing private state
 }
 
 func TestClient_SetKeepAlive(t *testing.T) {
-	opts := Options{
+	t.Parallel()
+
+	opts := client.Options{
 		Host:     "pve.example.com",
 		Username: "root@pam",
 		Password: "secret",
 	}
 
-	client, err := NewClient(opts)
+	cli, err := client.NewClient(opts)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 
 	newKeepAlive := 20
-	client.SetKeepAlive(newKeepAlive)
+	cli.SetKeepAlive(newKeepAlive)
 
 	// See comment in TestClient_UpdateTicket about testing private state
 }
 
+func createTestServer() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api2/json") {
+			http.Error(writer, "bad base path", http.StatusNotFound)
+
+			return
+		}
+
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"data": {"ok": true}, "success": 1}`))
+	}))
+}
+
+func parseServerURL(serverURL string) (string, int) {
+	u, _ := url.Parse(serverURL)
+	host := strings.Split(u.Host, ":")[0]
+
+	portStr := "80"
+	if parts := strings.Split(u.Host, ":"); len(parts) == 2 {
+		portStr = parts[1]
+	}
+
+	var port int
+	for _, ch := range portStr {
+		port = port*10 + int(ch-'0')
+	}
+
+	return host, port
+}
+
+func testHTTPMethod(t *testing.T, cli client.Client, method string, data map[string]interface{}) {
+	t.Helper()
+
+	var (
+		result interface{}
+		err    error
+	)
+
+	switch method {
+	case "GET":
+		result, err = cli.Get("/test", nil)
+	case "POST":
+		result, err = cli.Post("/test", data)
+	case "PUT":
+		result, err = cli.Put("/test", data)
+	case "DELETE":
+		result, err = cli.Delete("/test", nil)
+	}
+
+	if err != nil {
+		t.Errorf("%s() unexpected error = %v", method, err)
+	}
+
+	if result == nil {
+		t.Errorf("%s() returned nil data", method)
+	}
+}
+
 func TestClient_HTTPMethods(t *testing.T) {
-	opts := Options{
-		Host:     "pve.example.com",
+	t.Parallel()
+
+	srv := createTestServer()
+	defer srv.Close()
+
+	host, port := parseServerURL(srv.URL)
+	opts := client.Options{
+		Host:     host,
+		Port:     port,
+		Protocol: "http",
 		APIToken: "root@pam!token=secret",
 	}
 
-	client, err := NewClient(opts)
+	cli, err := client.NewClient(opts)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 
-	// Test Get
-	data, err := client.Get("/test", nil)
-	if err != nil {
-		t.Errorf("Get() unexpected error = %v", err)
-	}
-	if data == nil {
-		t.Errorf("Get() returned nil data")
-	}
+	testHTTPMethod(t, cli, "GET", nil)
 
-	// Test GetRaw
-	resp, err := client.GetRaw("/test", nil)
+	resp, err := cli.GetRaw("/test", nil)
 	if err != nil {
 		t.Errorf("GetRaw() unexpected error = %v", err)
 	}
+
 	if resp == nil {
 		t.Errorf("GetRaw() returned nil response")
 	}
 
-	// Test Post
-	data, err = client.Post("/test", map[string]interface{}{"key": "value"})
-	if err != nil {
-		t.Errorf("Post() unexpected error = %v", err)
-	}
-	if data == nil {
-		t.Errorf("Post() returned nil data")
-	}
-
-	// Test Put
-	data, err = client.Put("/test", map[string]interface{}{"key": "value"})
-	if err != nil {
-		t.Errorf("Put() unexpected error = %v", err)
-	}
-	if data == nil {
-		t.Errorf("Put() returned nil data")
-	}
-
-	// Test Delete
-	data, err = client.Delete("/test", nil)
-	if err != nil {
-		t.Errorf("Delete() unexpected error = %v", err)
-	}
-	if data == nil {
-		t.Errorf("Delete() returned nil data")
-	}
+	testData := map[string]interface{}{"key": "value"}
+	testHTTPMethod(t, cli, "POST", testData)
+	testHTTPMethod(t, cli, "PUT", testData)
+	testHTTPMethod(t, cli, "DELETE", nil)
 }
 
-// Helper function to check if string contains substring
+// Helper function to check if string contains substring.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || findSubstring(s, substr)))
 }
@@ -248,5 +338,6 @@ func findSubstring(s, substr string) bool {
 			return true
 		}
 	}
+
 	return false
 }

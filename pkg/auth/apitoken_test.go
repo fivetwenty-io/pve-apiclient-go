@@ -1,33 +1,39 @@
-package auth
+package auth_test
 
 import (
 	"testing"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/pkg/auth"
 )
 
 func TestNewAPITokenAuthenticator(t *testing.T) {
-	token := &Token{
+	t.Parallel()
+
+	token := &auth.Token{
 		ID:     "root@pam!mytoken",
 		Secret: "secret-value",
 	}
 
-	auth := NewAPITokenAuthenticator(token)
-	if auth == nil {
+	authenticator := auth.NewAPITokenAuthenticator(token)
+	if authenticator == nil {
 		t.Fatal("NewAPITokenAuthenticator returned nil")
 	}
 
-	if auth.token != token {
-		t.Errorf("NewAPITokenAuthenticator() token = %v, want %v", auth.token, token)
+	if authenticator.GetToken() != token {
+		t.Errorf("NewAPITokenAuthenticator() token = %v, want %v", authenticator.GetToken(), token)
 	}
 }
 
-func TestNewAPITokenAuthenticatorFromString(t *testing.T) {
-	tests := []struct {
-		name        string
-		tokenString string
-		wantErr     bool
-		wantID      string
-		wantSecret  string
-	}{
+type tokenFromStringTest struct {
+	name        string
+	tokenString string
+	wantErr     bool
+	wantID      string
+	wantSecret  string
+}
+
+func getTokenFromStringTestCases() []tokenFromStringTest {
+	return []tokenFromStringTest{
 		{
 			name:        "valid token",
 			tokenString: "root@pam!mytoken=secret-value",
@@ -51,41 +57,65 @@ func TestNewAPITokenAuthenticatorFromString(t *testing.T) {
 			wantErr:     true,
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			auth, err := NewAPITokenAuthenticatorFromString(tt.tokenString)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("NewAPITokenAuthenticatorFromString() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("NewAPITokenAuthenticatorFromString() unexpected error = %v", err)
-				}
-				if auth == nil {
-					t.Fatal("NewAPITokenAuthenticatorFromString() returned nil authenticator")
-				}
-				if auth.token.ID != tt.wantID {
-					t.Errorf("token.ID = %v, want %v", auth.token.ID, tt.wantID)
-				}
-				if auth.token.Secret != tt.wantSecret {
-					t.Errorf("token.Secret = %v, want %v", auth.token.Secret, tt.wantSecret)
-				}
-			}
+func runTokenFromStringTest(t *testing.T, testCase tokenFromStringTest) {
+	t.Helper()
+
+	authenticator, err := auth.NewAPITokenAuthenticatorFromString(testCase.tokenString)
+
+	if testCase.wantErr {
+		if err == nil {
+			t.Errorf("NewAPITokenAuthenticatorFromString() expected error, got nil")
+		}
+
+		return
+	}
+
+	if err != nil {
+		t.Errorf("NewAPITokenAuthenticatorFromString() unexpected error = %v", err)
+
+		return
+	}
+
+	if authenticator == nil {
+		t.Fatal("NewAPITokenAuthenticatorFromString() returned nil authenticator")
+	}
+
+	token := authenticator.GetToken()
+	if token.ID != testCase.wantID {
+		t.Errorf("token.ID = %v, want %v", token.ID, testCase.wantID)
+	}
+
+	if token.Secret != testCase.wantSecret {
+		t.Errorf("token.Secret = %v, want %v", token.Secret, testCase.wantSecret)
+	}
+}
+
+func TestNewAPITokenAuthenticatorFromString(t *testing.T) {
+	t.Parallel()
+
+	tests := getTokenFromStringTestCases()
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			runTokenFromStringTest(t, testCase)
 		})
 	}
 }
 
 func TestAPITokenAuthenticator_Authenticate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
-		token   *Token
+		token   *auth.Token
 		wantErr bool
 	}{
 		{
 			name: "valid token",
-			token: &Token{
+			token: &auth.Token{
 				ID:     "root@pam!mytoken",
 				Secret: "secret",
 			},
@@ -98,7 +128,7 @@ func TestAPITokenAuthenticator_Authenticate(t *testing.T) {
 		},
 		{
 			name: "empty ID",
-			token: &Token{
+			token: &auth.Token{
 				ID:     "",
 				Secret: "secret",
 			},
@@ -106,7 +136,7 @@ func TestAPITokenAuthenticator_Authenticate(t *testing.T) {
 		},
 		{
 			name: "empty secret",
-			token: &Token{
+			token: &auth.Token{
 				ID:     "root@pam!mytoken",
 				Secret: "",
 			},
@@ -114,11 +144,14 @@ func TestAPITokenAuthenticator_Authenticate(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			auth := NewAPITokenAuthenticator(tt.token)
-			err := auth.Authenticate()
-			if tt.wantErr {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			authenticator := auth.NewAPITokenAuthenticator(testCase.token)
+
+			err := authenticator.Authenticate()
+			if testCase.wantErr {
 				if err == nil {
 					t.Errorf("Authenticate() expected error, got nil")
 				}
@@ -132,14 +165,16 @@ func TestAPITokenAuthenticator_Authenticate(t *testing.T) {
 }
 
 func TestAPITokenAuthenticator_IsAuthenticated(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		token    *Token
+		token    *auth.Token
 		expected bool
 	}{
 		{
 			name: "valid token",
-			token: &Token{
+			token: &auth.Token{
 				ID:     "root@pam!mytoken",
 				Secret: "secret",
 			},
@@ -152,7 +187,7 @@ func TestAPITokenAuthenticator_IsAuthenticated(t *testing.T) {
 		},
 		{
 			name: "empty ID",
-			token: &Token{
+			token: &auth.Token{
 				ID:     "",
 				Secret: "secret",
 			},
@@ -160,7 +195,7 @@ func TestAPITokenAuthenticator_IsAuthenticated(t *testing.T) {
 		},
 		{
 			name: "empty secret",
-			token: &Token{
+			token: &auth.Token{
 				ID:     "root@pam!mytoken",
 				Secret: "",
 			},
@@ -168,25 +203,30 @@ func TestAPITokenAuthenticator_IsAuthenticated(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			auth := NewAPITokenAuthenticator(tt.token)
-			result := auth.IsAuthenticated()
-			if result != tt.expected {
-				t.Errorf("IsAuthenticated() = %v, want %v", result, tt.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			authenticator := auth.NewAPITokenAuthenticator(testCase.token)
+
+			result := authenticator.IsAuthenticated()
+			if result != testCase.expected {
+				t.Errorf("IsAuthenticated() = %v, want %v", result, testCase.expected)
 			}
 		})
 	}
 }
 
 func TestAPITokenAuthenticator_GetHeaders(t *testing.T) {
-	token := &Token{
+	t.Parallel()
+
+	token := &auth.Token{
 		ID:     "root@pam!mytoken",
 		Secret: "secret-value",
 	}
 
-	auth := NewAPITokenAuthenticator(token)
-	headers := auth.GetHeaders()
+	authenticator := auth.NewAPITokenAuthenticator(token)
+	headers := authenticator.GetHeaders()
 
 	expected := "PVEAPIToken=root@pam!mytoken=secret-value"
 	if headers["Authorization"] != expected {
@@ -194,21 +234,24 @@ func TestAPITokenAuthenticator_GetHeaders(t *testing.T) {
 	}
 
 	// Test with unauthenticated
-	auth = NewAPITokenAuthenticator(nil)
-	headers = auth.GetHeaders()
+	authenticator = auth.NewAPITokenAuthenticator(nil)
+
+	headers = authenticator.GetHeaders()
 	if headers != nil {
 		t.Errorf("GetHeaders() with nil token = %v, want nil", headers)
 	}
 }
 
-func TestParseAPIToken(t *testing.T) {
-	tests := []struct {
-		name       string
-		tokenStr   string
-		wantErr    bool
-		wantID     string
-		wantSecret string
-	}{
+type parseAPITokenTest struct {
+	name       string
+	tokenStr   string
+	wantErr    bool
+	wantID     string
+	wantSecret string
+}
+
+func getParseAPITokenTestCases() []parseAPITokenTest {
+	return []parseAPITokenTest{
 		{
 			name:       "valid token",
 			tokenStr:   "root@pam!mytoken=secret-value",
@@ -242,38 +285,60 @@ func TestParseAPIToken(t *testing.T) {
 			wantErr:  true,
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			token, err := ParseAPIToken(tt.tokenStr)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("ParseAPIToken() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("ParseAPIToken() unexpected error = %v", err)
-				}
-				if token.ID != tt.wantID {
-					t.Errorf("ParseAPIToken() ID = %v, want %v", token.ID, tt.wantID)
-				}
-				if token.Secret != tt.wantSecret {
-					t.Errorf("ParseAPIToken() Secret = %v, want %v", token.Secret, tt.wantSecret)
-				}
-			}
+func runParseAPITokenTest(t *testing.T, testCase parseAPITokenTest) {
+	t.Helper()
+
+	token, err := auth.ParseAPIToken(testCase.tokenStr)
+
+	if testCase.wantErr {
+		if err == nil {
+			t.Errorf("ParseAPIToken() expected error, got nil")
+		}
+
+		return
+	}
+
+	if err != nil {
+		t.Errorf("ParseAPIToken() unexpected error = %v", err)
+
+		return
+	}
+
+	if token.ID != testCase.wantID {
+		t.Errorf("ParseAPIToken() ID = %v, want %v", token.ID, testCase.wantID)
+	}
+
+	if token.Secret != testCase.wantSecret {
+		t.Errorf("ParseAPIToken() Secret = %v, want %v", token.Secret, testCase.wantSecret)
+	}
+}
+
+func TestParseAPIToken(t *testing.T) {
+	t.Parallel()
+
+	tests := getParseAPITokenTestCases()
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			runParseAPITokenTest(t, testCase)
 		})
 	}
 }
 
 func TestFormatAPIToken(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
-		token    *Token
+		token    *auth.Token
 		expected string
 	}{
 		{
 			name: "valid token",
-			token: &Token{
+			token: &auth.Token{
 				ID:     "root@pam!mytoken",
 				Secret: "secret-value",
 			},
@@ -286,17 +351,21 @@ func TestFormatAPIToken(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := FormatAPIToken(tt.token)
-			if result != tt.expected {
-				t.Errorf("FormatAPIToken() = %v, want %v", result, tt.expected)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := auth.FormatAPIToken(testCase.token)
+			if result != testCase.expected {
+				t.Errorf("FormatAPIToken() = %v, want %v", result, testCase.expected)
 			}
 		})
 	}
 }
 
 func TestValidateTokenID(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		id      string
@@ -339,10 +408,12 @@ func TestValidateTokenID(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateTokenID(tt.id)
-			if tt.wantErr {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := auth.ValidateTokenID(testCase.id)
+			if testCase.wantErr {
 				if err == nil {
 					t.Errorf("ValidateTokenID() expected error, got nil")
 				}

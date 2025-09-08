@@ -55,9 +55,11 @@ func (t *Ticket) GetHeaders() map[string]string {
 	if t.Value != "" {
 		headers["Cookie"] = "PVEAuthCookie=" + t.Value
 	}
+
 	if t.CSRFToken != "" {
 		headers["CSRFPreventionToken"] = t.CSRFToken
 	}
+
 	return headers
 }
 
