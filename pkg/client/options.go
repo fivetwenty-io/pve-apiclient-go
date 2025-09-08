@@ -6,8 +6,26 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/cache"
+	pvectx "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/context"
 )
+
+// ExecutionMode indicates where the client is running (local PVE node or remote).
+type ExecutionMode = pvectx.ExecutionMode
+
+// Execution mode constants.
+const (
+	ExecutionModeRemote  = pvectx.ExecutionModeRemote
+	ExecutionModeLocal   = pvectx.ExecutionModeLocal
+	ExecutionModeUnknown = pvectx.ExecutionModeUnknown
+)
+
+// CacheConfig holds cache configuration.
+type CacheConfig = cache.Config
+
+// CacheStats holds cache statistics.
+type CacheStats = cache.CacheStats
 
 var (
 	ErrHostRequired                           = errors.New("host is required")
@@ -50,6 +68,11 @@ type Options struct {
 	APIToken  string // API token for authentication (alternative to username/password)
 	Ticket    string // Authentication ticket (obtained after login)
 	CSRFToken string // CSRF prevention token
+	AutoLogin bool   // Automatically login on first API call if username/password provided (default: false)
+
+	// Execution Context
+	ExecutionMode    ExecutionMode // Detected or manually set execution mode (local/remote/unknown)
+	AutoDetectMode   bool          // Automatically detect execution mode on client creation (default: true)
 
 	// SSL/TLS
 	SSLOptions                  *SSLOptions                  // SSL/TLS configuration
@@ -61,6 +84,9 @@ type Options struct {
 	// HTTP Client
 	Timeout   time.Duration // Request timeout (default: 30s)
 	KeepAlive int           // Number of keep-alive connections (default: 10)
+
+	// Caching
+	CacheConfig *CacheConfig // Cache configuration (nil = disabled)
 
 	// Misc
 	CookieName   string // Name of the authentication cookie (default: "PVEAuthCookie")
@@ -203,5 +229,12 @@ func (o *Options) setDefaults() {
 			VerifyMode:     SSLVerifyPeer,
 			VerifyHostname: true,
 		}
+	}
+
+	// Auto-detect execution mode if not explicitly set
+	// Note: AutoDetectMode defaults to false (opt-in)
+	if o.AutoDetectMode && o.ExecutionMode == 0 {
+		detector := pvectx.NewDetector()
+		o.ExecutionMode = detector.DetectMode()
 	}
 }

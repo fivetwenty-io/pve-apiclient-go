@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/batch"
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/pool"
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/stream"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/batch"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/pool"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/stream"
 )
 
 var errEOF = errors.New("EOF")

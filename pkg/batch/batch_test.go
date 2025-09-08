@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/batch"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/batch"
 )
 
 func TestNewBatch(t *testing.T) {

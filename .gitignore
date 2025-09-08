@@ -35,4 +35,17 @@ Thumbs.db
 # Project specific
 /bin/
 /dist/
-*.log
+
+# Example binaries (compiled from examples/*/main.go)
+examples/*/advanced
+examples/*/auth
+examples/*/basic
+examples/*/auto-login
+examples/*/caching
+examples/*/context-detection
+examples/*/logging-slog
+examples/*/logging-zap
+examples/*/lxc-management
+examples/*/metrics-prom
+examples/*/vm-clone-start-cloudinit
+examples/*/vm-cloudinit-start

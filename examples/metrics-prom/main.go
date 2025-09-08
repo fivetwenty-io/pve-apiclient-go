@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
-	client "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
-	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/pkg/metrics"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	client "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
+	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/metrics"
 )
 
 func main() {

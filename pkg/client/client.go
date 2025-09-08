@@ -2,13 +2,14 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
 
-	pvehttp "github.com/fivetwenty-io/pve-apiclient-go/internal/http"
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/auth"
-	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/pkg/metrics"
+	pvehttp "github.com/fivetwenty-io/pve-apiclient-go/v3/internal/http"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/auth"
+	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/metrics"
 )
 
 // Client defines the interface for interacting with the PVE API.
@@ -57,6 +58,11 @@ type Client interface {
 
 	// Two-Factor Authentication
 	SetTFAHandler(h TFAHandler)
+
+	// Cache control
+	InvalidateCache(pattern string) int
+	ClearCache()
+	CacheStats() *CacheStats
 }
 
 // Response represents a response from the PVE API.
@@ -79,6 +85,9 @@ type HTTPClient interface {
 	UploadCtx(ctx context.Context, path string, fields map[string]string, fileField, filename string, file io.Reader) (*Response, error)
 	SetHeader(key, value string)
 	RemoveHeader(key string)
+	InvalidateCache(pattern string) int
+	ClearCache()
+	CacheStats() *CacheStats
 }
 
 // Re-export logging types for the public API.
@@ -258,10 +267,19 @@ func (c *client) UploadCtx(ctx context.Context, path string, fields map[string]s
 }
 
 // Login authenticates with the PVE API.
+// This method is useful when you want to explicitly login before making API calls,
+// or when AutoLogin is disabled (default) and you're using username/password authentication.
 func (c *client) Login() error {
-	// Authentication is handled by the internal HTTP client middleware.
-	// Keep method for API compatibility.
-	return nil
+	if a, ok := c.httpClient.(*internalHTTPAdapter); ok && a.inner != nil {
+		err := a.inner.Authenticate()
+		if err != nil {
+			return fmt.Errorf("failed to authenticate with PVE API: %w", err)
+		}
+
+		return nil
+	}
+
+	return errors.New("authentication not configured")
 }
 
 // Logout logs out from the PVE API.
@@ -338,6 +356,21 @@ func (c *client) SetTFAHandler(h TFAHandler) {
 	}
 }
 
+// InvalidateCache removes cache entries matching the given pattern.
+func (c *client) InvalidateCache(pattern string) int {
+	return c.httpClient.InvalidateCache(pattern)
+}
+
+// ClearCache removes all cached entries.
+func (c *client) ClearCache() {
+	c.httpClient.ClearCache()
+}
+
+// CacheStats returns current cache statistics.
+func (c *client) CacheStats() *CacheStats {
+	return c.httpClient.CacheStats()
+}
+
 func (c *client) call(method, path string, params map[string]interface{}) (*Response, error) {
 	// Make the HTTP request
 	resp, err := c.httpClient.Do(method, path, params)
@@ -401,6 +434,29 @@ func (a *internalHTTPAdapter) UploadCtx(ctx context.Context, path string, fields
 func (a *internalHTTPAdapter) SetHeader(key, value string) {}
 func (a *internalHTTPAdapter) RemoveHeader(key string)     {}
 
+func (a *internalHTTPAdapter) InvalidateCache(pattern string) int {
+	if a.inner != nil {
+		return a.inner.InvalidateCache(pattern)
+	}
+	return 0
+}
+
+func (a *internalHTTPAdapter) ClearCache() {
+	if a.inner != nil {
+		a.inner.ClearCache()
+	}
+}
+
+func (a *internalHTTPAdapter) CacheStats() *CacheStats {
+	if a.inner != nil {
+		stats := a.inner.CacheStats()
+		if stats != nil {
+			return (*CacheStats)(stats)
+		}
+	}
+	return nil
+}
+
 // internalHTTPNew constructs the real internal HTTP client.
 func internalHTTPNew(opts *Options) (*pvehttp.Client, error) {
 	// Map client.Options to internal/http.Options
@@ -422,9 +478,12 @@ func internalHTTPNew(opts *Options) (*pvehttp.Client, error) {
 		Username:                    opts.Username,
 		Password:                    opts.Password,
 		APIToken:                    opts.APIToken,
+		Ticket:                      opts.Ticket,
+		AutoLogin:                   opts.AutoLogin,
 		SSLOptions:                  ssl,
 		Timeout:                     opts.Timeout,
 		KeepAlive:                   opts.KeepAlive,
+		CacheConfig:                 opts.CacheConfig,
 		CookieName:                  opts.CookieName,
 		PVENewFormat:                opts.PVENewFormat,
 		CachedFingerprints:          opts.CachedFingerprints,

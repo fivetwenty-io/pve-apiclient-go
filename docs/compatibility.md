@@ -117,7 +117,7 @@ This document provides a comprehensive compatibility matrix for the PVE API Go c
 ### Checking Version Compatibility
 
 ```go
-import "github.com/fivetwenty-io/pve-apiclient-go/pkg/compatibility"
+import "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/compatibility"
 
 // Check PVE version
 checker, err := compatibility.NewChecker("7.4-3")

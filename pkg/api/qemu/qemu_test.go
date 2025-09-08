@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/api/qemu"
-	pveclient "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/api/qemu"
+	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 // helper to build client.Options from test server URL.

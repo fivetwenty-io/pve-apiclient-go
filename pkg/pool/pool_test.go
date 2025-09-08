@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/pool"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/pool"
 )
 
 func TestNewPool(t *testing.T) {

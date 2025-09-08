@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 // Service defines QEMU VM helpers.

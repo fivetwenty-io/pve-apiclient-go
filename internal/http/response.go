@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
-	apierrors "github.com/fivetwenty-io/pve-apiclient-go/pkg/errors"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	apierrors "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/errors"
 )
 
 var (

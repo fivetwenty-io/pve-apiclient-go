@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
 	"golang.org/x/term"
 )
 

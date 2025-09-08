@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
-	pveerr "github.com/fivetwenty-io/pve-apiclient-go/pkg/errors"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
+	pveerr "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/errors"
 )
 
 var errSizeGiBPositive = errors.New("sizeGiB must be > 0")
@@ -22,7 +22,7 @@ type Service interface {
 type service struct{ c client.Client }
 
 // New returns a new storage service.
-func New(c client.Client) Service { return &service{c: c} } //nolint:ireturn // Factory function pattern
+func New(c client.Client) Service { return &service{c: c} }
 
 func (s *service) CreateVolume(ctx context.Context, node, storage string, sizeGiB int, format string, vmid int, name string) (string, error) {
 	if sizeGiB <= 0 {

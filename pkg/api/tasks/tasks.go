@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 var (

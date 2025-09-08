@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/ssl"
-	pve "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
-	pveerrors "github.com/fivetwenty-io/pve-apiclient-go/pkg/errors"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/ssl"
+	pve "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
+	pveerrors "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/errors"
 )
 
 func main() {

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
 )
 
 var (

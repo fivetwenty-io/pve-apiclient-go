@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
 )
 
 // APIError represents a general API error from PVE.

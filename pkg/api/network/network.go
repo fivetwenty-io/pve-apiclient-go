@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 // Service defines network helpers.
@@ -18,7 +18,7 @@ type Service interface {
 type service struct{ c client.Client }
 
 // New returns a new network service.
-func New(c client.Client) Service { return &service{c: c} } //nolint:ireturn // Factory function pattern
+func New(c client.Client) Service { return &service{c: c} }
 
 func (s *service) EnsureBridge(ctx context.Context, node, bridge string, params map[string]interface{}) error {
 	exists, err := s.BridgeExists(ctx, node, bridge)

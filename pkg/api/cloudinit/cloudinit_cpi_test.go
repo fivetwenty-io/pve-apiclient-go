@@ -3,7 +3,7 @@ package cloudinit_test
 import (
 	"testing"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/api/cloudinit"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/api/cloudinit"
 )
 
 func TestBuildIPConfigsFromCPISpec(t *testing.T) {

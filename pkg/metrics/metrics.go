@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
 )
 
 // Collector collects metrics for the PVE API client.

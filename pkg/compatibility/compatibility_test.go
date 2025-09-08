@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/compatibility"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/compatibility"
 )
 
 func TestParseVersion(t *testing.T) {

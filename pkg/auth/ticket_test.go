@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/auth"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/auth"
 )
 
 func TestTicketAuthenticator_NewFormatAndCookieName(t *testing.T) {

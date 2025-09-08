@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	pvehttp "github.com/fivetwenty-io/pve-apiclient-go/internal/http"
+	pvehttp "github.com/fivetwenty-io/pve-apiclient-go/v3/internal/http"
 )
 
 // WithRetries sets per-request retry attempts in the context for this client.

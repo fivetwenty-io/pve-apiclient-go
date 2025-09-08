@@ -3,8 +3,8 @@ package slogadapter
 import (
 	"log/slog"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
-	ih "github.com/fivetwenty-io/pve-apiclient-go/internal/http"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	ih "github.com/fivetwenty-io/pve-apiclient-go/v3/internal/http"
 )
 
 // Adapter wraps a slog.Logger to satisfy internal/http.Logger.

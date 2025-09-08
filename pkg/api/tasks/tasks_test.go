@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/api/tasks"
-	pveclient "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/api/tasks"
+	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 func optsFromServerURL(u string) pveclient.Options {

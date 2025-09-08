@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/api/cloudinit"
-	pveclient "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/api/cloudinit"
+	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 func TestAttachWithUpload(t *testing.T) {

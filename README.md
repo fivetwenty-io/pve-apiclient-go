@@ -1,25 +1,34 @@
-# PVE API Client for Go
+# PVE API Client for Go (v3)
 
-A Go client library for the Proxmox Virtual Environment (PVE) API.
+A Go client library for the Proxmox Virtual Environment (PVE) API v3.
+
+> **Version Note:** This is version 3 of the library, designed for compatibility with Proxmox VE API v3. The module path includes `/v3` as per Go module versioning conventions.
 
 ## Features
 
 - Full authentication support (username/password, API tokens, TFA)
+- **Auto-login**: Optional automatic authentication on first API call (v3.1.0+)
+- **Request Caching**: Optional LRU cache with TTL for GET requests (v3.2.0+)
+- **Context Detection**: Automatic detection of local vs remote execution (v3.2.0+)
+- **LXC API**: Full container lifecycle management (v3.2.0+)
 - SSL/TLS certificate verification with fingerprint support
 - Complete HTTP method coverage (GET, POST, PUT, DELETE)
 - Error handling with detailed error types
 - Connection pooling and keep-alive support
-- Comprehensive test coverage
 - Structured logging with redaction and per-request controls
 - Metrics: snapshots and Prometheus-friendly export
 
 ## Installation
 
 ```bash
-go get github.com/fivetwenty-io/pve-apiclient-go
+go get github.com/fivetwenty-io/pve-apiclient-go/v3
 ```
 
+> **Note:** This library uses Go module versioning. The `/v3` suffix indicates compatibility with Proxmox VE API v3.
+
 ## Quick Start
+
+### With Auto-Login (Recommended)
 
 ```go
 package main
@@ -27,29 +36,133 @@ package main
 import (
     "fmt"
     "log"
-    
-    pve "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+
+    pve "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 func main() {
     client, err := pve.NewClient(pve.Options{
-        Host:     "pve.example.com",
-        Username: "root@pam",
-        Password: "secret",
+        Host:      "pve.example.com",
+        Username:  "root@pam",
+        Password:  "secret",
+        AutoLogin: true, // Authenticate automatically on first request
     })
     if err != nil {
         log.Fatal(err)
     }
-    
-    // Get cluster status
+
+    // No Login() needed - authentication happens automatically
     status, err := client.Get("/cluster/status", nil)
     if err != nil {
         log.Fatal(err)
     }
-    
+
     fmt.Printf("Cluster status: %v\n", status)
 }
 ```
+
+### Traditional Manual Login
+
+```go
+client, err := pve.NewClient(pve.Options{
+    Host:     "pve.example.com",
+    Username: "root@pam",
+    Password: "secret",
+    // AutoLogin: false (default)
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Explicit login call
+err = client.Login()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Now make API calls
+status, err := client.Get("/cluster/status", nil)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+## Authentication
+
+### Auto-Login (v3.1.0+)
+
+Auto-login provides convenient automatic authentication for simple scripts:
+
+```go
+client, _ := pve.NewClient(pve.Options{
+    Host:      "pve.example.com",
+    Username:  "root@pam",
+    Password:  "secret",
+    AutoLogin: true, // Enable auto-login
+})
+
+// Authentication happens automatically on first API call
+// No need to call Login() explicitly
+```
+
+**Key Points:**
+- Disabled by default (opt-in feature)
+- Only applies to username/password authentication
+- Thread-safe for concurrent first requests
+- API tokens and pre-existing tickets don't use auto-login
+- See [examples/auto-login](examples/auto-login/) for detailed examples
+
+## Request Caching
+
+Reduce API load and improve performance by caching GET request responses:
+
+```go
+import (
+    "time"
+    pve "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
+)
+
+// Configure caching
+cacheConfig := pve.CacheConfig{
+    Enabled:         true,
+    MaxSize:         50 * 1024 * 1024,  // 50 MB
+    DefaultTTL:      5 * time.Minute,   // Cache for 5 minutes
+    CleanupInterval: 1 * time.Minute,   // Cleanup every minute
+}
+
+client, _ := pve.NewClient(pve.Options{
+    Host:        "pve.example.com",
+    Username:    "root@pam",
+    Password:    "secret",
+    CacheConfig: &cacheConfig,
+})
+
+// First request - cache miss (hits API)
+version, _ := client.Get("/version", nil)
+
+// Second request - cache hit (served from cache, much faster)
+version, _ = client.Get("/version", nil)
+
+// Check cache statistics
+stats := client.CacheStats()
+fmt.Printf("Hit rate: %.2f%%\n", stats.HitRate * 100)
+
+// Invalidate cache entries by pattern
+client.InvalidateCache("/nodes/*")  // Remove all /nodes/* entries
+
+// Clear entire cache
+client.ClearCache()
+```
+
+**Features:**
+- LRU eviction when cache exceeds MaxSize
+- TTL expiration for time-sensitive data
+- Pattern-based invalidation (wildcards supported)
+- Thread-safe concurrent access
+- Real-time statistics (hits, misses, evictions, hit rate)
+- Only caches GET requests (idempotent operations)
+
+**See [examples/caching](examples/caching/) for detailed usage and best practices**
 
 ## Logging & Metrics
 
@@ -113,8 +226,8 @@ go build -tags zap ./...
 ```go
 // only when built with -tags zap
 import (
-    ih "github.com/fivetwenty-io/pve-apiclient-go/internal/http"
-    za "github.com/fivetwenty-io/pve-apiclient-go/pkg/logging/zapadapter"
+    ih "github.com/fivetwenty-io/pve-apiclient-go/v3/internal/http"
+    za "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/logging/zapadapter"
     "go.uber.org/zap"
 )
 
@@ -139,16 +252,79 @@ if c, ok := any(impl).(*pveclient.client); ok {
 }
 ```
 
+## Domain APIs
+
+The library provides high-level APIs for common Proxmox VE resources:
+
+### LXC Containers
+
+Full lifecycle management for Linux Containers:
+
+```go
+import "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/api/lxc"
+
+lxcClient := lxc.NewClient(client, "pve")  // Node name
+ctx := context.Background()
+
+// Create container
+config := lxc.ContainerConfig{
+    VMID:         200,
+    OSTemplate:   "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst",
+    Hostname:     "test-ct",
+    Memory:       1024,
+    Cores:        2,
+    RootFS:       "local-lvm:8",
+    Net0:         "name=eth0,bridge=vmbr0,ip=dhcp",
+    Unprivileged: true,
+}
+upid, _ := lxcClient.Create(ctx, config)
+
+// List containers
+containers, _ := lxcClient.List(ctx)
+
+// Get status
+status, _ := lxcClient.Status(ctx, 200)
+
+// Start/Stop/Reboot
+lxcClient.Start(ctx, 200)
+lxcClient.Shutdown(ctx, 200, 60)  // 60s timeout
+lxcClient.Stop(ctx, 200)
+lxcClient.Reboot(ctx, 200)
+
+// Update configuration
+updates := map[string]interface{}{
+    "memory": 2048,
+    "cores":  4,
+}
+lxcClient.UpdateConfig(ctx, 200, updates)
+
+// Clone container
+cloneOpts := lxc.CloneOptions{
+    Hostname: "test-ct-clone",
+    Full:     true,
+}
+lxcClient.Clone(ctx, 200, 201, cloneOpts)
+
+// Delete container
+lxcClient.Delete(ctx, 200, true)  // purge=true
+```
+
+**See [examples/lxc-management](examples/lxc-management/) for complete usage**
+
 ## Documentation
 
-See the [documentation](https://pkg.go.dev/github.com/fivetwenty-io/pve-apiclient-go) for detailed API reference.
+See the [documentation](https://pkg.go.dev/github.com/fivetwenty-io/pve-apiclient-go/v3) for detailed API reference.
 
 ## Examples
 
-Check the `cmd/examples/` directory for more comprehensive examples:
+Check the `examples/` directory for more examples:
 
 - `basic/` - Basic authentication and API calls
 - `auth/` - Advanced authentication scenarios including TFA
+- `auto-login/` - Automatic authentication on first request
+- `context-detection/` - Execution context detection (local vs remote)
+- `caching/` - Request caching with LRU and TTL
+- `lxc-management/` - LXC container lifecycle management
 - `advanced/` - Advanced features like batching and streaming
 
 ## Development

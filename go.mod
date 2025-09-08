@@ -1,4 +1,4 @@
-module github.com/fivetwenty-io/pve-apiclient-go
+module github.com/fivetwenty-io/pve-apiclient-go/v3
 
 go 1.25.0
 

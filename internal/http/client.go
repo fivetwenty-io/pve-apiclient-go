@@ -15,11 +15,12 @@ import (
 	"time"
 
 	"crypto/x509"
-	"github.com/fivetwenty-io/pve-apiclient-go/internal/constants"
-	issl "github.com/fivetwenty-io/pve-apiclient-go/internal/ssl"
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/auth"
-	apierrors "github.com/fivetwenty-io/pve-apiclient-go/pkg/errors"
-	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/pkg/metrics"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
+	issl "github.com/fivetwenty-io/pve-apiclient-go/v3/internal/ssl"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/auth"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/cache"
+	apierrors "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/errors"
+	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/metrics"
 )
 
 // Client implements the HTTP client for PVE API communication.
@@ -42,6 +43,14 @@ type Client struct {
 
 	// Optional TFA handler for auto-completion of two-factor challenges
 	tfaHandler auth.TFAHandler
+
+	// Auto-login state management
+	options        *Options
+	loginMutex     sync.Mutex
+	loginAttempted bool
+
+	// Caching
+	cache *cache.Cache
 }
 
 // Middleware defines a function that can modify requests or responses.
@@ -78,12 +87,26 @@ func NewClient(options *Options) (*Client, error) {
 		maxRetries:    constants.DefaultMaxRetries,
 		retryDelay:    time.Second,
 		logConfig:     defaultLogConfig(),
+		options:       options,
 	}
 
-	client.middleware = []Middleware{
-		client.authMiddleware,
-		client.retryMiddleware,
-		client.loggingMiddleware,
+	// Initialize cache if configured
+	if options.CacheConfig != nil && options.CacheConfig.Enabled {
+		client.cache = cache.NewCache(*options.CacheConfig)
+
+		// Add caching middleware BEFORE auth (cached responses bypass auth)
+		client.middleware = []Middleware{
+			client.cachingMiddleware,
+			client.authMiddleware,
+			client.retryMiddleware,
+			client.loggingMiddleware,
+		}
+	} else {
+		client.middleware = []Middleware{
+			client.authMiddleware,
+			client.retryMiddleware,
+			client.loggingMiddleware,
+		}
 	}
 
 	return client, nil
@@ -383,6 +406,34 @@ func (c *Client) SetMetrics(m *pmetrics.DefaultMetrics) { c.prom = m }
 
 // SetTFAHandler installs a handler to automatically complete two-factor authentication challenges.
 func (c *Client) SetTFAHandler(h auth.TFAHandler) { c.tfaHandler = h }
+
+// Authenticate performs explicit authentication with the PVE API.
+// This is a public wrapper around ensureAuthentication for use by the client package.
+func (c *Client) Authenticate() error {
+	return c.ensureAuthentication()
+}
+
+// isAuthenticated checks if the client is currently authenticated.
+func (c *Client) isAuthenticated() bool {
+	if c.authenticator == nil {
+		return false
+	}
+
+	return c.authenticator.IsAuthenticated()
+}
+
+// needsLogin determines if automatic login should be attempted.
+// Auto-login only applies to username/password authentication, not API tokens or pre-existing tickets.
+func (c *Client) needsLogin() bool {
+	if c.options == nil {
+		return false
+	}
+	// Only auto-login for username/password auth (not API tokens or pre-existing tickets)
+	return c.options.Username != "" &&
+		c.options.Password != "" &&
+		c.options.APIToken == "" &&
+		c.options.Ticket == ""
+}
 
 // Logout invalidates the current session if using ticket-based authentication.
 func (c *Client) Logout() error {
@@ -718,11 +769,94 @@ func (c *Client) handleAuthenticationRetry(req *http.Request, resp *http.Respons
 	return next(req)
 }
 
-func (c *Client) authMiddleware(req *http.Request, next Handler) (*http.Response, error) {
-	// Ensure we're authenticated
-	err := c.ensureAuthentication()
+// cachedResponse wraps an HTTP response for caching.
+type cachedResponse struct {
+	StatusCode int
+	Headers    http.Header
+	Body       []byte
+}
+
+func (c *Client) cachingMiddleware(req *http.Request, next Handler) (*http.Response, error) {
+	// Only cache GET requests
+	if req.Method != http.MethodGet || c.cache == nil {
+		return next(req)
+	}
+
+	// Generate cache key from URL
+	cacheKey := cache.GenerateKeyFromURL(req.Method, req.URL.String())
+
+	// Check cache
+	if cached, found := c.cache.Get(cacheKey); found {
+		if resp, ok := cached.(*cachedResponse); ok {
+			// Convert cached response back to http.Response
+			httpResp := &http.Response{
+				StatusCode: resp.StatusCode,
+				Header:     resp.Headers,
+				Body:       io.NopCloser(bytes.NewReader(resp.Body)),
+				Request:    req,
+			}
+			return httpResp, nil
+		}
+	}
+
+	// Cache miss - execute request
+	resp, err := next(req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Cache successful responses (2xx status codes)
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		// Read response body
+		bodyBytes, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			// If we can't read body, return response without caching
+			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			return resp, nil
+		}
+
+		// Create cached response
+		cached := &cachedResponse{
+			StatusCode: resp.StatusCode,
+			Headers:    resp.Header.Clone(),
+			Body:       bodyBytes,
+		}
+
+		// Store in cache with default TTL
+		c.cache.Set(cacheKey, cached, 0)
+
+		// Restore body for return
+		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	}
+
+	return resp, nil
+}
+
+func (c *Client) authMiddleware(req *http.Request, next Handler) (*http.Response, error) {
+	// Auto-login logic: if enabled and not yet authenticated, login automatically
+	if c.options != nil && c.options.AutoLogin && !c.isAuthenticated() && c.needsLogin() {
+		// Use mutex to prevent concurrent first requests from logging in multiple times
+		c.loginMutex.Lock()
+
+		// Double-check after acquiring lock (another goroutine may have logged in)
+		if !c.isAuthenticated() && !c.loginAttempted {
+			c.loginAttempted = true
+			c.loginMutex.Unlock() // Unlock before authentication to allow other operations
+
+			err := c.ensureAuthentication()
+			if err != nil {
+				return nil, fmt.Errorf("auto-login failed: %w", err)
+			}
+		} else {
+			c.loginMutex.Unlock()
+		}
+	} else {
+		// Standard authentication check (non-auto-login path)
+		err := c.ensureAuthentication()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Add authentication headers
@@ -834,4 +968,31 @@ func (c *Client) loggingMiddleware(req *http.Request, next Handler) (*http.Respo
 	c.fireHook(event)
 
 	return resp, err
+}
+
+// InvalidateCache removes cache entries matching the given pattern.
+// Pattern supports wildcard (*) at the end, e.g., "/nodes/*" invalidates all node paths.
+// Returns the number of entries invalidated.
+func (c *Client) InvalidateCache(pattern string) int {
+	if c.cache != nil {
+		return c.cache.Invalidate(pattern)
+	}
+	return 0
+}
+
+// ClearCache removes all cached entries.
+func (c *Client) ClearCache() {
+	if c.cache != nil {
+		c.cache.Clear()
+	}
+}
+
+// CacheStats returns current cache statistics.
+// Returns nil if caching is not enabled.
+func (c *Client) CacheStats() *cache.CacheStats {
+	if c.cache != nil {
+		stats := c.cache.Stats()
+		return &stats
+	}
+	return nil
 }

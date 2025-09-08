@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	pveerr "github.com/fivetwenty-io/pve-apiclient-go/pkg/errors"
+	pveerr "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/errors"
 )
 
 func TestAPIError_Error(t *testing.T) {

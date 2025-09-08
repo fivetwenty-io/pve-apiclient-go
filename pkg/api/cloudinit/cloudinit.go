@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 const dhcpIPConfig = "ip=dhcp"
@@ -29,7 +29,7 @@ type Service interface {
 type service struct{ c client.Client }
 
 // New returns a new cloud-init service.
-func New(c client.Client) Service { return &service{c: c} } //nolint:ireturn // Factory function pattern
+func New(c client.Client) Service { return &service{c: c} }
 
 func (s *service) BuildIPConfig(networks map[string]any) (map[string]string, error) {
 	// Minimal builder: expects keys "ip", "gw", "nameserver" directly

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/api/network"
-	pveclient "github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/api/network"
+	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 func TestBridgeExistsAndEnsure(t *testing.T) {

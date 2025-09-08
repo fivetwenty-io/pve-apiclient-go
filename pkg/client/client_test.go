@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/pkg/client"
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 const (

@@ -4,6 +4,8 @@ import (
 	"crypto/x509"
 	"fmt"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/cache"
 )
 
 // SSLVerifyMode defines how SSL certificates should be verified.
@@ -31,14 +33,19 @@ type Options struct {
 	Port     int
 	Protocol string
 
-	Username string
-	Password string
-	APIToken string
+	Username  string
+	Password  string
+	APIToken  string
+	Ticket    string
+	AutoLogin bool
 
 	SSLOptions *SSLOptions
 
 	Timeout   time.Duration
 	KeepAlive int
+
+	// Caching configuration
+	CacheConfig *cache.Config
 
 	// Extra options for auth/TLS parity with perl client
 	CookieName   string
