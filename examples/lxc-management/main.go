@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	pve "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/api/lxc"
+	pve "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
 func main() {
@@ -30,15 +30,18 @@ func main() {
 
 	// Example 1: List all LXC containers
 	fmt.Println("Example 1: List LXC Containers")
+
 	containers, err := lxcClient.List(ctx)
 	if err != nil {
 		log.Printf("Failed to list containers: %v", err)
 	} else {
 		fmt.Printf("Found %d containers:\n", len(containers))
+
 		for _, ct := range containers {
 			fmt.Printf("  - CT %d: %s (status: %s)\n", ct.VMID, ct.Name, ct.Status)
 		}
 	}
+
 	fmt.Println()
 
 	// Example 2: Create a new LXC container
@@ -70,6 +73,7 @@ func main() {
 		fmt.Println("  Memory: 1024 MB")
 		fmt.Println("  Note: Wait for task to complete before proceeding")
 	}
+
 	fmt.Println()
 
 	// Example 3: Get container status
@@ -82,16 +86,20 @@ func main() {
 		fmt.Printf("Container 200 Status:\n")
 		fmt.Printf("  Status: %s\n", status.Status)
 		fmt.Printf("  Name: %s\n", status.Name)
+
 		if status.Uptime > 0 {
 			fmt.Printf("  Uptime: %d seconds\n", status.Uptime)
 		}
+
 		if status.CPUs > 0 {
 			fmt.Printf("  CPUs: %d\n", status.CPUs)
 		}
+
 		if status.MaxMem > 0 {
 			fmt.Printf("  Memory: %d MB / %d MB\n", status.Mem/(1024*1024), status.MaxMem/(1024*1024))
 		}
 	}
+
 	fmt.Println()
 
 	// Example 4: Start container
@@ -103,6 +111,7 @@ func main() {
 	} else {
 		fmt.Printf("✓ Container 200 start task: %s\n", upid)
 	}
+
 	fmt.Println()
 
 	// Example 5: Get container configuration
@@ -113,10 +122,12 @@ func main() {
 		log.Printf("Failed to get config: %v", err)
 	} else {
 		fmt.Println("Container 200 Configuration:")
+
 		for key, value := range ctConfig {
 			fmt.Printf("  %s: %v\n", key, value)
 		}
 	}
+
 	fmt.Println()
 
 	// Example 6: Update container configuration
@@ -136,6 +147,7 @@ func main() {
 		fmt.Println("  Memory: 1024 MB → 2048 MB")
 		fmt.Println("  Cores: 2 → 4")
 	}
+
 	fmt.Println()
 
 	// Example 7: Clone container
@@ -156,6 +168,7 @@ func main() {
 		fmt.Println("  Target: CT 201")
 		fmt.Println("  Type: Full clone")
 	}
+
 	fmt.Println()
 
 	// Example 8: Resize container disk
@@ -169,6 +182,7 @@ func main() {
 		fmt.Println("  Disk: rootfs")
 		fmt.Println("  Size: +2G (added 2GB)")
 	}
+
 	fmt.Println()
 
 	// Example 9: Graceful shutdown
@@ -181,6 +195,7 @@ func main() {
 		fmt.Printf("✓ Container 200 shutdown task: %s\n", upid)
 		fmt.Println("  Timeout: 60 seconds")
 	}
+
 	fmt.Println()
 
 	// Example 10: Reboot container
@@ -192,6 +207,7 @@ func main() {
 	} else {
 		fmt.Printf("✓ Container 200 reboot task: %s\n", upid)
 	}
+
 	fmt.Println()
 
 	// Example 11: Stop container (forceful)
@@ -204,6 +220,7 @@ func main() {
 		fmt.Printf("✓ Container 200 stop task: %s\n", upid)
 		fmt.Println("  Type: Forceful stop")
 	}
+
 	fmt.Println()
 
 	// Example 12: Delete container
@@ -216,6 +233,7 @@ func main() {
 		fmt.Printf("✓ Container 200 deletion task: %s\n", upid)
 		fmt.Println("  Purge: true (all data will be removed)")
 	}
+
 	fmt.Println()
 
 	// Summary

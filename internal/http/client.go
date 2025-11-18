@@ -224,7 +224,7 @@ func createAuthenticator(options *Options, httpClient *http.Client) auth.Authent
 			Secret: options.APIToken,
 		}
 
-		return auth.NewAPITokenAuthenticator(token)
+		return auth.NewAPITokenAuthenticator(token, options.APITokenName)
 	} else if options.Username != "" {
 		credentials := &auth.Credentials{
 			Username: options.Username,
@@ -795,6 +795,7 @@ func (c *Client) cachingMiddleware(req *http.Request, next Handler) (*http.Respo
 				Body:       io.NopCloser(bytes.NewReader(resp.Body)),
 				Request:    req,
 			}
+
 			return httpResp, nil
 		}
 	}
@@ -809,10 +810,12 @@ func (c *Client) cachingMiddleware(req *http.Request, next Handler) (*http.Respo
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		// Read response body
 		bodyBytes, err := io.ReadAll(resp.Body)
+
 		_ = resp.Body.Close()
 		if err != nil {
 			// If we can't read body, return response without caching
 			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
 			return resp, nil
 		}
 
@@ -834,6 +837,26 @@ func (c *Client) cachingMiddleware(req *http.Request, next Handler) (*http.Respo
 }
 
 func (c *Client) authMiddleware(req *http.Request, next Handler) (*http.Response, error) {
+	// Check if ticket needs renewal before making the request.
+	// PVE tickets have 2-hour validity, but should be renewed after 1 hour
+	// to prevent expiration during long-running operations.
+	if ticketAuth, ok := c.authenticator.(*auth.TicketAuthenticator); ok {
+		ticket := ticketAuth.GetTicket()
+		if ticket != nil && ticket.ShouldRenew(time.Hour) {
+			// Ticket is approaching expiration (> 1 hour old), renew it proactively
+			err := ticketAuth.RefreshForce()
+			if err != nil {
+				// Log the renewal failure but don't fail the request
+				// The ticket may still be valid enough to complete this request
+				if c.logger != nil && c.logConfig.Enabled {
+					c.logger.Warn("automatic ticket renewal failed", map[string]interface{}{
+						"error": err.Error(),
+					})
+				}
+			}
+		}
+	}
+
 	// Auto-login logic: if enabled and not yet authenticated, login automatically
 	if c.options != nil && c.options.AutoLogin && !c.isAuthenticated() && c.needsLogin() {
 		// Use mutex to prevent concurrent first requests from logging in multiple times
@@ -977,6 +1000,7 @@ func (c *Client) InvalidateCache(pattern string) int {
 	if c.cache != nil {
 		return c.cache.Invalidate(pattern)
 	}
+
 	return 0
 }
 
@@ -992,7 +1016,9 @@ func (c *Client) ClearCache() {
 func (c *Client) CacheStats() *cache.CacheStats {
 	if c.cache != nil {
 		stats := c.cache.Stats()
+
 		return &stats
 	}
+
 	return nil
 }

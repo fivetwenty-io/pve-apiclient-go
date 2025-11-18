@@ -438,6 +438,7 @@ func (a *internalHTTPAdapter) InvalidateCache(pattern string) int {
 	if a.inner != nil {
 		return a.inner.InvalidateCache(pattern)
 	}
+
 	return 0
 }
 
@@ -454,6 +455,7 @@ func (a *internalHTTPAdapter) CacheStats() *CacheStats {
 			return (*CacheStats)(stats)
 		}
 	}
+
 	return nil
 }
 

@@ -103,6 +103,8 @@ func (ta *TicketAuthenticator) GetHeaders() map[string]string {
 }
 
 // Refresh refreshes the authentication if necessary.
+// If the ticket is valid, this is a no-op. If invalid, re-authenticates.
+// For forced renewal (e.g., when ticket is old but not expired), use RefreshForce.
 func (ta *TicketAuthenticator) Refresh() error {
 	if ta.IsAuthenticated() {
 		// Ticket is still valid
@@ -111,6 +113,32 @@ func (ta *TicketAuthenticator) Refresh() error {
 
 	// Re-authenticate
 	return ta.Authenticate()
+}
+
+// RefreshForce forces a ticket renewal regardless of current validity.
+// This is useful for renewing tickets that are approaching expiration.
+// Uses the ticket-as-password mechanism to renew using existing ticket.
+func (ta *TicketAuthenticator) RefreshForce() error {
+	result, err := ta.login()
+	if err != nil {
+		return fmt.Errorf("forced ticket renewal failed: %w", err)
+	}
+
+	if result.TFAChallenge != nil {
+		return &apierrors.TFARequiredError{
+			Ticket:    result.TFAChallenge.Ticket,
+			Challenge: result.TFAChallenge.Challenge,
+			Types:     result.TFAChallenge.Types,
+		}
+	}
+
+	if result.Ticket != nil {
+		ta.ticket = result.Ticket
+
+		return nil
+	}
+
+	return ErrAuthenticationFailedNoTicket
 }
 
 // Logout performs logout operations.
@@ -294,7 +322,15 @@ func (ta *TicketAuthenticator) login() (*AuthResult, error) {
 func (ta *TicketAuthenticator) prepareLoginData() url.Values {
 	data := url.Values{}
 	data.Set("username", fmt.Sprintf("%s@%s", ta.credentials.Username, ta.credentials.Realm))
-	data.Set("password", ta.credentials.Password)
+
+	// Use password, or fallback to ticket if password is empty.
+	// PVE API allows using an existing ticket as password to renew/create a new ticket.
+	password := ta.credentials.Password
+	if password == "" && ta.ticket != nil && ta.ticket.Value != "" {
+		password = ta.ticket.Value
+	}
+
+	data.Set("password", password)
 
 	if ta.credentials.OTP != "" {
 		data.Set("otp", ta.credentials.OTP)

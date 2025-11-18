@@ -49,7 +49,8 @@ func TestDetector_DetectMode_PartialChecks(t *testing.T) {
 	tmpDir := t.TempDir()
 	pveDir := filepath.Join(tmpDir, "pve")
 
-	if err := os.MkdirAll(pveDir, 0755); err != nil {
+	err := os.MkdirAll(pveDir, 0755)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -74,17 +75,19 @@ func TestDetector_DetectMode_HighScore(t *testing.T) {
 	nodesDir := filepath.Join(pveDir, "nodes", "test-node")
 	pveshPath := filepath.Join(tmpDir, "pvesh")
 
-	if err := os.MkdirAll(nodesDir, 0755); err != nil {
+	err := os.MkdirAll(nodesDir, 0755)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create fake pvesh binary
-	if err := os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0755); err != nil {
+	err := os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0755)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	detector := NewDetector(
-		WithPVEPath(pveDir),     // +3 points (PVE dir exists)
+		WithPVEPath(pveDir),      // +3 points (PVE dir exists)
 		WithPVESHPath(pveshPath), // +2 points (pvesh exists)
 		WithDpkgPath(""),         // 0 points (disabled)
 		WithHostnameFunc(func() (string, error) {
@@ -102,8 +105,8 @@ func TestDetector_DetectMode_HighScore(t *testing.T) {
 
 func TestDetector_IsLocal(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func() *Detector
+		name      string
+		setup     func() *Detector
 		wantLocal bool
 	}{
 		{
@@ -234,6 +237,7 @@ func TestDetector_GetNodeName(t *testing.T) {
 
 			if (err != nil) != tt.wantError {
 				t.Errorf("GetNodeName() error = %v, wantError %v", err, tt.wantError)
+
 				return
 			}
 
@@ -258,6 +262,7 @@ func TestDetector_checkPVEDirectory(t *testing.T) {
 			name: "Directory exists",
 			setup: func() string {
 				tmpDir := t.TempDir()
+
 				return tmpDir
 			},
 			want: true,
@@ -275,6 +280,7 @@ func TestDetector_checkPVEDirectory(t *testing.T) {
 				tmpDir := t.TempDir()
 				file := filepath.Join(tmpDir, "file")
 				_ = os.WriteFile(file, []byte("test"), 0644)
+
 				return file
 			},
 			want: false,
@@ -305,6 +311,7 @@ func TestDetector_checkPVESH(t *testing.T) {
 				tmpDir := t.TempDir()
 				binary := filepath.Join(tmpDir, "pvesh")
 				_ = os.WriteFile(binary, []byte("#!/bin/sh\n"), 0755)
+
 				return binary
 			},
 			want: true,
@@ -332,9 +339,9 @@ func TestDetector_checkPVESH(t *testing.T) {
 
 func TestDetector_checkNodeRegistration(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func() (pveDir string, hostname string)
-		want     bool
+		name  string
+		setup func() (pveDir string, hostname string)
+		want  bool
 	}{
 		{
 			name: "Node registered",
@@ -343,6 +350,7 @@ func TestDetector_checkNodeRegistration(t *testing.T) {
 				pveDir := filepath.Join(tmpDir, "pve")
 				nodesDir := filepath.Join(pveDir, "nodes", "registered-node")
 				_ = os.MkdirAll(nodesDir, 0755)
+
 				return pveDir, "registered-node"
 			},
 			want: true,
@@ -353,6 +361,7 @@ func TestDetector_checkNodeRegistration(t *testing.T) {
 				tmpDir := t.TempDir()
 				pveDir := filepath.Join(tmpDir, "pve")
 				_ = os.MkdirAll(pveDir, 0755)
+
 				return pveDir, "unregistered-node"
 			},
 			want: false,
@@ -376,6 +385,7 @@ func TestDetector_checkNodeRegistration(t *testing.T) {
 					if hostname == "" {
 						return "", errors.New("hostname error")
 					}
+
 					return hostname, nil
 				}),
 			)

@@ -17,9 +17,9 @@ func main() {
 
 	cacheConfig := pve.CacheConfig{
 		Enabled:         true,
-		MaxSize:         50 * 1024 * 1024,  // 50 MB
-		DefaultTTL:      5 * time.Minute,   // Cache entries for 5 minutes
-		CleanupInterval: 1 * time.Minute,   // Cleanup expired entries every minute
+		MaxSize:         50 * 1024 * 1024, // 50 MB
+		DefaultTTL:      5 * time.Minute,  // Cache entries for 5 minutes
+		CleanupInterval: 1 * time.Minute,  // Cleanup expired entries every minute
 	}
 
 	client, err := pve.NewClient(pve.Options{
@@ -42,10 +42,12 @@ func main() {
 
 	// First request - cache miss (will hit the API)
 	start := time.Now()
+
 	version1, err := client.Get("/version", nil)
 	if err != nil {
 		log.Printf("First request failed: %v", err)
 	}
+
 	firstDuration := time.Since(start)
 
 	fmt.Printf("First request (cache miss): %v\n", firstDuration)
@@ -53,10 +55,12 @@ func main() {
 
 	// Second request - cache hit (served from cache)
 	start = time.Now()
+
 	version2, err := client.Get("/version", nil)
 	if err != nil {
 		log.Printf("Second request failed: %v", err)
 	}
+
 	secondDuration := time.Since(start)
 
 	fmt.Printf("Second request (cache hit): %v\n", secondDuration)
@@ -126,9 +130,9 @@ func main() {
 
 	customConfig := pve.CacheConfig{
 		Enabled:         true,
-		MaxSize:         10 * 1024 * 1024,   // 10 MB (smaller cache)
-		DefaultTTL:      30 * time.Second,   // Short TTL (30 seconds)
-		CleanupInterval: 10 * time.Second,   // Frequent cleanup
+		MaxSize:         10 * 1024 * 1024, // 10 MB (smaller cache)
+		DefaultTTL:      30 * time.Second, // Short TTL (30 seconds)
+		CleanupInterval: 10 * time.Second, // Frequent cleanup
 	}
 
 	clientCustom, err := pve.NewClient(pve.Options{

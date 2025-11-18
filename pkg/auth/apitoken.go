@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
@@ -22,27 +23,40 @@ var (
 	ErrTokenNamePartEmpty      = errors.New("token name part cannot be empty")
 )
 
+// tokenFormatRegex matches already-formatted authorization headers (e.g., "PVEAPIToken=..." or "Bearer ...").
+// Pattern: word characters followed by = or space.
+var tokenFormatRegex = regexp.MustCompile(`^\w+(?:=| )`)
+
 // APITokenAuthenticator provides API token-based authentication for PVE.
 type APITokenAuthenticator struct {
-	token *Token
+	token     *Token
+	tokenName string // Name prefix for Authorization header (default: "PVEAPIToken")
 }
 
 // NewAPITokenAuthenticator creates a new API token authenticator.
-func NewAPITokenAuthenticator(token *Token) *APITokenAuthenticator {
+// The tokenName parameter specifies the prefix for the Authorization header.
+// If empty, defaults to "PVEAPIToken".
+func NewAPITokenAuthenticator(token *Token, tokenName string) *APITokenAuthenticator {
+	if tokenName == "" {
+		tokenName = "PVEAPIToken"
+	}
+
 	return &APITokenAuthenticator{
-		token: token,
+		token:     token,
+		tokenName: tokenName,
 	}
 }
 
 // NewAPITokenAuthenticatorFromString creates a new API token authenticator from a string.
 // The token string should be in the format: "user@realm!tokenid=secret".
+// Uses default token name "PVEAPIToken".
 func NewAPITokenAuthenticatorFromString(tokenString string) (*APITokenAuthenticator, error) {
 	token, err := ParseAPIToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewAPITokenAuthenticator(token), nil
+	return NewAPITokenAuthenticator(token, ""), nil
 }
 
 // Authenticate performs the authentication process.
@@ -61,13 +75,23 @@ func (ata *APITokenAuthenticator) IsAuthenticated() bool {
 }
 
 // GetHeaders returns the authentication headers for API token auth.
+// Transparently adds the token name prefix if not already present in the format.
 func (ata *APITokenAuthenticator) GetHeaders() map[string]string {
 	if !ata.IsAuthenticated() {
 		return nil
 	}
 
+	// Build the authorization header value
+	authHeader := fmt.Sprintf("%s=%s", ata.token.ID, ata.token.Secret)
+
+	// Check if the token is already formatted (starts with word char followed by = or space)
+	// This matches Perl implementation behavior: only add prefix if not already present
+	if !tokenFormatRegex.MatchString(authHeader) {
+		authHeader = fmt.Sprintf("%s=%s", ata.tokenName, authHeader)
+	}
+
 	return map[string]string{
-		"Authorization": fmt.Sprintf("PVEAPIToken=%s=%s", ata.token.ID, ata.token.Secret),
+		"Authorization": authHeader,
 	}
 }
 

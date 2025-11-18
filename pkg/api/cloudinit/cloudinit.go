@@ -86,13 +86,15 @@ func (s *service) BuildIPConfigs(specs []NICSpec, globalNameservers []string) (m
 		// Proxmox expects nameserver as a space-separated string
 		nameservers := ""
 
+		var nameserversSb89 strings.Builder
 		for i, server := range globalNameservers {
 			if i > 0 {
-				nameservers += " "
+				nameserversSb89.WriteString(" ")
 			}
 
-			nameservers += server
+			nameserversSb89.WriteString(server)
 		}
+		nameservers += nameserversSb89.String()
 
 		result["nameserver"] = nameservers
 	}

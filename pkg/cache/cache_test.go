@@ -9,6 +9,7 @@ import (
 func TestCache_BasicGetSet(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -35,6 +36,7 @@ func TestCache_TTLExpiration(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
 	config.DefaultTTL = 100 * time.Millisecond
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -46,6 +48,7 @@ func TestCache_TTLExpiration(t *testing.T) {
 	if !found {
 		t.Fatal("Expected to find expire-key immediately")
 	}
+
 	if val.(string) != "expire-value" {
 		t.Errorf("Expected 'expire-value', got %v", val)
 	}
@@ -70,6 +73,7 @@ func TestCache_LRUEviction(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
 	config.MaxSize = 3 * 1024 // 3KB total (3 entries with 1KB each)
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -82,9 +86,11 @@ func TestCache_LRUEviction(t *testing.T) {
 	if _, found := c.Get("key1"); !found {
 		t.Error("Expected key1 to be present")
 	}
+
 	if _, found := c.Get("key2"); !found {
 		t.Error("Expected key2 to be present")
 	}
+
 	if _, found := c.Get("key3"); !found {
 		t.Error("Expected key3 to be present")
 	}
@@ -101,9 +107,11 @@ func TestCache_LRUEviction(t *testing.T) {
 	if _, found := c.Get("key2"); !found {
 		t.Error("Expected key2 to be present after eviction")
 	}
+
 	if _, found := c.Get("key3"); !found {
 		t.Error("Expected key3 to be present after eviction")
 	}
+
 	if _, found := c.Get("key4"); !found {
 		t.Error("Expected key4 to be present after eviction")
 	}
@@ -117,20 +125,24 @@ func TestCache_LRUEviction(t *testing.T) {
 func TestCache_ConcurrentAccess(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
+
 	c := NewCache(config)
 	defer c.Close()
 
-	const goroutines = 100
-	const iterations = 100
+	const (
+		goroutines = 100
+		iterations = 100
+	)
 
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
 	// Concurrent writes
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+
+			for range iterations {
 				key := "concurrent-" + string(rune(id))
 				c.Set(key, id, 1*time.Minute)
 			}
@@ -141,10 +153,12 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 
 	// Concurrent reads
 	wg.Add(goroutines)
-	for i := 0; i < goroutines; i++ {
+
+	for i := range goroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+
+			for range iterations {
 				key := "concurrent-" + string(rune(id))
 				c.Get(key)
 			}
@@ -163,6 +177,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 func TestCache_PatternInvalidation(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -182,6 +197,7 @@ func TestCache_PatternInvalidation(t *testing.T) {
 	if _, found := c.Get("/nodes/node1/status"); found {
 		t.Error("Expected /nodes/node1/status to be invalidated")
 	}
+
 	if _, found := c.Get("/nodes/node2/status"); found {
 		t.Error("Expected /nodes/node2/status to be invalidated")
 	}
@@ -190,6 +206,7 @@ func TestCache_PatternInvalidation(t *testing.T) {
 	if _, found := c.Get("/storage/local/status"); !found {
 		t.Error("Expected /storage/local/status to remain")
 	}
+
 	if _, found := c.Get("/version"); !found {
 		t.Error("Expected /version to remain")
 	}
@@ -198,6 +215,7 @@ func TestCache_PatternInvalidation(t *testing.T) {
 func TestCache_ExactInvalidation(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -213,6 +231,7 @@ func TestCache_ExactInvalidation(t *testing.T) {
 	if _, found := c.Get("exact-key"); found {
 		t.Error("Expected exact-key to be invalidated")
 	}
+
 	if _, found := c.Get("exact-key-other"); !found {
 		t.Error("Expected exact-key-other to remain")
 	}
@@ -221,6 +240,7 @@ func TestCache_ExactInvalidation(t *testing.T) {
 func TestCache_Clear(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -241,6 +261,7 @@ func TestCache_Clear(t *testing.T) {
 	if stats.Entries != 0 {
 		t.Errorf("Expected 0 entries after Clear, got %d", stats.Entries)
 	}
+
 	if stats.Size != 0 {
 		t.Errorf("Expected 0 size after Clear, got %d", stats.Size)
 	}
@@ -249,6 +270,7 @@ func TestCache_Clear(t *testing.T) {
 func TestCache_Stats(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -267,6 +289,7 @@ func TestCache_Stats(t *testing.T) {
 	if stats.Hits != 2 {
 		t.Errorf("Expected 2 hits, got %d", stats.Hits)
 	}
+
 	if stats.HitRate != 1.0 {
 		t.Errorf("Expected hit rate 1.0, got %f", stats.HitRate)
 	}
@@ -288,6 +311,7 @@ func TestCache_Stats(t *testing.T) {
 func TestCache_Disabled(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = false // Disabled
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -308,6 +332,7 @@ func TestCache_Disabled(t *testing.T) {
 func TestCache_UpdateExisting(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -326,6 +351,7 @@ func TestCache_UpdateExisting(t *testing.T) {
 	if !found {
 		t.Fatal("Expected to find updated value")
 	}
+
 	if val.(string) != "value2" {
 		t.Errorf("Expected 'value2', got %v", val)
 	}
@@ -341,6 +367,7 @@ func TestCache_CleanupLoop(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
 	config.CleanupInterval = 50 * time.Millisecond
+
 	c := NewCache(config)
 	defer c.Close()
 
@@ -356,6 +383,7 @@ func TestCache_CleanupLoop(t *testing.T) {
 	if _, found := c.Get("cleanup1"); found {
 		t.Error("Expected cleanup1 to be cleaned up")
 	}
+
 	if _, found := c.Get("cleanup2"); found {
 		t.Error("Expected cleanup2 to be cleaned up")
 	}
@@ -398,6 +426,7 @@ func TestGenerateKey(t *testing.T) {
 		"node": "pve1",
 		"type": "qemu",
 	})
+
 	key7 := GenerateKey("GET", "/nodes", map[string]interface{}{
 		"type": "qemu",
 		"node": "pve1",

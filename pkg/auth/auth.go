@@ -1,8 +1,24 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
+	"regexp"
+	"strconv"
 	"time"
+
+	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
 )
+
+var (
+	// ErrInvalidTicketFormat indicates that the ticket format doesn't match expected pattern.
+	ErrInvalidTicketFormat = errors.New("invalid ticket format: does not match expected pattern")
+)
+
+// ticketTimestampRegex matches PVE ticket format to extract creation timestamp.
+// Format: <data>:<TIMESTAMP>::<signature>
+// Where TIMESTAMP is 8 hex characters representing Unix timestamp.
+var ticketTimestampRegex = regexp.MustCompile(`^\S+:([A-F0-9]{8})::[^:\s]+$`)
 
 // Authenticator defines the interface for authentication mechanisms.
 type Authenticator interface {
@@ -47,6 +63,50 @@ type Ticket struct {
 // IsValid checks if the ticket is still valid.
 func (t *Ticket) IsValid() bool {
 	return t.Value != "" && time.Now().Before(t.ValidUntil)
+}
+
+// ParseTicketTimestamp extracts the creation timestamp from a PVE ticket value.
+// PVE tickets encode their creation time as an 8-character hex timestamp.
+// Returns the creation time or an error if the ticket format is invalid.
+func ParseTicketTimestamp(ticket string) (time.Time, error) {
+	matches := ticketTimestampRegex.FindStringSubmatch(ticket)
+	if len(matches) != 2 {
+		return time.Time{}, ErrInvalidTicketFormat
+	}
+
+	timestampHex := matches[1]
+
+	timestamp, err := strconv.ParseInt(timestampHex, 16, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse ticket timestamp: %w", err)
+	}
+
+	return time.Unix(timestamp, 0), nil
+}
+
+// ShouldRenew checks if the ticket should be renewed based on its age.
+// Tickets have a 2-hour validity, but should be renewed after 1 hour to
+// prevent expiration during long-running operations.
+// The threshold parameter specifies how much time before expiry to renew.
+func (t *Ticket) ShouldRenew(threshold time.Duration) bool {
+	if t.Value == "" {
+		return false
+	}
+
+	// Try to parse the ticket timestamp to get the exact creation time
+	createdAt, err := ParseTicketTimestamp(t.Value)
+	if err != nil {
+		// Fallback to ValidUntil-based check if parsing fails
+		timeUntilExpiry := time.Until(t.ValidUntil)
+
+		return timeUntilExpiry > 0 && timeUntilExpiry < threshold
+	}
+
+	// Calculate age and check if it exceeds the validity period minus threshold
+	age := time.Since(createdAt)
+	maxAge := constants.TicketValidity() - threshold
+
+	return age > maxAge
 }
 
 // GetHeaders returns the headers for ticket-based authentication.

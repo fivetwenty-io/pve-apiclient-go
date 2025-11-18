@@ -63,12 +63,13 @@ type Options struct {
 	Protocol string // Protocol to use: ProtocolHTTP or ProtocolHTTPS (default: ProtocolHTTPS)
 
 	// Authentication
-	Username  string // Username for authentication (e.g., "root@pam")
-	Password  string // Password for authentication
-	APIToken  string // API token for authentication (alternative to username/password)
-	Ticket    string // Authentication ticket (obtained after login)
-	CSRFToken string // CSRF prevention token
-	AutoLogin bool   // Automatically login on first API call if username/password provided (default: false)
+	Username     string // Username for authentication (e.g., "root@pam")
+	Password     string // Password for authentication
+	APIToken     string // API token for authentication (alternative to username/password)
+	APITokenName string // Name prefix for API token in Authorization header (default: "PVEAPIToken")
+	Ticket       string // Authentication ticket (obtained after login)
+	CSRFToken    string // CSRF prevention token
+	AutoLogin    bool   // Automatically login on first API call if username/password provided (default: false)
 
 	// Execution Context
 	ExecutionMode    ExecutionMode // Detected or manually set execution mode (local/remote/unknown)

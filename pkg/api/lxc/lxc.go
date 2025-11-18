@@ -49,15 +49,15 @@ type ContainerConfig struct {
 
 // ContainerStatus represents the current status of an LXC container.
 type ContainerStatus struct {
-	VMID   int    `json:"vmid"`
-	Status string `json:"status"` // running, stopped, etc.
-	Name   string `json:"name"`
-	Uptime int64  `json:"uptime,omitempty"`
-	CPUs   int    `json:"cpus,omitempty"`
-	MaxMem int64  `json:"maxmem,omitempty"`
-	Mem    int64  `json:"mem,omitempty"`
-	MaxDisk int64 `json:"maxdisk,omitempty"`
-	Disk   int64  `json:"disk,omitempty"`
+	VMID    int    `json:"vmid"`
+	Status  string `json:"status"` // running, stopped, etc.
+	Name    string `json:"name"`
+	Uptime  int64  `json:"uptime,omitempty"`
+	CPUs    int    `json:"cpus,omitempty"`
+	MaxMem  int64  `json:"maxmem,omitempty"`
+	Mem     int64  `json:"mem,omitempty"`
+	MaxDisk int64  `json:"maxdisk,omitempty"`
+	Disk    int64  `json:"disk,omitempty"`
 }
 
 // List returns all LXC containers on the node.
@@ -71,6 +71,7 @@ func (c *Client) List(ctx context.Context) ([]ContainerStatus, error) {
 
 	// Parse response
 	containers := []ContainerStatus{}
+
 	if data, ok := resp.([]interface{}); ok {
 		for _, item := range data {
 			if ct, ok := item.(map[string]interface{}); ok {
@@ -81,9 +82,11 @@ func (c *Client) List(ctx context.Context) ([]ContainerStatus, error) {
 				if vmid, ok := ct["vmid"].(float64); ok {
 					status.VMID = int(vmid)
 				}
+
 				if uptime, ok := ct["uptime"].(float64); ok {
 					status.Uptime = int64(uptime)
 				}
+
 				containers = append(containers, status)
 			}
 		}
@@ -97,7 +100,7 @@ func (c *Client) Create(ctx context.Context, config ContainerConfig) (string, er
 	path := fmt.Sprintf("/nodes/%s/lxc", c.node)
 
 	params := map[string]interface{}{
-		"vmid":      config.VMID,
+		"vmid":       config.VMID,
 		"ostemplate": config.OSTemplate,
 	}
 
@@ -105,51 +108,67 @@ func (c *Client) Create(ctx context.Context, config ContainerConfig) (string, er
 	if config.Hostname != "" {
 		params["hostname"] = config.Hostname
 	}
+
 	if config.Description != "" {
 		params["description"] = config.Description
 	}
+
 	if config.Memory > 0 {
 		params["memory"] = config.Memory
 	}
+
 	if config.Swap > 0 {
 		params["swap"] = config.Swap
 	}
+
 	if config.Cores > 0 {
 		params["cores"] = config.Cores
 	}
+
 	if config.CPULimit > 0 {
 		params["cpulimit"] = config.CPULimit
 	}
+
 	if config.CPUUnits > 0 {
 		params["cpuunits"] = config.CPUUnits
 	}
+
 	if config.RootFS != "" {
 		params["rootfs"] = config.RootFS
 	}
+
 	if config.Net0 != "" {
 		params["net0"] = config.Net0
 	}
+
 	if config.Unprivileged {
 		params["unprivileged"] = 1
 	}
+
 	if config.Password != "" {
 		params["password"] = config.Password
 	}
+
 	if config.SSHKeys != "" {
 		params["ssh-public-keys"] = config.SSHKeys
 	}
+
 	if config.Nameserver != "" {
 		params["nameserver"] = config.Nameserver
 	}
+
 	if config.Searchdomain != "" {
 		params["searchdomain"] = config.Searchdomain
 	}
+
 	if config.Start {
 		params["start"] = 1
 	}
+
 	if config.Storage != "" {
 		params["storage"] = config.Storage
 	}
+
 	if config.Pool != "" {
 		params["pool"] = config.Pool
 	}
@@ -185,22 +204,28 @@ func (c *Client) Status(ctx context.Context, vmid int) (*ContainerStatus, error)
 
 	if data, ok := resp.(map[string]interface{}); ok {
 		status.Status = getString(data, "status")
+
 		status.Name = getString(data, "name")
 		if uptime, ok := data["uptime"].(float64); ok {
 			status.Uptime = int64(uptime)
 		}
+
 		if cpus, ok := data["cpus"].(float64); ok {
 			status.CPUs = int(cpus)
 		}
+
 		if maxmem, ok := data["maxmem"].(float64); ok {
 			status.MaxMem = int64(maxmem)
 		}
+
 		if mem, ok := data["mem"].(float64); ok {
 			status.Mem = int64(mem)
 		}
+
 		if maxdisk, ok := data["maxdisk"].(float64); ok {
 			status.MaxDisk = int64(maxdisk)
 		}
+
 		if disk, ok := data["disk"].(float64); ok {
 			status.Disk = int64(disk)
 		}
@@ -338,18 +363,23 @@ func (c *Client) Clone(ctx context.Context, vmid int, newID int, opts CloneOptio
 	if opts.Hostname != "" {
 		params["hostname"] = opts.Hostname
 	}
+
 	if opts.Description != "" {
 		params["description"] = opts.Description
 	}
+
 	if opts.Target != "" {
 		params["target"] = opts.Target
 	}
+
 	if opts.Pool != "" {
 		params["pool"] = opts.Pool
 	}
+
 	if opts.Storage != "" {
 		params["storage"] = opts.Storage
 	}
+
 	if opts.Full {
 		params["full"] = 1
 	}
@@ -398,6 +428,7 @@ func getString(m map[string]interface{}, key string) string {
 	if val, ok := m[key].(string); ok {
 		return val
 	}
+
 	return ""
 }
 
@@ -406,10 +437,12 @@ func getInt(m map[string]interface{}, key string) int {
 	if val, ok := m[key].(float64); ok {
 		return int(val)
 	}
+
 	if val, ok := m[key].(string); ok {
 		if i, err := strconv.Atoi(val); err == nil {
 			return i
 		}
 	}
+
 	return 0
 }

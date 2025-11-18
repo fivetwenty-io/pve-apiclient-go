@@ -196,6 +196,7 @@ func BenchmarkBatchRequests(b *testing.B) {
 func BenchmarkStreamProcessing(b *testing.B) {
 	// Create mock streaming response
 	data := make([]string, 1000)
+
 	for itemIndex := range 1000 {
 		item := map[string]interface{}{
 			"id":    itemIndex,

@@ -33,11 +33,12 @@ type Options struct {
 	Port     int
 	Protocol string
 
-	Username  string
-	Password  string
-	APIToken  string
-	Ticket    string
-	AutoLogin bool
+	Username     string
+	Password     string
+	APIToken     string
+	APITokenName string
+	Ticket       string
+	AutoLogin    bool
 
 	SSLOptions *SSLOptions
 

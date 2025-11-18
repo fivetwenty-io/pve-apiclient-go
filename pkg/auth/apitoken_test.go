@@ -14,7 +14,7 @@ func TestNewAPITokenAuthenticator(t *testing.T) {
 		Secret: "secret-value",
 	}
 
-	authenticator := auth.NewAPITokenAuthenticator(token)
+	authenticator := auth.NewAPITokenAuthenticator(token, "")
 	if authenticator == nil {
 		t.Fatal("NewAPITokenAuthenticator returned nil")
 	}
@@ -148,7 +148,7 @@ func TestAPITokenAuthenticator_Authenticate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			authenticator := auth.NewAPITokenAuthenticator(testCase.token)
+			authenticator := auth.NewAPITokenAuthenticator(testCase.token, "")
 
 			err := authenticator.Authenticate()
 			if testCase.wantErr {
@@ -207,7 +207,7 @@ func TestAPITokenAuthenticator_IsAuthenticated(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			authenticator := auth.NewAPITokenAuthenticator(testCase.token)
+			authenticator := auth.NewAPITokenAuthenticator(testCase.token, "")
 
 			result := authenticator.IsAuthenticated()
 			if result != testCase.expected {
@@ -225,7 +225,7 @@ func TestAPITokenAuthenticator_GetHeaders(t *testing.T) {
 		Secret: "secret-value",
 	}
 
-	authenticator := auth.NewAPITokenAuthenticator(token)
+	authenticator := auth.NewAPITokenAuthenticator(token, "")
 	headers := authenticator.GetHeaders()
 
 	expected := "PVEAPIToken=root@pam!mytoken=secret-value"
@@ -234,7 +234,7 @@ func TestAPITokenAuthenticator_GetHeaders(t *testing.T) {
 	}
 
 	// Test with unauthenticated
-	authenticator = auth.NewAPITokenAuthenticator(nil)
+	authenticator = auth.NewAPITokenAuthenticator(nil, "")
 
 	headers = authenticator.GetHeaders()
 	if headers != nil {
@@ -424,4 +424,134 @@ func TestValidateTokenID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAPITokenAuthenticator_GetHeaders_FormatDetection(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		tokenID          string
+		tokenSecret      string
+		customTokenName  string
+		expectedAuthHeader string
+		description      string
+	}{
+		{
+			name:             "default token name with raw token",
+			tokenID:          "root@pam!mytoken",
+			tokenSecret:      "secret-value",
+			customTokenName:  "",
+			expectedAuthHeader: "PVEAPIToken=root@pam!mytoken=secret-value",
+			description:      "Should add PVEAPIToken= prefix to raw token",
+		},
+		{
+			name:             "custom token name",
+			tokenID:          "root@pam!mytoken",
+			tokenSecret:      "secret-value",
+			customTokenName:  "CustomAuth",
+			expectedAuthHeader: "CustomAuth=root@pam!mytoken=secret-value",
+			description:      "Should use custom token name prefix",
+		},
+		{
+			name:             "bearer token format",
+			tokenID:          "root@pam!mytoken",
+			tokenSecret:      "secret-value",
+			customTokenName:  "Bearer",
+			expectedAuthHeader: "Bearer=root@pam!mytoken=secret-value",
+			description:      "Should support Bearer token format",
+		},
+		{
+			name:             "pre-formatted token should not double-prefix",
+			tokenID:          "PVEAPIToken=user@pam!token",
+			tokenSecret:      "secret",
+			customTokenName:  "PVEAPIToken",
+			expectedAuthHeader: "PVEAPIToken=user@pam!token=secret",
+			description:      "Already formatted tokens should not be double-prefixed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			token := &auth.Token{
+				ID:     tt.tokenID,
+				Secret: tt.tokenSecret,
+			}
+
+			authenticator := auth.NewAPITokenAuthenticator(token, tt.customTokenName)
+			headers := authenticator.GetHeaders()
+
+			if headers == nil {
+				t.Fatal("GetHeaders() returned nil")
+			}
+
+			authHeader, ok := headers["Authorization"]
+			if !ok {
+				t.Fatal("GetHeaders() missing Authorization header")
+			}
+
+			if authHeader != tt.expectedAuthHeader {
+				t.Errorf("GetHeaders()[Authorization] = %v, want %v. %s",
+					authHeader, tt.expectedAuthHeader, tt.description)
+			}
+		})
+	}
+}
+
+func TestAPITokenAuthenticator_CustomTokenName(t *testing.T) {
+	t.Parallel()
+
+	token := &auth.Token{
+		ID:     "root@pam!mytoken",
+		Secret: "secret-value",
+	}
+
+	tests := []struct {
+		name          string
+		tokenName     string
+		expectedPrefix string
+	}{
+		{
+			name:          "empty token name defaults to PVEAPIToken",
+			tokenName:     "",
+			expectedPrefix: "PVEAPIToken=",
+		},
+		{
+			name:          "explicit PVEAPIToken",
+			tokenName:     "PVEAPIToken",
+			expectedPrefix: "PVEAPIToken=",
+		},
+		{
+			name:          "custom Bearer token",
+			tokenName:     "Bearer",
+			expectedPrefix: "Bearer=",
+		},
+		{
+			name:          "custom API token",
+			tokenName:     "X-API-Token",
+			expectedPrefix: "X-API-Token=",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			authenticator := auth.NewAPITokenAuthenticator(token, tt.tokenName)
+			headers := authenticator.GetHeaders()
+
+			authHeader := headers["Authorization"]
+			if !hasPrefix(authHeader, tt.expectedPrefix) {
+				t.Errorf("Authorization header %q does not start with expected prefix %q",
+					authHeader, tt.expectedPrefix)
+			}
+		})
+	}
+}
+
+// hasPrefix checks if a string has the given prefix
+func hasPrefix(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }

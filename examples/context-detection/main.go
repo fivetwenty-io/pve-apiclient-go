@@ -14,6 +14,7 @@ func main() {
 
 	// Example 1: Manual context detection
 	fmt.Println("Example 1: Manual Context Detection")
+
 	detector := pvectx.NewDetector()
 	mode := detector.DetectMode()
 
@@ -27,6 +28,7 @@ func main() {
 		} else {
 			fmt.Printf("✓ Running on PVE node: %s\n", nodeName)
 		}
+
 		fmt.Println("  - Can use local ticket generation")
 		fmt.Println("  - Can access /etc/pve directly")
 		fmt.Println("  - No network overhead for some operations")

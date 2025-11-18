@@ -118,6 +118,7 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	elem, exists := c.entries[key]
 	if !exists {
 		c.misses++
+
 		return nil, false
 	}
 
@@ -127,6 +128,7 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	if item.entry.IsExpired() {
 		c.removeElement(elem)
 		c.misses++
+
 		return nil, false
 	}
 
@@ -164,6 +166,7 @@ func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
 		item.entry = entry
 		c.size += entry.Size
 		c.lru.MoveToFront(elem)
+
 		return
 	}
 
@@ -186,9 +189,11 @@ func (c *Cache) Invalidate(pattern string) int {
 	defer c.mu.Unlock()
 
 	removed := 0
+
 	for key, elem := range c.entries {
 		if matchPattern(key, pattern) {
 			c.removeElement(elem)
+
 			removed++
 		}
 	}
@@ -212,6 +217,7 @@ func (c *Cache) Stats() CacheStats {
 	defer c.mu.RUnlock()
 
 	total := c.hits + c.misses
+
 	hitRate := 0.0
 	if total > 0 {
 		hitRate = float64(c.hits) / float64(total)
@@ -307,6 +313,7 @@ func matchPattern(key, pattern string) bool {
 
 	if pattern[len(pattern)-1] == '*' {
 		prefix := pattern[:len(pattern)-1]
+
 		return len(key) >= len(prefix) && key[:len(prefix)] == prefix
 	}
 
@@ -325,11 +332,12 @@ func GenerateKey(method, path string, params map[string]interface{}) string {
 		for k := range params {
 			keys = append(keys, k)
 		}
+
 		sort.Strings(keys)
 
 		for _, k := range keys {
 			h.Write([]byte(k))
-			h.Write([]byte(fmt.Sprintf("%v", params[k])))
+			fmt.Fprintf(h, "%v", params[k])
 		}
 	}
 
@@ -341,6 +349,7 @@ func GenerateKeyFromURL(method, url string) string {
 	h := sha256.New()
 	h.Write([]byte(method))
 	h.Write([]byte(url))
+
 	return hex.EncodeToString(h.Sum(nil))
 }
 

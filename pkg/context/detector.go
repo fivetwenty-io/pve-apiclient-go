@@ -178,6 +178,7 @@ func (d *Detector) checkPVEDirectory() bool {
 // pvesh is the PVE shell utility, present on all PVE nodes.
 func (d *Detector) checkPVESH() bool {
 	_, err := os.Stat(d.pveshPath)
+
 	return err == nil
 }
 

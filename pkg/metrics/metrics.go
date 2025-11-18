@@ -259,6 +259,7 @@ func (s *Summary) GetQuantiles(quantiles []float64) map[float64]float64 {
 	sort.Float64s(sorted)
 
 	result := make(map[float64]float64)
+
 	for _, q := range quantiles {
 		index := int(float64(len(sorted)-1) * q)
 		result[q] = sorted[index]
