@@ -38,6 +38,17 @@ import (
 	"time"
 )
 
+const (
+	// DefaultMaxCacheSizeMB is the default maximum cache size in bytes (100 MB).
+	DefaultMaxCacheSizeMB = 100 * 1024 * 1024
+	// DefaultCacheTTL is the default time-to-live for cache entries (5 minutes).
+	DefaultCacheTTL = 5 * time.Minute
+	// DefaultCleanupInterval is the default cleanup interval for expired entries (1 minute).
+	DefaultCleanupInterval = 1 * time.Minute
+	// EstimatedEntrySizeBytes is the estimated size per cache entry in bytes (1KB).
+	EstimatedEntrySizeBytes = 1024
+)
+
 // Entry represents a cached response.
 type Entry struct {
 	Key        string
@@ -62,9 +73,9 @@ type Config struct {
 // DefaultConfig returns sensible defaults.
 func DefaultConfig() Config {
 	return Config{
-		MaxSize:         100 * 1024 * 1024, // 100 MB
-		DefaultTTL:      5 * time.Minute,
-		CleanupInterval: 1 * time.Minute,
+		MaxSize:         DefaultMaxCacheSizeMB,
+		DefaultTTL:      DefaultCacheTTL,
+		CleanupInterval: DefaultCleanupInterval,
 		Enabled:         false, // Opt-in
 	}
 }
@@ -92,7 +103,7 @@ type cacheItem struct {
 
 // NewCache creates a new cache instance.
 func NewCache(config Config) *Cache {
-	c := &Cache{
+	cache := &Cache{
 		config:      config,
 		entries:     make(map[string]*list.Element),
 		lru:         list.New(),
@@ -100,10 +111,10 @@ func NewCache(config Config) *Cache {
 	}
 
 	if config.Enabled {
-		go c.cleanupLoop()
+		go cache.cleanupLoop()
 	}
 
-	return c
+	return cache
 }
 
 // Get retrieves a value from cache.
@@ -122,7 +133,10 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	item := elem.Value.(*cacheItem)
+	item, ok := elem.Value.(*cacheItem)
+	if !ok {
+		panic("cache: invalid item type")
+	}
 
 	// Check expiration
 	if item.entry.IsExpired() {
@@ -161,7 +175,11 @@ func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
 
 	// Check if key already exists
 	if elem, exists := c.entries[key]; exists {
-		item := elem.Value.(*cacheItem)
+		item, ok := elem.Value.(*cacheItem)
+		if !ok {
+			panic("cache: invalid item type")
+		}
+
 		c.size -= item.entry.Size
 		item.entry = entry
 		c.size += entry.Size
@@ -259,7 +277,11 @@ func (c *Cache) evictOldest() {
 }
 
 func (c *Cache) removeElement(elem *list.Element) {
-	item := elem.Value.(*cacheItem)
+	item, ok := elem.Value.(*cacheItem)
+	if !ok {
+		panic("cache: invalid item type")
+	}
+
 	delete(c.entries, item.key)
 	c.size -= item.entry.Size
 	c.lru.Remove(elem)
@@ -286,7 +308,11 @@ func (c *Cache) cleanupExpired() {
 	var toRemove []*list.Element
 
 	for elem := c.lru.Back(); elem != nil; elem = elem.Prev() {
-		item := elem.Value.(*cacheItem)
+		item, ok := elem.Value.(*cacheItem)
+		if !ok {
+			panic("cache: invalid item type")
+		}
+
 		if item.entry.IsExpired() {
 			toRemove = append(toRemove, elem)
 		}
@@ -302,7 +328,7 @@ func (c *Cache) cleanupExpired() {
 func estimateSize(v interface{}) int64 {
 	// Simple estimation - could be more sophisticated
 	// For now, use a fixed size estimate of 1KB per entry
-	return 1024 // 1KB average estimate
+	return EstimatedEntrySizeBytes
 }
 
 func matchPattern(key, pattern string) bool {
@@ -322,9 +348,9 @@ func matchPattern(key, pattern string) bool {
 
 // GenerateKey creates a cache key from request components.
 func GenerateKey(method, path string, params map[string]interface{}) string {
-	h := sha256.New()
-	h.Write([]byte(method))
-	h.Write([]byte(path))
+	hasher := sha256.New()
+	hasher.Write([]byte(method))
+	hasher.Write([]byte(path))
 
 	// Sort params for consistent keys
 	if len(params) > 0 {
@@ -336,21 +362,21 @@ func GenerateKey(method, path string, params map[string]interface{}) string {
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			h.Write([]byte(k))
-			fmt.Fprintf(h, "%v", params[k])
+			hasher.Write([]byte(k))
+			_, _ = fmt.Fprintf(hasher, "%v", params[k])
 		}
 	}
 
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 // GenerateKeyFromURL creates a cache key from a URL string.
 func GenerateKeyFromURL(method, url string) string {
-	h := sha256.New()
-	h.Write([]byte(method))
-	h.Write([]byte(url))
+	hasher := sha256.New()
+	hasher.Write([]byte(method))
+	hasher.Write([]byte(url))
 
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 // ShouldCache determines if a request should be cached based on method.

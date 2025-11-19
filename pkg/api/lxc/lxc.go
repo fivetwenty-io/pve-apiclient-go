@@ -3,11 +3,14 @@ package lxc
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
+
+// ErrUnexpectedResponseType is returned when the API response type is not what was expected.
+var ErrUnexpectedResponseType = errors.New("unexpected response type")
 
 // Client provides LXC container management operations.
 type Client struct {
@@ -69,126 +72,125 @@ func (c *Client) List(ctx context.Context) ([]ContainerStatus, error) {
 		return nil, fmt.Errorf("failed to list LXC containers: %w", err)
 	}
 
-	// Parse response
-	containers := []ContainerStatus{}
+	return parseContainerList(resp), nil
+}
 
-	if data, ok := resp.([]interface{}); ok {
-		for _, item := range data {
-			if ct, ok := item.(map[string]interface{}); ok {
-				status := ContainerStatus{
-					Status: getString(ct, "status"),
-					Name:   getString(ct, "name"),
-				}
-				if vmid, ok := ct["vmid"].(float64); ok {
-					status.VMID = int(vmid)
-				}
+// parseContainerList extracts container status information from API response.
+func parseContainerList(resp interface{}) []ContainerStatus {
+	data, ok := resp.([]interface{})
+	if !ok {
+		return []ContainerStatus{}
+	}
 
-				if uptime, ok := ct["uptime"].(float64); ok {
-					status.Uptime = int64(uptime)
-				}
-
-				containers = append(containers, status)
-			}
+	containers := make([]ContainerStatus, 0, len(data))
+	for _, item := range data {
+		if status, ok := parseContainerItem(item); ok {
+			containers = append(containers, status)
 		}
 	}
 
-	return containers, nil
+	return containers
+}
+
+// parseContainerItem converts a single API response item to ContainerStatus.
+func parseContainerItem(item interface{}) (ContainerStatus, bool) {
+	containerData, ok := item.(map[string]interface{})
+	if !ok {
+		return ContainerStatus{}, false
+	}
+
+	status := ContainerStatus{
+		Status: getString(containerData, "status"),
+		Name:   getString(containerData, "name"),
+	}
+
+	if vmid, ok := containerData["vmid"].(float64); ok {
+		status.VMID = int(vmid)
+	}
+
+	if uptime, ok := containerData["uptime"].(float64); ok {
+		status.Uptime = int64(uptime)
+	}
+
+	return status, true
 }
 
 // Create creates a new LXC container.
 func (c *Client) Create(ctx context.Context, config ContainerConfig) (string, error) {
 	path := fmt.Sprintf("/nodes/%s/lxc", c.node)
-
-	params := map[string]interface{}{
-		"vmid":       config.VMID,
-		"ostemplate": config.OSTemplate,
-	}
-
-	// Add optional parameters
-	if config.Hostname != "" {
-		params["hostname"] = config.Hostname
-	}
-
-	if config.Description != "" {
-		params["description"] = config.Description
-	}
-
-	if config.Memory > 0 {
-		params["memory"] = config.Memory
-	}
-
-	if config.Swap > 0 {
-		params["swap"] = config.Swap
-	}
-
-	if config.Cores > 0 {
-		params["cores"] = config.Cores
-	}
-
-	if config.CPULimit > 0 {
-		params["cpulimit"] = config.CPULimit
-	}
-
-	if config.CPUUnits > 0 {
-		params["cpuunits"] = config.CPUUnits
-	}
-
-	if config.RootFS != "" {
-		params["rootfs"] = config.RootFS
-	}
-
-	if config.Net0 != "" {
-		params["net0"] = config.Net0
-	}
-
-	if config.Unprivileged {
-		params["unprivileged"] = 1
-	}
-
-	if config.Password != "" {
-		params["password"] = config.Password
-	}
-
-	if config.SSHKeys != "" {
-		params["ssh-public-keys"] = config.SSHKeys
-	}
-
-	if config.Nameserver != "" {
-		params["nameserver"] = config.Nameserver
-	}
-
-	if config.Searchdomain != "" {
-		params["searchdomain"] = config.Searchdomain
-	}
-
-	if config.Start {
-		params["start"] = 1
-	}
-
-	if config.Storage != "" {
-		params["storage"] = config.Storage
-	}
-
-	if config.Pool != "" {
-		params["pool"] = config.Pool
-	}
-
-	// Add features
-	for key, value := range config.Features {
-		params[key] = value
-	}
+	params := buildCreateParams(config)
 
 	resp, err := c.pveClient.PostCtx(ctx, path, params)
 	if err != nil {
 		return "", fmt.Errorf("failed to create LXC container: %w", err)
 	}
 
-	// Extract UPID (task ID)
+	return extractUPID(resp)
+}
+
+// buildCreateParams constructs the parameters map for container creation.
+func buildCreateParams(config ContainerConfig) map[string]interface{} {
+	params := map[string]interface{}{
+		"vmid":       config.VMID,
+		"ostemplate": config.OSTemplate,
+	}
+
+	addStringParam(params, "hostname", config.Hostname)
+	addStringParam(params, "description", config.Description)
+	addStringParam(params, "rootfs", config.RootFS)
+	addStringParam(params, "net0", config.Net0)
+	addStringParam(params, "password", config.Password)
+	addStringParam(params, "ssh-public-keys", config.SSHKeys)
+	addStringParam(params, "nameserver", config.Nameserver)
+	addStringParam(params, "searchdomain", config.Searchdomain)
+	addStringParam(params, "storage", config.Storage)
+	addStringParam(params, "pool", config.Pool)
+
+	addIntParam(params, "memory", config.Memory)
+	addIntParam(params, "swap", config.Swap)
+	addIntParam(params, "cores", config.Cores)
+	addIntParam(params, "cpulimit", config.CPULimit)
+	addIntParam(params, "cpuunits", config.CPUUnits)
+
+	addBoolParam(params, "unprivileged", config.Unprivileged)
+	addBoolParam(params, "start", config.Start)
+
+	// Add features
+	for key, value := range config.Features {
+		params[key] = value
+	}
+
+	return params
+}
+
+// addStringParam adds a non-empty string parameter to the params map.
+func addStringParam(params map[string]interface{}, key, value string) {
+	if value != "" {
+		params[key] = value
+	}
+}
+
+// addIntParam adds a non-zero integer parameter to the params map.
+func addIntParam(params map[string]interface{}, key string, value int) {
+	if value > 0 {
+		params[key] = value
+	}
+}
+
+// addBoolParam adds a boolean parameter as 1 if true.
+func addBoolParam(params map[string]interface{}, key string, value bool) {
+	if value {
+		params[key] = 1
+	}
+}
+
+// extractUPID extracts the UPID string from the API response.
+func extractUPID(resp interface{}) (string, error) {
 	if upid, ok := resp.(string); ok {
 		return upid, nil
 	}
 
-	return "", fmt.Errorf("unexpected response type: %T", resp)
+	return "", fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // Status returns the current status of an LXC container.
@@ -200,38 +202,52 @@ func (c *Client) Status(ctx context.Context, vmid int) (*ContainerStatus, error)
 		return nil, fmt.Errorf("failed to get container status: %w", err)
 	}
 
-	status := &ContainerStatus{VMID: vmid}
+	return parseContainerStatus(resp, vmid), nil
+}
 
-	if data, ok := resp.(map[string]interface{}); ok {
-		status.Status = getString(data, "status")
-
-		status.Name = getString(data, "name")
-		if uptime, ok := data["uptime"].(float64); ok {
-			status.Uptime = int64(uptime)
-		}
-
-		if cpus, ok := data["cpus"].(float64); ok {
-			status.CPUs = int(cpus)
-		}
-
-		if maxmem, ok := data["maxmem"].(float64); ok {
-			status.MaxMem = int64(maxmem)
-		}
-
-		if mem, ok := data["mem"].(float64); ok {
-			status.Mem = int64(mem)
-		}
-
-		if maxdisk, ok := data["maxdisk"].(float64); ok {
-			status.MaxDisk = int64(maxdisk)
-		}
-
-		if disk, ok := data["disk"].(float64); ok {
-			status.Disk = int64(disk)
-		}
+// parseContainerStatus extracts detailed container status from API response.
+func parseContainerStatus(resp interface{}, vmid int) *ContainerStatus {
+	data, ok := resp.(map[string]interface{})
+	if !ok {
+		return &ContainerStatus{VMID: vmid}
 	}
 
-	return status, nil
+	status := &ContainerStatus{
+		VMID:   vmid,
+		Status: getString(data, "status"),
+		Name:   getString(data, "name"),
+	}
+
+	populateContainerMetrics(status, data)
+
+	return status
+}
+
+// populateContainerMetrics fills in numeric metrics from the API response data.
+func populateContainerMetrics(status *ContainerStatus, data map[string]interface{}) {
+	if uptime, ok := data["uptime"].(float64); ok {
+		status.Uptime = int64(uptime)
+	}
+
+	if cpus, ok := data["cpus"].(float64); ok {
+		status.CPUs = int(cpus)
+	}
+
+	if maxmem, ok := data["maxmem"].(float64); ok {
+		status.MaxMem = int64(maxmem)
+	}
+
+	if mem, ok := data["mem"].(float64); ok {
+		status.Mem = int64(mem)
+	}
+
+	if maxdisk, ok := data["maxdisk"].(float64); ok {
+		status.MaxDisk = int64(maxdisk)
+	}
+
+	if disk, ok := data["disk"].(float64); ok {
+		status.Disk = int64(disk)
+	}
 }
 
 // Start starts an LXC container.
@@ -247,7 +263,7 @@ func (c *Client) Start(ctx context.Context, vmid int) (string, error) {
 		return upid, nil
 	}
 
-	return "", fmt.Errorf("unexpected response type: %T", resp)
+	return "", fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // Stop stops an LXC container.
@@ -263,7 +279,7 @@ func (c *Client) Stop(ctx context.Context, vmid int) (string, error) {
 		return upid, nil
 	}
 
-	return "", fmt.Errorf("unexpected response type: %T", resp)
+	return "", fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // Shutdown gracefully shuts down an LXC container.
@@ -284,7 +300,7 @@ func (c *Client) Shutdown(ctx context.Context, vmid int, timeout int) (string, e
 		return upid, nil
 	}
 
-	return "", fmt.Errorf("unexpected response type: %T", resp)
+	return "", fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // Reboot reboots an LXC container.
@@ -300,7 +316,7 @@ func (c *Client) Reboot(ctx context.Context, vmid int) (string, error) {
 		return upid, nil
 	}
 
-	return "", fmt.Errorf("unexpected response type: %T", resp)
+	return "", fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // Delete deletes an LXC container.
@@ -321,7 +337,7 @@ func (c *Client) Delete(ctx context.Context, vmid int, purge bool) (string, erro
 		return upid, nil
 	}
 
-	return "", fmt.Errorf("unexpected response type: %T", resp)
+	return "", fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // GetConfig retrieves the configuration of an LXC container.
@@ -337,7 +353,7 @@ func (c *Client) GetConfig(ctx context.Context, vmid int) (map[string]interface{
 		return config, nil
 	}
 
-	return nil, fmt.Errorf("unexpected response type: %T", resp)
+	return nil, fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // UpdateConfig updates the configuration of an LXC container.
@@ -393,7 +409,7 @@ func (c *Client) Clone(ctx context.Context, vmid int, newID int, opts CloneOptio
 		return upid, nil
 	}
 
-	return "", fmt.Errorf("unexpected response type: %T", resp)
+	return "", fmt.Errorf("%w: %T", ErrUnexpectedResponseType, resp)
 }
 
 // CloneOptions represents options for cloning a container.
@@ -430,19 +446,4 @@ func getString(m map[string]interface{}, key string) string {
 	}
 
 	return ""
-}
-
-// Helper function to safely get int from map.
-func getInt(m map[string]interface{}, key string) int {
-	if val, ok := m[key].(float64); ok {
-		return int(val)
-	}
-
-	if val, ok := m[key].(string); ok {
-		if i, err := strconv.Atoi(val); err == nil {
-			return i
-		}
-	}
-
-	return 0
 }

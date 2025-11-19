@@ -88,7 +88,8 @@ func handleSnapshotRollback(writer http.ResponseWriter, request *http.Request) {
 	http.Error(writer, "method", http.StatusMethodNotAllowed)
 }
 
-func createSnapshotTestClient(t *testing.T, serverURL string) pveclient.Client { //nolint:ireturn // Factory function pattern
+//nolint:ireturn // Test helper - returns interface for test setup
+func createSnapshotTestClient(t *testing.T, serverURL string) pveclient.Client {
 	t.Helper()
 
 	parsed, _ := url.Parse(serverURL)

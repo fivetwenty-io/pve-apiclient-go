@@ -413,6 +413,50 @@ func (c *Client) Authenticate() error {
 	return c.ensureAuthentication()
 }
 
+// Logout invalidates the current session if using ticket-based authentication.
+func (c *Client) Logout() error {
+	if c.authenticator == nil {
+		return nil
+	}
+
+	err := c.authenticator.Logout()
+	if err != nil {
+		return fmt.Errorf("failed to logout: %w", err)
+	}
+
+	return nil
+}
+
+// InvalidateCache removes cache entries matching the given pattern.
+// Pattern supports wildcard (*) at the end, e.g., "/nodes/*" invalidates all node paths.
+// Returns the number of entries invalidated.
+func (c *Client) InvalidateCache(pattern string) int {
+	if c.cache != nil {
+		return c.cache.Invalidate(pattern)
+	}
+
+	return 0
+}
+
+// ClearCache removes all cached entries.
+func (c *Client) ClearCache() {
+	if c.cache != nil {
+		c.cache.Clear()
+	}
+}
+
+// CacheStats returns current cache statistics.
+// Returns nil if caching is not enabled.
+func (c *Client) CacheStats() *cache.CacheStats {
+	if c.cache != nil {
+		stats := c.cache.Stats()
+
+		return &stats
+	}
+
+	return nil
+}
+
 // isAuthenticated checks if the client is currently authenticated.
 func (c *Client) isAuthenticated() bool {
 	if c.authenticator == nil {
@@ -433,20 +477,6 @@ func (c *Client) needsLogin() bool {
 		c.options.Password != "" &&
 		c.options.APIToken == "" &&
 		c.options.Ticket == ""
-}
-
-// Logout invalidates the current session if using ticket-based authentication.
-func (c *Client) Logout() error {
-	if c.authenticator == nil {
-		return nil
-	}
-
-	err := c.authenticator.Logout()
-	if err != nil {
-		return fmt.Errorf("failed to logout: %w", err)
-	}
-
-	return nil
 }
 
 func (c *Client) buildUploadRequest(ctx context.Context, path string, fields map[string]string, fileField, filename string, file io.Reader) (*http.Request, error) {
@@ -816,7 +846,7 @@ func (c *Client) cachingMiddleware(req *http.Request, next Handler) (*http.Respo
 			// If we can't read body, return response without caching
 			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
-			return resp, nil
+			return resp, fmt.Errorf("failed to read response body: %w", err)
 		}
 
 		// Create cached response
@@ -840,46 +870,12 @@ func (c *Client) authMiddleware(req *http.Request, next Handler) (*http.Response
 	// Check if ticket needs renewal before making the request.
 	// PVE tickets have 2-hour validity, but should be renewed after 1 hour
 	// to prevent expiration during long-running operations.
-	if ticketAuth, ok := c.authenticator.(*auth.TicketAuthenticator); ok {
-		ticket := ticketAuth.GetTicket()
-		if ticket != nil && ticket.ShouldRenew(time.Hour) {
-			// Ticket is approaching expiration (> 1 hour old), renew it proactively
-			err := ticketAuth.RefreshForce()
-			if err != nil {
-				// Log the renewal failure but don't fail the request
-				// The ticket may still be valid enough to complete this request
-				if c.logger != nil && c.logConfig.Enabled {
-					c.logger.Warn("automatic ticket renewal failed", map[string]interface{}{
-						"error": err.Error(),
-					})
-				}
-			}
-		}
-	}
+	c.renewTicketIfNeeded()
 
-	// Auto-login logic: if enabled and not yet authenticated, login automatically
-	if c.options != nil && c.options.AutoLogin && !c.isAuthenticated() && c.needsLogin() {
-		// Use mutex to prevent concurrent first requests from logging in multiple times
-		c.loginMutex.Lock()
-
-		// Double-check after acquiring lock (another goroutine may have logged in)
-		if !c.isAuthenticated() && !c.loginAttempted {
-			c.loginAttempted = true
-			c.loginMutex.Unlock() // Unlock before authentication to allow other operations
-
-			err := c.ensureAuthentication()
-			if err != nil {
-				return nil, fmt.Errorf("auto-login failed: %w", err)
-			}
-		} else {
-			c.loginMutex.Unlock()
-		}
-	} else {
-		// Standard authentication check (non-auto-login path)
-		err := c.ensureAuthentication()
-		if err != nil {
-			return nil, err
-		}
+	// Handle auto-login or standard authentication
+	err := c.handleAuthentication()
+	if err != nil {
+		return nil, err
 	}
 
 	// Add authentication headers
@@ -893,6 +889,74 @@ func (c *Client) authMiddleware(req *http.Request, next Handler) (*http.Response
 
 	// Handle authentication retry if needed
 	return c.handleAuthenticationRetry(req, resp, next)
+}
+
+// renewTicketIfNeeded checks and renews the ticket if it's approaching expiration.
+func (c *Client) renewTicketIfNeeded() {
+	ticketAuth, ok := c.authenticator.(*auth.TicketAuthenticator)
+	if !ok {
+		return
+	}
+
+	ticket := ticketAuth.GetTicket()
+	if ticket == nil || !ticket.ShouldRenew(time.Hour) {
+		return
+	}
+
+	// Ticket is approaching expiration (> 1 hour old), renew it proactively
+	err := ticketAuth.RefreshForce()
+	if err != nil {
+		// Log the renewal failure but don't fail the request
+		// The ticket may still be valid enough to complete this request
+		c.logTicketRenewalFailure(err)
+	}
+}
+
+// logTicketRenewalFailure logs ticket renewal failures if logging is enabled.
+func (c *Client) logTicketRenewalFailure(err error) {
+	if c.logger == nil || !c.logConfig.Enabled {
+		return
+	}
+
+	c.logger.Warn("automatic ticket renewal failed", map[string]interface{}{
+		"error": err.Error(),
+	})
+}
+
+// handleAuthentication processes auto-login or standard authentication.
+func (c *Client) handleAuthentication() error {
+	if !c.shouldAutoLogin() {
+		return c.ensureAuthentication()
+	}
+
+	return c.performAutoLogin()
+}
+
+// shouldAutoLogin checks if auto-login should be attempted.
+func (c *Client) shouldAutoLogin() bool {
+	return c.options != nil && c.options.AutoLogin && !c.isAuthenticated() && c.needsLogin()
+}
+
+// performAutoLogin handles the auto-login logic with mutex protection.
+func (c *Client) performAutoLogin() error {
+	c.loginMutex.Lock()
+
+	// Double-check after acquiring lock (another goroutine may have logged in)
+	if c.isAuthenticated() || c.loginAttempted {
+		c.loginMutex.Unlock()
+
+		return nil
+	}
+
+	c.loginAttempted = true
+	c.loginMutex.Unlock() // Unlock before authentication to allow other operations
+
+	err := c.ensureAuthentication()
+	if err != nil {
+		return fmt.Errorf("auto-login failed: %w", err)
+	}
+
+	return nil
 }
 
 func (c *Client) retryMiddleware(req *http.Request, next Handler) (*http.Response, error) {
@@ -991,34 +1055,4 @@ func (c *Client) loggingMiddleware(req *http.Request, next Handler) (*http.Respo
 	c.fireHook(event)
 
 	return resp, err
-}
-
-// InvalidateCache removes cache entries matching the given pattern.
-// Pattern supports wildcard (*) at the end, e.g., "/nodes/*" invalidates all node paths.
-// Returns the number of entries invalidated.
-func (c *Client) InvalidateCache(pattern string) int {
-	if c.cache != nil {
-		return c.cache.Invalidate(pattern)
-	}
-
-	return 0
-}
-
-// ClearCache removes all cached entries.
-func (c *Client) ClearCache() {
-	if c.cache != nil {
-		c.cache.Clear()
-	}
-}
-
-// CacheStats returns current cache statistics.
-// Returns nil if caching is not enabled.
-func (c *Client) CacheStats() *cache.CacheStats {
-	if c.cache != nil {
-		stats := c.cache.Stats()
-
-		return &stats
-	}
-
-	return nil
 }

@@ -1,10 +1,23 @@
 package context
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+)
+
+const (
+	// Scoring weights for detection checks.
+	pveDirectoryScore      = 3 // High confidence indicator
+	pveshBinaryScore       = 2 // Medium confidence indicator
+	pveManagerPackageScore = 3 // High confidence indicator
+	nodeRegistrationScore  = 3 // High confidence indicator
+
+	// Scoring thresholds for execution mode determination.
+	localModeThreshold   = 6 // 6+ points indicates local execution
+	unknownModeThreshold = 3 // 3-5 points indicates unknown/inconclusive
 )
 
 // ExecutionMode indicates where the client is running.
@@ -85,7 +98,7 @@ func WithHostnameFunc(fn func() (string, error)) DetectorOption {
 
 // NewDetector creates a new Detector with default paths.
 func NewDetector(opts ...DetectorOption) *Detector {
-	d := &Detector{
+	detector := &Detector{
 		pvePath:      "/etc/pve",
 		pveshPath:    "/usr/bin/pvesh",
 		dpkgPath:     "/usr/bin/dpkg",
@@ -93,10 +106,10 @@ func NewDetector(opts ...DetectorOption) *Detector {
 	}
 
 	for _, opt := range opts {
-		opt(d)
+		opt(detector)
 	}
 
-	return d
+	return detector
 }
 
 // DetectMode determines the execution context using multiple checks.
@@ -107,31 +120,31 @@ func (d *Detector) DetectMode() ExecutionMode {
 
 	// Check 1: /etc/pve directory exists and is accessible (HIGH confidence)
 	if d.checkPVEDirectory() {
-		score += 3
+		score += pveDirectoryScore
 	}
 
 	// Check 2: pvesh binary exists (MEDIUM confidence)
 	if d.checkPVESH() {
-		score += 2
+		score += pveshBinaryScore
 	}
 
 	// Check 3: pve-manager package installed (HIGH confidence)
 	if d.checkPVEManager() {
-		score += 3
+		score += pveManagerPackageScore
 	}
 
 	// Check 4: hostname matches registered node (HIGH confidence)
 	if d.checkNodeRegistration() {
-		score += 3
+		score += nodeRegistrationScore
 	}
 
 	// Scoring thresholds:
 	// 0-2: Remote (low/no PVE indicators)
 	// 3-5: Unknown (some indicators, inconclusive)
 	// 6+: Local (multiple strong indicators)
-	if score >= 6 {
+	if score >= localModeThreshold {
 		return ExecutionModeLocal
-	} else if score >= 3 {
+	} else if score >= unknownModeThreshold {
 		return ExecutionModeUnknown
 	}
 
@@ -190,12 +203,16 @@ func (d *Detector) checkPVEManager() bool {
 	}
 
 	// Check if dpkg exists first
-	if _, err := os.Stat(d.dpkgPath); err != nil {
+	_, err := os.Stat(d.dpkgPath)
+	if err != nil {
 		return false
 	}
 
-	cmd := exec.Command(d.dpkgPath, "-s", "pve-manager")
-	err := cmd.Run()
+	// #nosec G204 -- dpkgPath is validated via os.Stat above and controlled through
+	// DetectorOption configuration. In production, it defaults to the constant "/usr/bin/dpkg".
+	// The package argument "pve-manager" is a hardcoded constant, not user input.
+	cmd := exec.CommandContext(context.Background(), d.dpkgPath, "-s", "pve-manager")
+	err = cmd.Run()
 
 	return err == nil
 }

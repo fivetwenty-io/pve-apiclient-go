@@ -97,10 +97,10 @@ func TestNewAPITokenAuthenticatorFromString(t *testing.T) {
 
 	tests := getTokenFromStringTestCases()
 
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			runTokenFromStringTest(t, testCase)
+			runTokenFromStringTest(t, tc)
 		})
 	}
 }
@@ -429,74 +429,92 @@ func TestValidateTokenID(t *testing.T) {
 func TestAPITokenAuthenticator_GetHeaders_FormatDetection(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name             string
-		tokenID          string
-		tokenSecret      string
-		customTokenName  string
-		expectedAuthHeader string
-		description      string
-	}{
-		{
-			name:             "default token name with raw token",
-			tokenID:          "root@pam!mytoken",
-			tokenSecret:      "secret-value",
-			customTokenName:  "",
-			expectedAuthHeader: "PVEAPIToken=root@pam!mytoken=secret-value",
-			description:      "Should add PVEAPIToken= prefix to raw token",
-		},
-		{
-			name:             "custom token name",
-			tokenID:          "root@pam!mytoken",
-			tokenSecret:      "secret-value",
-			customTokenName:  "CustomAuth",
-			expectedAuthHeader: "CustomAuth=root@pam!mytoken=secret-value",
-			description:      "Should use custom token name prefix",
-		},
-		{
-			name:             "bearer token format",
-			tokenID:          "root@pam!mytoken",
-			tokenSecret:      "secret-value",
-			customTokenName:  "Bearer",
-			expectedAuthHeader: "Bearer=root@pam!mytoken=secret-value",
-			description:      "Should support Bearer token format",
-		},
-		{
-			name:             "pre-formatted token should not double-prefix",
-			tokenID:          "PVEAPIToken=user@pam!token",
-			tokenSecret:      "secret",
-			customTokenName:  "PVEAPIToken",
-			expectedAuthHeader: "PVEAPIToken=user@pam!token=secret",
-			description:      "Already formatted tokens should not be double-prefixed",
-		},
-	}
+	tests := buildFormatDetectionTestCases()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
 			token := &auth.Token{
-				ID:     tt.tokenID,
-				Secret: tt.tokenSecret,
+				ID:     testCase.tokenID,
+				Secret: testCase.tokenSecret,
 			}
 
-			authenticator := auth.NewAPITokenAuthenticator(token, tt.customTokenName)
+			authenticator := auth.NewAPITokenAuthenticator(token, testCase.customTokenName)
 			headers := authenticator.GetHeaders()
 
-			if headers == nil {
-				t.Fatal("GetHeaders() returned nil")
-			}
-
-			authHeader, ok := headers["Authorization"]
-			if !ok {
-				t.Fatal("GetHeaders() missing Authorization header")
-			}
-
-			if authHeader != tt.expectedAuthHeader {
-				t.Errorf("GetHeaders()[Authorization] = %v, want %v. %s",
-					authHeader, tt.expectedAuthHeader, tt.description)
-			}
+			assertAuthorizationHeader(t, headers, testCase.expectedAuthHeader, testCase.description)
 		})
+	}
+}
+
+// buildFormatDetectionTestCases creates test cases for format detection validation.
+func buildFormatDetectionTestCases() []struct {
+	name               string
+	tokenID            string
+	tokenSecret        string
+	customTokenName    string
+	expectedAuthHeader string
+	description        string
+} {
+	return []struct {
+		name               string
+		tokenID            string
+		tokenSecret        string
+		customTokenName    string
+		expectedAuthHeader string
+		description        string
+	}{
+		{
+			name:               "default token name with raw token",
+			tokenID:            "root@pam!mytoken",
+			tokenSecret:        "secret-value",
+			customTokenName:    "",
+			expectedAuthHeader: "PVEAPIToken=root@pam!mytoken=secret-value",
+			description:        "Should add PVEAPIToken= prefix to raw token",
+		},
+		{
+			name:               "custom token name",
+			tokenID:            "root@pam!mytoken",
+			tokenSecret:        "secret-value",
+			customTokenName:    "CustomAuth",
+			expectedAuthHeader: "CustomAuth=root@pam!mytoken=secret-value",
+			description:        "Should use custom token name prefix",
+		},
+		{
+			name:               "bearer token format",
+			tokenID:            "root@pam!mytoken",
+			tokenSecret:        "secret-value",
+			customTokenName:    "Bearer",
+			expectedAuthHeader: "Bearer=root@pam!mytoken=secret-value",
+			description:        "Should support Bearer token format",
+		},
+		{
+			name:               "pre-formatted token should not double-prefix",
+			tokenID:            "PVEAPIToken=user@pam!token",
+			tokenSecret:        "secret",
+			customTokenName:    "PVEAPIToken",
+			expectedAuthHeader: "PVEAPIToken=user@pam!token=secret",
+			description:        "Already formatted tokens should not be double-prefixed",
+		},
+	}
+}
+
+// assertAuthorizationHeader validates that headers contain the expected Authorization value.
+func assertAuthorizationHeader(t *testing.T, headers map[string]string, expected, description string) {
+	t.Helper()
+
+	if headers == nil {
+		t.Fatal("GetHeaders() returned nil")
+	}
+
+	authHeader, ok := headers["Authorization"]
+	if !ok {
+		t.Fatal("GetHeaders() missing Authorization header")
+	}
+
+	if authHeader != expected {
+		t.Errorf("GetHeaders()[Authorization] = %v, want %v. %s", authHeader, expected, description)
 	}
 }
 
@@ -509,49 +527,49 @@ func TestAPITokenAuthenticator_CustomTokenName(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		tokenName     string
+		name           string
+		tokenName      string
 		expectedPrefix string
 	}{
 		{
-			name:          "empty token name defaults to PVEAPIToken",
-			tokenName:     "",
+			name:           "empty token name defaults to PVEAPIToken",
+			tokenName:      "",
 			expectedPrefix: "PVEAPIToken=",
 		},
 		{
-			name:          "explicit PVEAPIToken",
-			tokenName:     "PVEAPIToken",
+			name:           "explicit PVEAPIToken",
+			tokenName:      "PVEAPIToken",
 			expectedPrefix: "PVEAPIToken=",
 		},
 		{
-			name:          "custom Bearer token",
-			tokenName:     "Bearer",
+			name:           "custom Bearer token",
+			tokenName:      "Bearer",
 			expectedPrefix: "Bearer=",
 		},
 		{
-			name:          "custom API token",
-			tokenName:     "X-API-Token",
+			name:           "custom API token",
+			tokenName:      "X-API-Token",
 			expectedPrefix: "X-API-Token=",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			authenticator := auth.NewAPITokenAuthenticator(token, tt.tokenName)
+			authenticator := auth.NewAPITokenAuthenticator(token, testCase.tokenName)
 			headers := authenticator.GetHeaders()
 
 			authHeader := headers["Authorization"]
-			if !hasPrefix(authHeader, tt.expectedPrefix) {
+			if !hasPrefix(authHeader, testCase.expectedPrefix) {
 				t.Errorf("Authorization header %q does not start with expected prefix %q",
-					authHeader, tt.expectedPrefix)
+					authHeader, testCase.expectedPrefix)
 			}
 		})
 	}
 }
 
-// hasPrefix checks if a string has the given prefix
+// hasPrefix checks if a string has the given prefix.
 func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }

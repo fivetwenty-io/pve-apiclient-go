@@ -11,7 +11,15 @@ func main() {
 	fmt.Println("=== Auto-Login Example ===")
 	fmt.Println()
 
-	// Example 1: Auto-login enabled (recommended for simple scripts)
+	demonstrateAutoLogin()
+	demonstrateManualLogin()
+	demonstrateTokenAuth()
+
+	printSummary()
+}
+
+// demonstrateAutoLogin shows how auto-login enables automatic authentication on first API call.
+func demonstrateAutoLogin() {
 	fmt.Println("Example 1: With Auto-Login (convenient)")
 
 	clientWithAutoLogin, err := pve.NewClient(pve.Options{
@@ -34,8 +42,10 @@ func main() {
 	}
 
 	fmt.Printf("✓ Auto-login successful! Cluster status: %v\n\n", status)
+}
 
-	// Example 2: Manual login (traditional approach, more control)
+// demonstrateManualLogin shows the traditional explicit login approach.
+func demonstrateManualLogin() {
 	fmt.Println("Example 2: Manual Login (traditional)")
 
 	clientManual, err := pve.NewClient(pve.Options{
@@ -65,8 +75,10 @@ func main() {
 	}
 
 	fmt.Printf("✓ API call successful! Nodes: %v\n\n", nodes)
+}
 
-	// Example 3: Auto-login with API token (auto-login is ignored for tokens)
+// demonstrateTokenAuth shows API token authentication which bypasses auto-login.
+func demonstrateTokenAuth() {
 	fmt.Println("Example 3: API Token Authentication")
 
 	clientToken, err := pve.NewClient(pve.Options{
@@ -85,7 +97,10 @@ func main() {
 	}
 
 	fmt.Printf("✓ Token auth successful! Resources: %v\n\n", resources)
+}
 
+// printSummary displays key takeaways about auto-login functionality.
+func printSummary() {
 	fmt.Println("=== Examples Complete ===")
 	fmt.Println("\nKey Points:")
 	fmt.Println("1. AutoLogin=true: Authenticates automatically on first API call")

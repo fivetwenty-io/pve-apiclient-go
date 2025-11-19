@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -11,14 +12,51 @@ import (
 func TestParseTicketTimestamp(t *testing.T) {
 	t.Parallel()
 
+	tests := buildParseTicketTimestampTestCases()
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := auth.ParseTicketTimestamp(testCase.ticket)
+
+			if testCase.wantErr {
+				assertParseTimestampError(t, err, testCase.errType)
+
+				return
+			}
+
+			if err != nil {
+				t.Errorf("ParseTicketTimestamp() unexpected error = %v", err)
+
+				return
+			}
+
+			if testCase.validateAge {
+				validateTimestampAge(t, result)
+			}
+		})
+	}
+}
+
+// buildParseTicketTimestampTestCases creates test cases for timestamp parsing validation.
+//
+//nolint:funlen // Test case data structure
+func buildParseTicketTimestampTestCases() []struct {
+	name        string
+	ticket      string
+	wantErr     bool
+	errType     error
+	validateAge bool
+} {
 	hexTimestamp := "659F8E78" // Hex representation of 1705314424 (2024-01-15 10:27:04 UTC)
 
-	tests := []struct {
+	return []struct {
 		name        string
 		ticket      string
 		wantErr     bool
 		errType     error
-		validateAge bool // If true, validate timestamp is reasonable (not too old/new)
+		validateAge bool
 	}{
 		{
 			name:    "valid ticket format",
@@ -84,45 +122,36 @@ func TestParseTicketTimestamp(t *testing.T) {
 			errType: auth.ErrInvalidTicketFormat,
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+// assertParseTimestampError validates expected error conditions for timestamp parsing.
+func assertParseTimestampError(t *testing.T, err, expectedType error) {
+	t.Helper()
 
-			result, err := auth.ParseTicketTimestamp(tt.ticket)
+	if err == nil {
+		t.Errorf("ParseTicketTimestamp() expected error, got nil")
 
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("ParseTicketTimestamp() expected error, got nil")
-					return
-				}
+		return
+	}
 
-				if tt.errType != nil && err != tt.errType {
-					t.Errorf("ParseTicketTimestamp() error = %v, want %v", err, tt.errType)
-				}
+	if expectedType != nil && !errors.Is(err, expectedType) {
+		t.Errorf("ParseTicketTimestamp() error = %v, want %v", err, expectedType)
+	}
+}
 
-				return
-			}
+// validateTimestampAge checks that timestamp is reasonable (not too old or in future).
+func validateTimestampAge(t *testing.T, timestamp time.Time) {
+	t.Helper()
 
-			if err != nil {
-				t.Errorf("ParseTicketTimestamp() unexpected error = %v", err)
-				return
-			}
+	now := time.Now()
+	tenYearsAgo := now.Add(-10 * 365 * 24 * time.Hour)
 
-			// Validate the timestamp is reasonable (within last 10 years and not in future)
-			if tt.validateAge {
-				now := time.Now()
-				tenYearsAgo := now.Add(-10 * 365 * 24 * time.Hour)
+	if timestamp.Before(tenYearsAgo) {
+		t.Errorf("ParseTicketTimestamp() timestamp too old: %v", timestamp)
+	}
 
-				if result.Before(tenYearsAgo) {
-					t.Errorf("ParseTicketTimestamp() timestamp too old: %v", result)
-				}
-
-				if result.After(now.Add(time.Hour)) {
-					t.Errorf("ParseTicketTimestamp() timestamp in future: %v", result)
-				}
-			}
-		})
+	if timestamp.After(now.Add(time.Hour)) {
+		t.Errorf("ParseTicketTimestamp() timestamp in future: %v", timestamp)
 	}
 }
 
@@ -152,17 +181,17 @@ func TestParseTicketTimestamp_ActualValues(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			result, err := auth.ParseTicketTimestamp(tt.ticket)
+			result, err := auth.ParseTicketTimestamp(testCase.ticket)
 			if err != nil {
 				t.Fatalf("ParseTicketTimestamp() unexpected error = %v", err)
 			}
 
-			if !result.Equal(tt.wantTime) {
-				t.Errorf("ParseTicketTimestamp() = %v, want %v", result, tt.wantTime)
+			if !result.Equal(testCase.wantTime) {
+				t.Errorf("ParseTicketTimestamp() = %v, want %v", result, testCase.wantTime)
 			}
 		})
 	}
@@ -171,6 +200,31 @@ func TestParseTicketTimestamp_ActualValues(t *testing.T) {
 func TestTicket_ShouldRenew(t *testing.T) {
 	t.Parallel()
 
+	tests := buildShouldRenewTestCases()
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := testCase.ticket.ShouldRenew(testCase.threshold)
+
+			if result != testCase.wantRenew {
+				t.Errorf("ShouldRenew() = %v, want %v. %s", result, testCase.wantRenew, testCase.description)
+			}
+		})
+	}
+}
+
+// buildShouldRenewTestCases creates test cases for ticket renewal validation.
+//
+//nolint:funlen // Test case data structure
+func buildShouldRenewTestCases() []struct {
+	name        string
+	ticket      *auth.Ticket
+	threshold   time.Duration
+	wantRenew   bool
+	description string
+} {
 	now := time.Now()
 	oneHourAgo := now.Add(-1 * time.Hour)
 	twoHoursAgo := now.Add(-2 * time.Hour)
@@ -181,11 +235,11 @@ func TestTicket_ShouldRenew(t *testing.T) {
 	thirtyMinAgoHex := formatTimestampHex(thirtyMinutesAgo.Unix())
 	twoHoursAgoHex := formatTimestampHex(twoHoursAgo.Unix())
 
-	tests := []struct {
-		name       string
-		ticket     *auth.Ticket
-		threshold  time.Duration
-		wantRenew  bool
+	return []struct {
+		name        string
+		ticket      *auth.Ticket
+		threshold   time.Duration
+		wantRenew   bool
 		description string
 	}{
 		{
@@ -269,21 +323,9 @@ func TestTicket_ShouldRenew(t *testing.T) {
 			description: "With 30min threshold, 20min old ticket should not renew",
 		},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.ticket.ShouldRenew(tt.threshold)
-
-			if result != tt.wantRenew {
-				t.Errorf("ShouldRenew() = %v, want %v. %s", result, tt.wantRenew, tt.description)
-			}
-		})
-	}
 }
 
-// formatTimestampHex formats a Unix timestamp as an 8-character uppercase hex string
+// formatTimestampHex formats a Unix timestamp as an 8-character uppercase hex string.
 func formatTimestampHex(timestamp int64) string {
 	return fmt.Sprintf("%08X", timestamp)
 }

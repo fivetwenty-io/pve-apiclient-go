@@ -31,7 +31,9 @@ type service struct {
 }
 
 // New returns a new QEMU service.
-func New(c client.Client) Service { return &service{c: c} } //nolint:ireturn // Factory function pattern
+//
+//nolint:ireturn // Factory pattern - returns interface to encapsulate implementation and enable mocking
+func New(c client.Client) Service { return &service{c: c} }
 
 func (s *service) Create(ctx context.Context, node string, params map[string]interface{}) (string, error) {
 	data, err := s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/qemu", node), params)

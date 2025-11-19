@@ -133,7 +133,8 @@ func handleTicketEndpoint(writer http.ResponseWriter, request *http.Request, log
 	http.NotFound(writer, request)
 }
 
-func setupLogoutTestClient(t *testing.T, srv *httptest.Server) pve.Client { //nolint:ireturn // Test helper function
+//nolint:ireturn // Test helper - returns interface for test setup
+func setupLogoutTestClient(t *testing.T, srv *httptest.Server) pve.Client {
 	t.Helper()
 
 	u, _ := url.Parse(srv.URL)

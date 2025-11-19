@@ -8,18 +8,48 @@ import (
 	pve "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
+const (
+	// Cache size constants in bytes.
+	DefaultCacheSizeMB = 50 * 1024 * 1024 // 50 MB
+	CustomCacheSizeMB  = 10 * 1024 * 1024 // 10 MB
+
+	// Cache TTL durations.
+	DefaultCacheTTL = 5 * time.Minute  // 5 minutes
+	CustomCacheTTL  = 30 * time.Second // 30 seconds
+
+	// Cleanup intervals.
+	DefaultCleanupInterval = 1 * time.Minute  // 1 minute
+	CustomCleanupInterval  = 10 * time.Second // 10 seconds
+
+	// Percentage multiplier for display.
+	PercentageMultiplier = 100
+)
+
 func main() {
 	fmt.Println("=== Request Caching Example ===")
 	fmt.Println()
 
-	// Example 1: Client with caching enabled
+	client := demonstrateCacheSetup()
+	demonstrateCachedRequests(client)
+	demonstrateCacheStats(client)
+	demonstrateCacheInvalidation(client)
+	demonstrateCacheClear(client)
+	demonstrateCustomConfig()
+
+	printCachingSummary()
+}
+
+// demonstrateCacheSetup creates a client with caching enabled and displays configuration.
+//
+//nolint:ireturn // Example code - returns interface for demonstration
+func demonstrateCacheSetup() pve.Client {
 	fmt.Println("Example 1: Enable Request Caching")
 
 	cacheConfig := pve.CacheConfig{
 		Enabled:         true,
-		MaxSize:         50 * 1024 * 1024, // 50 MB
-		DefaultTTL:      5 * time.Minute,  // Cache entries for 5 minutes
-		CleanupInterval: 1 * time.Minute,  // Cleanup expired entries every minute
+		MaxSize:         DefaultCacheSizeMB,     // 50 MB
+		DefaultTTL:      DefaultCacheTTL,        // Cache entries for 5 minutes
+		CleanupInterval: DefaultCleanupInterval, // Cleanup expired entries every minute
 	}
 
 	client, err := pve.NewClient(pve.Options{
@@ -37,7 +67,11 @@ func main() {
 	fmt.Println("  Default TTL: 5 minutes")
 	fmt.Println()
 
-	// Example 2: Making cached requests
+	return client
+}
+
+// demonstrateCachedRequests shows cache miss and cache hit performance comparison.
+func demonstrateCachedRequests(client pve.Client) {
 	fmt.Println("Example 2: Cached vs Uncached Requests")
 
 	// First request - cache miss (will hit the API)
@@ -68,28 +102,32 @@ func main() {
 
 	// Show performance improvement
 	if secondDuration < firstDuration {
-		improvement := float64(firstDuration-secondDuration) / float64(firstDuration) * 100
+		improvement := float64(firstDuration-secondDuration) / float64(firstDuration) * PercentageMultiplier
 		fmt.Printf("Cache improved response time by %.1f%%\n", improvement)
 	}
 
 	fmt.Println()
+}
 
-	// Example 3: Cache statistics
+// demonstrateCacheStats displays current cache statistics.
+func demonstrateCacheStats(client pve.Client) {
 	fmt.Println("Example 3: Cache Statistics")
 
 	stats := client.CacheStats()
 	if stats != nil {
 		fmt.Printf("Cache Hits:      %d\n", stats.Hits)
 		fmt.Printf("Cache Misses:    %d\n", stats.Misses)
-		fmt.Printf("Hit Rate:        %.2f%%\n", stats.HitRate*100)
+		fmt.Printf("Hit Rate:        %.2f%%\n", stats.HitRate*PercentageMultiplier)
 		fmt.Printf("Evictions:       %d\n", stats.Evictions)
 		fmt.Printf("Current Size:    %d bytes\n", stats.Size)
 		fmt.Printf("Total Entries:   %d\n", stats.Entries)
 	}
 
 	fmt.Println()
+}
 
-	// Example 4: Pattern-based cache invalidation
+// demonstrateCacheInvalidation shows pattern-based cache invalidation.
+func demonstrateCacheInvalidation(client pve.Client) {
 	fmt.Println("Example 4: Cache Invalidation")
 
 	// Make some requests to populate cache
@@ -104,35 +142,39 @@ func main() {
 	fmt.Printf("✓ Invalidated %d entries matching /nodes/*\n", removed)
 
 	// Check stats again
-	stats = client.CacheStats()
+	stats := client.CacheStats()
 	if stats != nil {
 		fmt.Printf("  Remaining entries: %d\n", stats.Entries)
 	}
 
 	fmt.Println()
+}
 
-	// Example 5: Clear entire cache
+// demonstrateCacheClear shows clearing all cache entries.
+func demonstrateCacheClear(client pve.Client) {
 	fmt.Println("Example 5: Clear All Cache")
 
 	client.ClearCache()
 	fmt.Println("✓ Cleared entire cache")
 
-	stats = client.CacheStats()
+	stats := client.CacheStats()
 	if stats != nil {
 		fmt.Printf("  Entries after clear: %d\n", stats.Entries)
 		fmt.Printf("  Size after clear: %d bytes\n", stats.Size)
 	}
 
 	fmt.Println()
+}
 
-	// Example 6: Custom cache configuration
+// demonstrateCustomConfig shows custom cache configuration for specific scenarios.
+func demonstrateCustomConfig() {
 	fmt.Println("Example 6: Custom Cache Configuration")
 
 	customConfig := pve.CacheConfig{
 		Enabled:         true,
-		MaxSize:         10 * 1024 * 1024, // 10 MB (smaller cache)
-		DefaultTTL:      30 * time.Second, // Short TTL (30 seconds)
-		CleanupInterval: 10 * time.Second, // Frequent cleanup
+		MaxSize:         CustomCacheSizeMB,     // 10 MB (smaller cache)
+		DefaultTTL:      CustomCacheTTL,        // Short TTL (30 seconds)
+		CleanupInterval: CustomCleanupInterval, // Frequent cleanup
 	}
 
 	clientCustom, err := pve.NewClient(pve.Options{
@@ -154,8 +196,10 @@ func main() {
 	_ = clientCustom
 
 	fmt.Println()
+}
 
-	// Summary
+// printCachingSummary displays key takeaways and use cases for caching.
+func printCachingSummary() {
 	fmt.Println("=== Examples Complete ===")
 	fmt.Println()
 	fmt.Println("Key Points:")

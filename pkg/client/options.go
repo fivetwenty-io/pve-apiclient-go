@@ -72,8 +72,8 @@ type Options struct {
 	AutoLogin    bool   // Automatically login on first API call if username/password provided (default: false)
 
 	// Execution Context
-	ExecutionMode    ExecutionMode // Detected or manually set execution mode (local/remote/unknown)
-	AutoDetectMode   bool          // Automatically detect execution mode on client creation (default: true)
+	ExecutionMode  ExecutionMode // Detected or manually set execution mode (local/remote/unknown)
+	AutoDetectMode bool          // Automatically detect execution mode on client creation (default: true)
 
 	// SSL/TLS
 	SSLOptions                  *SSLOptions                  // SSL/TLS configuration

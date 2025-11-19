@@ -15,6 +15,11 @@ var (
 	ErrInvalidTicketFormat = errors.New("invalid ticket format: does not match expected pattern")
 )
 
+const (
+	// ticketTimestampMatchGroups is the expected number of regex match groups for ticket parsing.
+	ticketTimestampMatchGroups = 2
+)
+
 // ticketTimestampRegex matches PVE ticket format to extract creation timestamp.
 // Format: <data>:<TIMESTAMP>::<signature>
 // Where TIMESTAMP is 8 hex characters representing Unix timestamp.
@@ -70,7 +75,7 @@ func (t *Ticket) IsValid() bool {
 // Returns the creation time or an error if the ticket format is invalid.
 func ParseTicketTimestamp(ticket string) (time.Time, error) {
 	matches := ticketTimestampRegex.FindStringSubmatch(ticket)
-	if len(matches) != 2 {
+	if len(matches) != ticketTimestampMatchGroups {
 		return time.Time{}, ErrInvalidTicketFormat
 	}
 

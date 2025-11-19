@@ -12,7 +12,17 @@ func main() {
 	fmt.Println("=== Execution Context Detection Example ===")
 	fmt.Println()
 
-	// Example 1: Manual context detection
+	demonstrateManualDetection()
+	demonstrateConvenienceFunctions()
+	demonstrateAutoDetection()
+	demonstrateManualOverride()
+	demonstrateDetectionDetails()
+
+	printDetectionSummary()
+}
+
+// demonstrateManualDetection shows explicit context detection and mode interpretation.
+func demonstrateManualDetection() {
 	fmt.Println("Example 1: Manual Context Detection")
 
 	detector := pvectx.NewDetector()
@@ -45,8 +55,10 @@ func main() {
 	}
 
 	fmt.Println()
+}
 
-	// Example 2: Convenience functions
+// demonstrateConvenienceFunctions shows simple boolean check for PVE node execution.
+func demonstrateConvenienceFunctions() {
 	fmt.Println("Example 2: Convenience Functions")
 
 	if pvectx.IsRunningOnPVENode() {
@@ -56,8 +68,10 @@ func main() {
 	}
 
 	fmt.Println()
+}
 
-	// Example 3: Client with auto-detection
+// demonstrateAutoDetection shows client with automatic context detection enabled.
+func demonstrateAutoDetection() {
 	fmt.Println("Example 3: Client with Auto-Detection")
 
 	client, err := pve.NewClient(pve.Options{
@@ -74,9 +88,14 @@ func main() {
 	fmt.Println("  The client will automatically detect if running on a PVE node")
 	fmt.Println("  and optimize authentication accordingly")
 
-	fmt.Println()
+	// Prevent unused variable warnings
+	_ = client
 
-	// Example 4: Manual execution mode override
+	fmt.Println()
+}
+
+// demonstrateManualOverride shows explicit execution mode configuration.
+func demonstrateManualOverride() {
 	fmt.Println("Example 4: Manual Execution Mode Override")
 
 	clientManual, err := pve.NewClient(pve.Options{
@@ -94,9 +113,14 @@ func main() {
 	fmt.Println("  ExecutionMode explicitly set to Remote")
 	fmt.Println("  Auto-detection bypassed")
 
-	fmt.Println()
+	// Prevent unused variable warnings
+	_ = clientManual
 
-	// Example 5: Detailed detection information
+	fmt.Println()
+}
+
+// demonstrateDetectionDetails explains the detection algorithm and scoring.
+func demonstrateDetectionDetails() {
 	fmt.Println("Example 5: Detection Details")
 
 	fmt.Println("Detection checks performed:")
@@ -111,11 +135,10 @@ func main() {
 	fmt.Println("  6+ points  → Local")
 
 	fmt.Println()
+}
 
-	// Prevent unused variable warnings
-	_ = client
-	_ = clientManual
-
+// printDetectionSummary displays key takeaways about context detection.
+func printDetectionSummary() {
 	fmt.Println("=== Examples Complete ===")
 	fmt.Println("\nKey Points:")
 	fmt.Println("1. Auto-detection is opt-in (AutoDetectMode: true)")

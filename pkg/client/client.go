@@ -12,6 +12,9 @@ import (
 	pmetrics "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/metrics"
 )
 
+// ErrAuthNotConfigured is returned when authentication is not configured.
+var ErrAuthNotConfigured = errors.New("authentication not configured")
+
 // Client defines the interface for interacting with the PVE API.
 type Client interface {
 	// HTTP Methods
@@ -279,7 +282,7 @@ func (c *client) Login() error {
 		return nil
 	}
 
-	return errors.New("authentication not configured")
+	return ErrAuthNotConfigured
 }
 
 // Logout logs out from the PVE API.
@@ -450,10 +453,7 @@ func (a *internalHTTPAdapter) ClearCache() {
 
 func (a *internalHTTPAdapter) CacheStats() *CacheStats {
 	if a.inner != nil {
-		stats := a.inner.CacheStats()
-		if stats != nil {
-			return (*CacheStats)(stats)
-		}
+		return a.inner.CacheStats()
 	}
 
 	return nil

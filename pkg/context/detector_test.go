@@ -1,3 +1,4 @@
+//nolint:testpackage // White-box testing required to test unexported functions
 package context
 
 import (
@@ -7,7 +8,11 @@ import (
 	"testing"
 )
 
+var errHostname = errors.New("hostname error")
+
 func TestExecutionMode_String(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		mode ExecutionMode
@@ -19,16 +24,20 @@ func TestExecutionMode_String(t *testing.T) {
 		{"Invalid mode", ExecutionMode(999), "invalid"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.mode.String(); got != tt.want {
-				t.Errorf("ExecutionMode.String() = %v, want %v", got, tt.want)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := testCase.mode.String(); got != testCase.want {
+				t.Errorf("ExecutionMode.String() = %v, want %v", got, testCase.want)
 			}
 		})
 	}
 }
 
 func TestDetector_DetectMode_AllChecksFail(t *testing.T) {
+	t.Parallel()
+
 	detector := NewDetector(
 		WithPVEPath("/nonexistent/pve"),
 		WithPVESHPath("/nonexistent/pvesh"),
@@ -45,11 +54,13 @@ func TestDetector_DetectMode_AllChecksFail(t *testing.T) {
 }
 
 func TestDetector_DetectMode_PartialChecks(t *testing.T) {
+	t.Parallel()
+
 	// Create temporary directory structure
 	tmpDir := t.TempDir()
 	pveDir := filepath.Join(tmpDir, "pve")
 
-	err := os.MkdirAll(pveDir, 0755)
+	err := os.MkdirAll(pveDir, 0750)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,19 +80,22 @@ func TestDetector_DetectMode_PartialChecks(t *testing.T) {
 }
 
 func TestDetector_DetectMode_HighScore(t *testing.T) {
+	t.Parallel()
+
 	// Create temporary directory structure
 	tmpDir := t.TempDir()
 	pveDir := filepath.Join(tmpDir, "pve")
 	nodesDir := filepath.Join(pveDir, "nodes", "test-node")
 	pveshPath := filepath.Join(tmpDir, "pvesh")
 
-	err := os.MkdirAll(nodesDir, 0755)
+	err := os.MkdirAll(nodesDir, 0750)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create fake pvesh binary
-	err := os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0755)
+	// #nosec G306 -- Test file requires executable permissions to simulate pvesh binary
+	err = os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0750)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,6 +118,8 @@ func TestDetector_DetectMode_HighScore(t *testing.T) {
 }
 
 func TestDetector_IsLocal(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setup     func() *Detector
@@ -117,8 +133,9 @@ func TestDetector_IsLocal(t *testing.T) {
 				nodesDir := filepath.Join(pveDir, "nodes", "local-node")
 				pveshPath := filepath.Join(tmpDir, "pvesh")
 
-				_ = os.MkdirAll(nodesDir, 0755)
-				_ = os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0755)
+				_ = os.MkdirAll(nodesDir, 0750)
+				// #nosec G306 -- Test file requires executable permissions to simulate pvesh binary
+				_ = os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0750)
 
 				return NewDetector(
 					WithPVEPath(pveDir),
@@ -144,17 +161,21 @@ func TestDetector_IsLocal(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			detector := tt.setup()
-			if got := detector.IsLocal(); got != tt.wantLocal {
-				t.Errorf("IsLocal() = %v, want %v", got, tt.wantLocal)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			detector := testCase.setup()
+			if got := detector.IsLocal(); got != testCase.wantLocal {
+				t.Errorf("IsLocal() = %v, want %v", got, testCase.wantLocal)
 			}
 		})
 	}
 }
 
 func TestDetector_IsRemote(t *testing.T) {
+	t.Parallel()
+
 	detector := NewDetector(
 		WithPVEPath("/nonexistent"),
 		WithPVESHPath("/nonexistent"),
@@ -165,7 +186,10 @@ func TestDetector_IsRemote(t *testing.T) {
 	}
 }
 
+//nolint:funlen // Test case definitions with setup closures
 func TestDetector_GetNodeName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setup     func() *Detector
@@ -180,8 +204,9 @@ func TestDetector_GetNodeName(t *testing.T) {
 				nodesDir := filepath.Join(pveDir, "nodes", "my-node")
 				pveshPath := filepath.Join(tmpDir, "pvesh")
 
-				_ = os.MkdirAll(nodesDir, 0755)
-				_ = os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0755)
+				_ = os.MkdirAll(nodesDir, 0750)
+				// #nosec G306 -- Test file requires executable permissions to simulate pvesh binary
+				_ = os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0750)
 
 				return NewDetector(
 					WithPVEPath(pveDir),
@@ -213,15 +238,16 @@ func TestDetector_GetNodeName(t *testing.T) {
 				nodesDir := filepath.Join(pveDir, "nodes", "test")
 				pveshPath := filepath.Join(tmpDir, "pvesh")
 
-				_ = os.MkdirAll(nodesDir, 0755)
-				_ = os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0755)
+				_ = os.MkdirAll(nodesDir, 0750)
+				// #nosec G306 -- Test file requires executable permissions to simulate pvesh binary
+				_ = os.WriteFile(pveshPath, []byte("#!/bin/sh\n"), 0750)
 
 				return NewDetector(
 					WithPVEPath(pveDir),
 					WithPVESHPath(pveshPath),
 					WithDpkgPath(""),
 					WithHostnameFunc(func() (string, error) {
-						return "", errors.New("hostname error")
+						return "", errHostname
 					}),
 				)
 			},
@@ -230,22 +256,24 @@ func TestDetector_GetNodeName(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			detector := tt.setup()
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			detector := testCase.setup()
 			name, err := detector.GetNodeName()
 
-			if (err != nil) != tt.wantError {
-				t.Errorf("GetNodeName() error = %v, wantError %v", err, tt.wantError)
+			if (err != nil) != testCase.wantError {
+				t.Errorf("GetNodeName() error = %v, wantError %v", err, testCase.wantError)
 
 				return
 			}
 
-			if name != tt.wantName {
-				t.Errorf("GetNodeName() = %v, want %v", name, tt.wantName)
+			if name != testCase.wantName {
+				t.Errorf("GetNodeName() = %v, want %v", name, testCase.wantName)
 			}
 
-			if tt.wantError && !errors.Is(err, ErrNotOnPVENode) && err.Error() != "hostname error" {
+			if testCase.wantError && !errors.Is(err, ErrNotOnPVENode) && err.Error() != "hostname error" {
 				t.Errorf("GetNodeName() error = %v, want ErrNotOnPVENode or hostname error", err)
 			}
 		})
@@ -253,6 +281,8 @@ func TestDetector_GetNodeName(t *testing.T) {
 }
 
 func TestDetector_checkPVEDirectory(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name  string
 		setup func() string
@@ -279,7 +309,7 @@ func TestDetector_checkPVEDirectory(t *testing.T) {
 			setup: func() string {
 				tmpDir := t.TempDir()
 				file := filepath.Join(tmpDir, "file")
-				_ = os.WriteFile(file, []byte("test"), 0644)
+				_ = os.WriteFile(file, []byte("test"), 0600)
 
 				return file
 			},
@@ -287,19 +317,23 @@ func TestDetector_checkPVEDirectory(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := tt.setup()
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := testCase.setup()
 			detector := NewDetector(WithPVEPath(path))
 
-			if got := detector.checkPVEDirectory(); got != tt.want {
-				t.Errorf("checkPVEDirectory() = %v, want %v", got, tt.want)
+			if got := detector.checkPVEDirectory(); got != testCase.want {
+				t.Errorf("checkPVEDirectory() = %v, want %v", got, testCase.want)
 			}
 		})
 	}
 }
 
 func TestDetector_checkPVESH(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name  string
 		setup func() string
@@ -310,7 +344,8 @@ func TestDetector_checkPVESH(t *testing.T) {
 			setup: func() string {
 				tmpDir := t.TempDir()
 				binary := filepath.Join(tmpDir, "pvesh")
-				_ = os.WriteFile(binary, []byte("#!/bin/sh\n"), 0755)
+				// #nosec G306 -- Test file requires executable permissions to simulate pvesh binary
+				_ = os.WriteFile(binary, []byte("#!/bin/sh\n"), 0750)
 
 				return binary
 			},
@@ -325,19 +360,24 @@ func TestDetector_checkPVESH(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := tt.setup()
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := testCase.setup()
 			detector := NewDetector(WithPVESHPath(path))
 
-			if got := detector.checkPVESH(); got != tt.want {
-				t.Errorf("checkPVESH() = %v, want %v", got, tt.want)
+			if got := detector.checkPVESH(); got != testCase.want {
+				t.Errorf("checkPVESH() = %v, want %v", got, testCase.want)
 			}
 		})
 	}
 }
 
+//nolint:funlen // Test case definitions with setup closures
 func TestDetector_checkNodeRegistration(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name  string
 		setup func() (pveDir string, hostname string)
@@ -349,7 +389,7 @@ func TestDetector_checkNodeRegistration(t *testing.T) {
 				tmpDir := t.TempDir()
 				pveDir := filepath.Join(tmpDir, "pve")
 				nodesDir := filepath.Join(pveDir, "nodes", "registered-node")
-				_ = os.MkdirAll(nodesDir, 0755)
+				_ = os.MkdirAll(nodesDir, 0750)
 
 				return pveDir, "registered-node"
 			},
@@ -360,7 +400,7 @@ func TestDetector_checkNodeRegistration(t *testing.T) {
 			setup: func() (string, string) {
 				tmpDir := t.TempDir()
 				pveDir := filepath.Join(tmpDir, "pve")
-				_ = os.MkdirAll(pveDir, 0755)
+				_ = os.MkdirAll(pveDir, 0750)
 
 				return pveDir, "unregistered-node"
 			},
@@ -375,29 +415,33 @@ func TestDetector_checkNodeRegistration(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pveDir, hostname := tt.setup()
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			pveDir, hostname := testCase.setup()
 
 			detector := NewDetector(
 				WithPVEPath(pveDir),
 				WithHostnameFunc(func() (string, error) {
 					if hostname == "" {
-						return "", errors.New("hostname error")
+						return "", errHostname
 					}
 
 					return hostname, nil
 				}),
 			)
 
-			if got := detector.checkNodeRegistration(); got != tt.want {
-				t.Errorf("checkNodeRegistration() = %v, want %v", got, tt.want)
+			if got := detector.checkNodeRegistration(); got != testCase.want {
+				t.Errorf("checkNodeRegistration() = %v, want %v", got, testCase.want)
 			}
 		})
 	}
 }
 
 func TestDetect(t *testing.T) {
+	t.Parallel()
+
 	// Just verify the convenience function works
 	mode := Detect()
 	// Should return Remote or Unknown on non-PVE systems
@@ -408,6 +452,8 @@ func TestDetect(t *testing.T) {
 }
 
 func TestIsRunningOnPVENode(t *testing.T) {
+	t.Parallel()
+
 	// Just verify the convenience function works
 	isLocal := IsRunningOnPVENode()
 	// Should return false on non-PVE systems
@@ -418,6 +464,8 @@ func TestIsRunningOnPVENode(t *testing.T) {
 }
 
 func TestDetector_checkPVEManager(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		dpkgPath string
@@ -435,12 +483,14 @@ func TestDetector_checkPVEManager(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			detector := NewDetector(WithDpkgPath(tt.dpkgPath))
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 
-			if got := detector.checkPVEManager(); got != tt.want {
-				t.Errorf("checkPVEManager() = %v, want %v", got, tt.want)
+			detector := NewDetector(WithDpkgPath(testCase.dpkgPath))
+
+			if got := detector.checkPVEManager(); got != testCase.want {
+				t.Errorf("checkPVEManager() = %v, want %v", got, testCase.want)
 			}
 		})
 	}

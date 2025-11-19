@@ -18,6 +18,8 @@ type Service interface {
 type service struct{ c client.Client }
 
 // New returns a new network service.
+//
+//nolint:ireturn // Factory pattern - returns interface to encapsulate implementation and enable mocking
 func New(c client.Client) Service { return &service{c: c} }
 
 func (s *service) EnsureBridge(ctx context.Context, node, bridge string, params map[string]interface{}) error {

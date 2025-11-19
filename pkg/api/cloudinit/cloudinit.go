@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
@@ -29,6 +30,8 @@ type Service interface {
 type service struct{ c client.Client }
 
 // New returns a new cloud-init service.
+//
+//nolint:ireturn // Factory pattern - returns interface to encapsulate implementation and enable mocking
 func New(c client.Client) Service { return &service{c: c} }
 
 func (s *service) BuildIPConfig(networks map[string]any) (map[string]string, error) {
@@ -87,6 +90,7 @@ func (s *service) BuildIPConfigs(specs []NICSpec, globalNameservers []string) (m
 		nameservers := ""
 
 		var nameserversSb89 strings.Builder
+
 		for i, server := range globalNameservers {
 			if i > 0 {
 				nameserversSb89.WriteString(" ")
@@ -94,6 +98,7 @@ func (s *service) BuildIPConfigs(specs []NICSpec, globalNameservers []string) (m
 
 			nameserversSb89.WriteString(server)
 		}
+
 		nameservers += nameserversSb89.String()
 
 		result["nameserver"] = nameservers

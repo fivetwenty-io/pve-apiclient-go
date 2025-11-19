@@ -32,7 +32,7 @@ linters:
   - exhaustive # Check exhaustiveness of enum switch statements.
   - exptostd # Detects functions from golang.org/x/exp/ that can be replaced by std functions. [auto-fix]
   - fatcontext # Detects nested contexts in loops and function literals. [auto-fix]
-  - forbidigo # Forbids identifiers.
+  #- forbidigo # Forbids identifiers. # Disabled - too many false positives
   - forcetypeassert # Find forced type assertions.
   - funcorder # Checks the order of functions, methods, and constructors. [fast]
   - funlen # Checks for long functions. [fast]
@@ -135,4 +135,3 @@ formatters:
 issues:
   fix: true
   max-same-issues: 20
-

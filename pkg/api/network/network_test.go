@@ -141,7 +141,8 @@ func handleBridgeRequest(writer http.ResponseWriter, request *http.Request, stat
 	}
 }
 
-func createTestClient(t *testing.T, serverURL string) pveclient.Client { //nolint:ireturn // Factory function pattern
+//nolint:ireturn // Test helper - returns interface for test setup
+func createTestClient(t *testing.T, serverURL string) pveclient.Client {
 	t.Helper()
 
 	parsed, _ := url.Parse(serverURL)

@@ -22,6 +22,8 @@ type Service interface {
 type service struct{ c client.Client }
 
 // New returns a new storage service.
+//
+//nolint:ireturn // Factory pattern - returns interface to encapsulate implementation and enable mocking
 func New(c client.Client) Service { return &service{c: c} }
 
 func (s *service) CreateVolume(ctx context.Context, node, storage string, sizeGiB int, format string, vmid int, name string) (string, error) {

@@ -48,7 +48,9 @@ type service struct {
 }
 
 // New returns a new tasks service.
-func New(c client.Client) Service { return &service{c: c} } //nolint:ireturn // Factory function pattern
+//
+//nolint:ireturn // Factory pattern - returns interface to encapsulate implementation and enable mocking
+func New(c client.Client) Service { return &service{c: c} }
 
 // Wait polls a task until completion or timeout.
 func (s *service) Wait(ctx context.Context, node, upid string, opts *WaitOptions) (*Status, error) {
