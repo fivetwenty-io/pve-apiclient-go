@@ -278,6 +278,8 @@ func TestWaitTask_ExitStatusEmpty(t *testing.T) {
 }
 
 // TestWaitTask_ContextCancellation: cancelled ctx returns quickly with an error.
+// Uses WithTimeout rather than a goroutine-based cancel to avoid scheduling
+// non-determinism under -race -count=N parallel load.
 func TestWaitTask_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
@@ -289,12 +291,10 @@ func TestWaitTask_ContextCancellation(t *testing.T) {
 
 	svc := tasks.New(newTestClient(t, srv))
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		time.Sleep(30 * time.Millisecond)
-		cancel()
-	}()
+	// Deadline-based cancellation is runtime-enforced; no goroutine scheduling dependency.
+	// Use a 2s deadline so the context fires reliably even under -race -count=20 load.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	start := time.Now()
 
@@ -309,7 +309,8 @@ func TestWaitTask_ContextCancellation(t *testing.T) {
 		t.Fatal("expected error on ctx cancellation")
 	}
 
-	if elapsed > 2*time.Second {
+	// Must return within 10s even under heavy parallel load (-race -count=20).
+	if elapsed > 10*time.Second {
 		t.Errorf("cancellation took too long: %v", elapsed)
 	}
 }

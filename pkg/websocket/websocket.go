@@ -36,6 +36,7 @@ type Client struct {
 	dialer     *websocket.Dialer
 	handlers   map[string][]EventHandler
 	mu         sync.RWMutex
+	writeMu    sync.Mutex // serialises all ws writes (gorilla not concurrent-write-safe)
 	closed     bool
 	closeChan  chan struct{}
 	errorChan  chan error
@@ -237,10 +238,12 @@ func (c *Client) Connect(ctx context.Context) error {
 		}
 	}
 
-	// Set pong handler
-	c.conn.SetPongHandler(func(string) error {
+	// Set pong handler — close over local conn, not c.conn, to avoid a race
+	// when Disconnect nils c.conn concurrently.
+	pongConn := conn
+	pongConn.SetPongHandler(func(string) error {
 		if c.config.ReadTimeout > 0 {
-			err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout))
+			err := pongConn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout))
 			if err != nil {
 				return fmt.Errorf("failed to set read deadline: %w", err)
 			}
@@ -312,13 +315,22 @@ func (c *Client) Disconnect() error {
 	}
 
 	if c.conn != nil {
-		// Send close message
-		_ = c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		err := c.conn.Close()
+		conn := c.conn
 		c.conn = nil
 
-		if err != nil {
-			return fmt.Errorf("failed to close websocket connection: %w", err)
+		// Release mu before acquiring writeMu to avoid lock-order inversion.
+		c.mu.Unlock()
+
+		c.writeMu.Lock()
+		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		closeErr := conn.Close()
+		c.writeMu.Unlock()
+
+		// Re-acquire mu so the deferred Unlock does not double-unlock.
+		c.mu.Lock()
+
+		if closeErr != nil {
+			return fmt.Errorf("failed to close websocket connection: %w", closeErr)
 		}
 
 		return nil
@@ -351,21 +363,24 @@ func (c *Client) Off(eventType string) {
 // Send sends a message to the server.
 func (c *Client) Send(data interface{}) error {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
+	conn := c.conn
+	c.mu.RUnlock()
 
-	if c.conn == nil {
+	if conn == nil {
 		return errNotConnected
 	}
 
-	// Set write deadline
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+
 	if c.config.WriteTimeout > 0 {
-		err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
+		err := conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
 		if err != nil {
 			return fmt.Errorf("failed to set write deadline: %w", err)
 		}
 	}
 
-	err := c.conn.WriteJSON(data)
+	err := conn.WriteJSON(data)
 	if err != nil {
 		return fmt.Errorf("failed to send JSON message: %w", err)
 	}
@@ -376,21 +391,24 @@ func (c *Client) Send(data interface{}) error {
 // SendText sends a text message to the server.
 func (c *Client) SendText(text string) error {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
+	conn := c.conn
+	c.mu.RUnlock()
 
-	if c.conn == nil {
+	if conn == nil {
 		return errNotConnected
 	}
 
-	// Set write deadline
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+
 	if c.config.WriteTimeout > 0 {
-		err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
+		err := conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
 		if err != nil {
 			return fmt.Errorf("failed to set write deadline: %w", err)
 		}
 	}
 
-	err := c.conn.WriteMessage(websocket.TextMessage, []byte(text))
+	err := conn.WriteMessage(websocket.TextMessage, []byte(text))
 	if err != nil {
 		return fmt.Errorf("failed to send text message: %w", err)
 	}
@@ -488,6 +506,12 @@ func (c *Client) NewStream(bufferSize int) *Stream {
 }
 
 func (c *Client) readLoop(ctx context.Context) {
+	// Capture conn once; Disconnect sets c.conn = nil but we hold our own
+	// reference for the lifetime of this goroutine.
+	c.mu.RLock()
+	conn := c.conn
+	c.mu.RUnlock()
+
 	defer func() {
 		if r := recover(); r != nil {
 			c.sendError(fmt.Errorf("%w: %v", errPanicInReadLoop, r))
@@ -503,7 +527,7 @@ func (c *Client) readLoop(ctx context.Context) {
 		default:
 			// Set read deadline
 			if c.config.ReadTimeout > 0 {
-				err := c.conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout))
+				err := conn.SetReadDeadline(time.Now().Add(c.config.ReadTimeout))
 				if err != nil {
 					c.sendError(fmt.Errorf("failed to set read deadline: %w", err))
 
@@ -511,7 +535,7 @@ func (c *Client) readLoop(ctx context.Context) {
 				}
 			}
 
-			messageType, data, err := c.conn.ReadMessage()
+			messageType, data, err := conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 					c.sendError(fmt.Errorf("read error: %w", err))
@@ -528,13 +552,19 @@ func (c *Client) readLoop(ctx context.Context) {
 }
 
 func (c *Client) pingLoop() {
-	defer c.pingTicker.Stop()
+	// Capture ticker at start; Disconnect stops and nils c.pingTicker but we
+	// hold our own reference so the channel read is always safe.
+	c.mu.RLock()
+	ticker := c.pingTicker
+	c.mu.RUnlock()
+
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-c.closeChan:
 			return
-		case <-c.pingTicker.C:
+		case <-ticker.C:
 			c.mu.RLock()
 			conn := c.conn
 			c.mu.RUnlock()
@@ -543,19 +573,9 @@ func (c *Client) pingLoop() {
 				return
 			}
 
-			// Set write deadline
-			if c.config.WriteTimeout > 0 {
-				err := conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
-				if err != nil {
-					c.sendError(fmt.Errorf("failed to set write deadline: %w", err))
-
-					return
-				}
-			}
-
-			err := conn.WriteMessage(websocket.PingMessage, nil)
+			err := c.sendPing(conn)
 			if err != nil {
-				c.sendError(fmt.Errorf("ping error: %w", err))
+				c.sendError(err)
 
 				return
 			}
@@ -658,6 +678,27 @@ func (c *Client) sendError(err error) {
 	default:
 		// Channel is full, drop the error
 	}
+}
+
+// sendPing sets a write deadline (if configured) and sends a ping frame.
+// All operations are serialised through writeMu.
+func (c *Client) sendPing(conn *websocket.Conn) error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+
+	if c.config.WriteTimeout > 0 {
+		err := conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
+		if err != nil {
+			return fmt.Errorf("failed to set write deadline: %w", err)
+		}
+	}
+
+	err := conn.WriteMessage(websocket.PingMessage, nil)
+	if err != nil {
+		return fmt.Errorf("ping error: %w", err)
+	}
+
+	return nil
 }
 
 // Events returns the event channel.

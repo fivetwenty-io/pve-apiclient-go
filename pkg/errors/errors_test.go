@@ -763,7 +763,7 @@ func contains(s, substr string) bool {
 	return false
 }
 
-func typeOf(v interface{}) string {
+func typeOf(v any) string {
 	if v == nil {
 		return "nil"
 	}

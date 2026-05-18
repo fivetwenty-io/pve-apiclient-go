@@ -1,7 +1,17 @@
 # PVE API Specification Data
 
 This directory holds the upstream Proxmox VE API specification used as input
-to the typed client codegen pipeline at `cmd/pvegen`.
+to the typed client codegen pipeline at `cmd/pvegen`. The generator emits
+typed bindings for all six top-level PVE namespaces:
+
+- `/version`  → `pkg/api/version/`
+- `/access`   → `pkg/api/access/`
+- `/pools`    → `pkg/api/pools/`
+- `/cluster`  → `pkg/api/cluster/`
+- `/storage`  → `pkg/api/clusterstorage/` (renamed to avoid clashing with the
+  hand-written `pkg/api/storage/` helpers that target
+  `/nodes/{node}/storage/...`)
+- `/nodes`    → `pkg/api/nodes/`
 
 ## Files
 

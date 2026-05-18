@@ -117,6 +117,21 @@ linters:
     paths:
       - vendor
       - tmp
+      # Generated typed bindings emitted by cmd/pvegen. Linting these
+      # is unproductive: every issue is a property of the generator
+      # template, not author intent. Fix the generator if a class of
+      # issue keeps appearing.
+      - pkg/api/access/.*_gen\.go
+      - pkg/api/cluster/.*_gen\.go
+      - pkg/api/clusterstorage/.*_gen\.go
+      - pkg/api/nodes/.*_gen\.go
+      - pkg/api/pools/.*_gen\.go
+      - pkg/api/version/.*_gen\.go
+      - pkg/api/access/.*_smoke_test\.go
+      - pkg/api/cluster/.*_smoke_test\.go
+      - pkg/api/clusterstorage/.*_smoke_test\.go
+      - pkg/api/nodes/.*_smoke_test\.go
+      - pkg/api/pools/.*_smoke_test\.go
 
   settings:
     cyclop:
@@ -130,6 +145,17 @@ formatters:
     paths:
       - vendor
       - tmp
+      - pkg/api/access/.*_gen\.go
+      - pkg/api/cluster/.*_gen\.go
+      - pkg/api/clusterstorage/.*_gen\.go
+      - pkg/api/nodes/.*_gen\.go
+      - pkg/api/pools/.*_gen\.go
+      - pkg/api/version/.*_gen\.go
+      - pkg/api/access/.*_smoke_test\.go
+      - pkg/api/cluster/.*_smoke_test\.go
+      - pkg/api/clusterstorage/.*_smoke_test\.go
+      - pkg/api/nodes/.*_smoke_test\.go
+      - pkg/api/pools/.*_smoke_test\.go
 
 # Issues configuration
 issues:

@@ -417,10 +417,16 @@ func (s *Stream) readStreamData() ([]byte, error) {
 
 	if s.config.Format == "jsonlines" || s.decoder.SupportsPartial() {
 		data, err = s.buffer.ReadBytes('\n')
-		if err != nil && !errors.Is(err, io.EOF) {
-			s.recordError(err)
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				s.recordError(err)
 
-			return nil, fmt.Errorf("failed to read stream line: %w", err)
+				return nil, fmt.Errorf("failed to read stream line: %w", err)
+			}
+			// io.EOF with no data means the stream is exhausted.
+			if len(data) == 0 {
+				return nil, io.EOF
+			}
 		}
 	} else {
 		data, err = io.ReadAll(s.buffer)
