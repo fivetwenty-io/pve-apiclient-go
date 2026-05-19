@@ -44,7 +44,15 @@ const (
 	// Protocol constants.
 	ProtocolHTTP  = "http"
 	ProtocolHTTPS = "https"
+)
 
+// SSL verification modes. Kept in a dedicated const block so iota starts at 0,
+// matching the numeric values used by the internal/http package. Combining
+// with the protocol-string block above silently shifted iota by 2, mapping
+// pkg/client.SSLVerifyNone (intended 0) to internalhttp.SSLVerifyHost (2)
+// after the SSLVerifyMode() cast in pkg/client.NewClient — leaving
+// InsecureSkipVerify=false even when callers asked for SSLVerifyNone.
+const (
 	// SSLVerifyNone disables SSL verification (insecure).
 	SSLVerifyNone SSLVerifyMode = iota
 	// SSLVerifyPeer verifies the peer certificate.
