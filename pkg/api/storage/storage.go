@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/constants"
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 	pveerr "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/errors"
 )
@@ -30,14 +29,20 @@ func (s *service) CreateVolume(ctx context.Context, node, storage string, sizeGi
 	if sizeGiB <= 0 {
 		return "", errSizeGiBPositive
 	}
-	// PVE expects size in bytes
-	sizeBytes := int64(sizeGiB) * constants.BytesPerGB
+	// PVE schema for POST /nodes/{node}/storage/{storage}/content:
+	//   - filename (required)
+	//   - size: kilobytes with optional 'M' or 'G' suffix (required, string)
+	//   - vmid (required)
+	//   - format (optional)
+	// "content" is NOT an accepted parameter; passing it triggers
+	// "property is not defined in schema".
 	params := map[string]interface{}{
-		"size":     sizeBytes,
-		"format":   format,
+		"size":     fmt.Sprintf("%dG", sizeGiB),
 		"vmid":     vmid,
 		"filename": name,
-		"content":  "images",
+	}
+	if format != "" {
+		params["format"] = format
 	}
 
 	data, err := s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/storage/%s/content", node, storage), params)
