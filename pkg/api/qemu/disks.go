@@ -91,21 +91,75 @@ func (s *service) attachDiskToVM(ctx context.Context, node string, vmid int, par
 }
 
 // DetachDisk detaches a disk by its diskID (e.g., scsi0).
+//
+// PVE's PUT /qemu/{vmid}/config with `delete: scsiN` removes the disk from
+// its bus slot but moves the volume reference into a new `unusedN` slot
+// rather than fully clearing it. The volume remains attached to the VM's
+// configuration; a subsequent DELETE /qemu/{vmid} (or `qm destroy --purge`)
+// will then destroy every disk still referenced — unusedN included — and
+// silently nuke the persistent volume.
+//
+// To make "detach" mean detached, this method performs a second config PUT
+// that removes the resulting unusedN slot. Callers therefore never observe
+// the dangling unused entry, and any later destroy of the VM will not touch
+// the volume. When diskID itself names an `unusedN` slot, only the single
+// delete is issued.
+//
+// No-op when diskID is not present in the VM config.
 func (s *service) DetachDisk(ctx context.Context, node string, vmid int, diskID string) error {
 	cfg, err := s.Config(ctx, node, vmid)
 	if err != nil {
 		return err
 	}
 
-	if _, ok := cfg[diskID]; !ok {
+	rawVal, ok := cfg[diskID]
+	if !ok {
+		return nil
+	}
+	volid, _ := rawVal.(string)
+
+	configPath := fmt.Sprintf("/nodes/%s/qemu/%d/config", node, vmid)
+
+	if _, err = s.c.PutCtx(ctx, configPath, map[string]interface{}{"delete": diskID}); err != nil {
+		return fmt.Errorf("failed to detach disk %q from VM %d on node %q: %w", diskID, vmid, node, err)
+	}
+
+	// If we were already deleting an unusedN slot, or the original config entry
+	// did not carry a parsable volid, the auto-move side-effect does not apply.
+	if strings.HasPrefix(diskID, "unused") || volid == "" {
 		return nil
 	}
 
-	params := map[string]interface{}{"delete": diskID}
+	// Sweep the unusedN slot PVE auto-creates for the bare volid prefix
+	// (config values may be "<volid>" or "<volid>,options").
+	bareVolid := volid
+	if comma := strings.Index(volid, ","); comma >= 0 {
+		bareVolid = volid[:comma]
+	}
 
-	_, err = s.c.PutCtx(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/config", node, vmid), params)
+	cfg2, err := s.Config(ctx, node, vmid)
 	if err != nil {
-		return fmt.Errorf("failed to detach disk %q from VM %d on node %q: %w", diskID, vmid, node, err)
+		return fmt.Errorf("failed to refresh config after detaching disk %q from VM %d on node %q: %w", diskID, vmid, node, err)
+	}
+	for key, raw := range cfg2 {
+		if !strings.HasPrefix(key, "unused") {
+			continue
+		}
+		val, ok := raw.(string)
+		if !ok || val == "" {
+			continue
+		}
+		valBare := val
+		if comma := strings.Index(val, ","); comma >= 0 {
+			valBare = val[:comma]
+		}
+		if valBare != bareVolid {
+			continue
+		}
+		if _, err := s.c.PutCtx(ctx, configPath, map[string]interface{}{"delete": key}); err != nil {
+			return fmt.Errorf("failed to remove unused slot %q for volid %q on VM %d node %q: %w", key, bareVolid, vmid, node, err)
+		}
+		break
 	}
 
 	return nil
