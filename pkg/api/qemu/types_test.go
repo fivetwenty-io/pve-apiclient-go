@@ -90,8 +90,8 @@ func buildFindDiskIDCases() []findDiskCase {
 		{
 			name: "skips non-disk keys",
 			cfg: map[string]interface{}{
-				keyName:   volIDDisk9003,
-				"scsi2":   volIDDisk9003 + ",size=64G",
+				keyName: volIDDisk9003,
+				"scsi2": volIDDisk9003 + ",size=64G",
 			},
 			volid:   volIDDisk9003,
 			wantID:  "scsi2",

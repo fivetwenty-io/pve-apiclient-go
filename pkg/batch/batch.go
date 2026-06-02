@@ -205,19 +205,23 @@ func (e *Executor) ExecuteWithCallback(ctx context.Context, batch *Batch, callba
 	)
 
 	for _, req := range batch.requests {
+		// Acquire a concurrency slot before spawning so a large batch does not
+		// create one goroutine per request up front; block here instead.
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			e.handleContextCancellation(ctx, req, result, &mutex)
+
+			continue
+		}
+
 		waitGroup.Add(1)
 
 		go func(request *Request) {
 			defer waitGroup.Done()
+			defer func() { <-sem }()
 
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-
-				e.processRequest(ctx, request, result, &mutex, callback)
-			case <-ctx.Done():
-				e.handleContextCancellation(ctx, request, result, &mutex)
-			}
+			e.processRequest(ctx, request, result, &mutex, callback)
 		}(req)
 	}
 

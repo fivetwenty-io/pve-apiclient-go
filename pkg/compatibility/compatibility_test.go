@@ -2,6 +2,7 @@ package compatibility_test
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/compatibility"
@@ -567,6 +568,25 @@ func TestMigrationHelper(t *testing.T) {
 	changes := helper.GetBreakingChanges()
 	if len(changes) == 0 {
 		t.Error("No breaking changes found for major version upgrade")
+	}
+}
+
+func TestMigrationHelperGetDeprecatedFeatures(t *testing.T) {
+	t.Parallel()
+
+	// openvz is supported through PVE 5.4 and dropped in 6.x+, so a 5.x->8.x
+	// migration must report it as deprecated. Regression test: the lookup
+	// previously used the feature's display name instead of its matrix key,
+	// so the result was always empty.
+	helper, err := compatibility.NewMigrationHelper("5.4-1", "8.0-1")
+	if err != nil {
+		t.Fatalf("NewMigrationHelper() error = %v", err)
+	}
+
+	deprecated := helper.GetDeprecatedFeatures()
+
+	if !slices.Contains(deprecated, "OpenVZ Containers") {
+		t.Errorf("GetDeprecatedFeatures() = %v, want it to contain %q", deprecated, "OpenVZ Containers")
 	}
 }
 

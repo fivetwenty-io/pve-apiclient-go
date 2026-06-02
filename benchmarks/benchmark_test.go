@@ -51,12 +51,12 @@ func createMockServer() *httptest.Server {
 			resources := make([]map[string]interface{}, 100)
 			for i := range 100 {
 				resources[i] = map[string]interface{}{
-					"vmid":       100 + i,
-					benchKeyName: fmt.Sprintf("vm-%d", 100+i),
-					"type":       "qemu",
-					benchKeyStatus:    "running",
-					benchKeyCPU: 0.1,
-					"mem":        1073741824,
+					"vmid":         100 + i,
+					benchKeyName:   fmt.Sprintf("vm-%d", 100+i),
+					"type":         "qemu",
+					benchKeyStatus: "running",
+					benchKeyCPU:    0.1,
+					"mem":          1073741824,
 				}
 			}
 
@@ -209,9 +209,9 @@ func BenchmarkStreamProcessing(b *testing.B) {
 
 	for itemIndex := range 1000 {
 		item := map[string]interface{}{
-			"id":           itemIndex,
-			benchKeyName:   fmt.Sprintf("item-%d", itemIndex),
-			"value":        itemIndex * 100,
+			"id":         itemIndex,
+			benchKeyName: fmt.Sprintf("item-%d", itemIndex),
+			"value":      itemIndex * 100,
 		}
 
 		jsonData, err := json.Marshal(item)
@@ -231,14 +231,12 @@ func BenchmarkStreamProcessing(b *testing.B) {
 			pos:  0,
 		}
 
-		stream := stream.New(reader, nil)
-
-		defer func() { _ = stream.Close() }()
+		strm := stream.New(reader, nil)
 
 		count := 0
 
 		for {
-			item, err := stream.Read()
+			item, err := strm.Read()
 			if err != nil {
 				break
 			}
@@ -251,6 +249,10 @@ func BenchmarkStreamProcessing(b *testing.B) {
 				break
 			}
 		}
+
+		// Close each iteration's stream immediately; deferring inside the b.N
+		// loop would accumulate b.N closers and distort the allocation numbers.
+		_ = strm.Close()
 	}
 }
 
@@ -428,7 +430,7 @@ func BenchmarkLargePayload(b *testing.B) {
 		for i := range 10000 {
 			data[i] = map[string]interface{}{
 				"id":          i,
-				benchKeyName: fmt.Sprintf("resource-%d", i),
+				benchKeyName:  fmt.Sprintf("resource-%d", i),
 				"description": "This is a long description text that adds bulk to the response payload",
 				"metadata": map[string]interface{}{
 					"created":  time.Now().Unix(),

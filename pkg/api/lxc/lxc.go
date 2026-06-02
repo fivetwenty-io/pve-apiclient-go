@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
@@ -65,7 +66,7 @@ type ContainerStatus struct {
 
 // List returns all LXC containers on the node.
 func (c *Client) List(ctx context.Context) ([]ContainerStatus, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc", c.node)
+	path := fmt.Sprintf("/nodes/%s/lxc", url.PathEscape(c.node))
 
 	resp, err := c.pveClient.GetCtx(ctx, path, nil)
 	if err != nil {
@@ -117,7 +118,7 @@ func parseContainerItem(item interface{}) (ContainerStatus, bool) {
 
 // Create creates a new LXC container.
 func (c *Client) Create(ctx context.Context, config ContainerConfig) (string, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc", c.node)
+	path := fmt.Sprintf("/nodes/%s/lxc", url.PathEscape(c.node))
 	params := buildCreateParams(config)
 
 	resp, err := c.pveClient.PostCtx(ctx, path, params)
@@ -195,7 +196,7 @@ func extractUPID(resp interface{}) (string, error) {
 
 // Status returns the current status of an LXC container.
 func (c *Client) Status(ctx context.Context, vmid int) (*ContainerStatus, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/current", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/current", url.PathEscape(c.node), vmid)
 
 	resp, err := c.pveClient.GetCtx(ctx, path, nil)
 	if err != nil {
@@ -252,7 +253,7 @@ func populateContainerMetrics(status *ContainerStatus, data map[string]interface
 
 // Start starts an LXC container.
 func (c *Client) Start(ctx context.Context, vmid int) (string, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/start", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/start", url.PathEscape(c.node), vmid)
 
 	resp, err := c.pveClient.PostCtx(ctx, path, nil)
 	if err != nil {
@@ -268,7 +269,7 @@ func (c *Client) Start(ctx context.Context, vmid int) (string, error) {
 
 // Stop stops an LXC container.
 func (c *Client) Stop(ctx context.Context, vmid int) (string, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/stop", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/stop", url.PathEscape(c.node), vmid)
 
 	resp, err := c.pveClient.PostCtx(ctx, path, nil)
 	if err != nil {
@@ -284,7 +285,7 @@ func (c *Client) Stop(ctx context.Context, vmid int) (string, error) {
 
 // Shutdown gracefully shuts down an LXC container.
 func (c *Client) Shutdown(ctx context.Context, vmid int, timeout int) (string, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/shutdown", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/shutdown", url.PathEscape(c.node), vmid)
 
 	params := map[string]interface{}{}
 	if timeout > 0 {
@@ -305,7 +306,7 @@ func (c *Client) Shutdown(ctx context.Context, vmid int, timeout int) (string, e
 
 // Reboot reboots an LXC container.
 func (c *Client) Reboot(ctx context.Context, vmid int) (string, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/reboot", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/status/reboot", url.PathEscape(c.node), vmid)
 
 	resp, err := c.pveClient.PostCtx(ctx, path, nil)
 	if err != nil {
@@ -321,7 +322,7 @@ func (c *Client) Reboot(ctx context.Context, vmid int) (string, error) {
 
 // Delete deletes an LXC container.
 func (c *Client) Delete(ctx context.Context, vmid int, purge bool) (string, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d", url.PathEscape(c.node), vmid)
 
 	params := map[string]interface{}{}
 	if purge {
@@ -342,7 +343,7 @@ func (c *Client) Delete(ctx context.Context, vmid int, purge bool) (string, erro
 
 // GetConfig retrieves the configuration of an LXC container.
 func (c *Client) GetConfig(ctx context.Context, vmid int) (map[string]interface{}, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/config", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/config", url.PathEscape(c.node), vmid)
 
 	resp, err := c.pveClient.GetCtx(ctx, path, nil)
 	if err != nil {
@@ -358,7 +359,7 @@ func (c *Client) GetConfig(ctx context.Context, vmid int) (map[string]interface{
 
 // UpdateConfig updates the configuration of an LXC container.
 func (c *Client) UpdateConfig(ctx context.Context, vmid int, config map[string]interface{}) error {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/config", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/config", url.PathEscape(c.node), vmid)
 
 	_, err := c.pveClient.PutCtx(ctx, path, config)
 	if err != nil {
@@ -370,7 +371,7 @@ func (c *Client) UpdateConfig(ctx context.Context, vmid int, config map[string]i
 
 // Clone clones an LXC container.
 func (c *Client) Clone(ctx context.Context, vmid int, newID int, opts CloneOptions) (string, error) {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/clone", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/clone", url.PathEscape(c.node), vmid)
 
 	params := map[string]interface{}{
 		"newid": newID,
@@ -424,7 +425,7 @@ type CloneOptions struct {
 
 // Resize resizes a container disk.
 func (c *Client) Resize(ctx context.Context, vmid int, disk string, size string) error {
-	path := fmt.Sprintf("/nodes/%s/lxc/%d/resize", c.node, vmid)
+	path := fmt.Sprintf("/nodes/%s/lxc/%d/resize", url.PathEscape(c.node), vmid)
 
 	params := map[string]interface{}{
 		"disk": disk,

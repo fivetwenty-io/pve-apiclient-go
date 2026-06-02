@@ -7,7 +7,6 @@ import (
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/auth"
 )
 
-
 // TestCreateAuthenticator_APIToken_MalformedReturnsInvalidAuthenticator verifies
 // that a malformed APIToken string causes createAuthenticator to return an
 // InvalidAuthenticator that fails on Authenticate(), rather than silently

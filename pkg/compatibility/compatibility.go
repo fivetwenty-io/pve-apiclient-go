@@ -663,11 +663,13 @@ func (h *MigrationHelper) GetNewFeatures() []string {
 func (h *MigrationHelper) GetDeprecatedFeatures() []string {
 	var deprecated []string
 
-	for _, feature := range h.matrix.features {
+	for key, feature := range h.matrix.features {
 		if feature.Deprecated {
-			// Was supported in source but not in target
-			supportedInSource, _ := h.matrix.IsFeatureSupported(feature.Name, h.sourceVersion)
-			supportedInTarget, _ := h.matrix.IsFeatureSupported(feature.Name, h.targetVersion)
+			// Was supported in source but not in target. Look up by the matrix
+			// key (e.g. "openvz"), not feature.Name ("OpenVZ Containers");
+			// IsFeatureSupported is keyed on the former, as GetNewFeatures does.
+			supportedInSource, _ := h.matrix.IsFeatureSupported(key, h.sourceVersion)
+			supportedInTarget, _ := h.matrix.IsFeatureSupported(key, h.targetVersion)
 
 			if supportedInSource && !supportedInTarget {
 				deprecated = append(deprecated, feature.Name)

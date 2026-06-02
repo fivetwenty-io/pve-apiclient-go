@@ -705,3 +705,43 @@ func TestFilter_Read_EOF_NoMatch(t *testing.T) {
 		t.Errorf("Filter no match: want io.EOF, got %v", err)
 	}
 }
+
+// errReadBoom is the sentinel returned by erroringReader.
+var errReadBoom = errors.New("read boom")
+
+// erroringReader always fails Read with a non-EOF error, driving the stream's
+// error-reporting path on every read.
+type erroringReader struct{}
+
+func (erroringReader) Read([]byte) (int, error) { return 0, errReadBoom }
+func (erroringReader) Close() error             { return nil }
+
+// TestStream_ConcurrentCloseAndErrorSend exercises Close racing against the
+// error-reporting send under the race detector. Previously Close closed
+// errorChan while Read/Channel could still send to it, panicking on a send to a
+// closed channel.
+func TestStream_ConcurrentCloseAndErrorSend(t *testing.T) {
+	t.Parallel()
+
+	strm := stream.New(erroringReader{}, nil)
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for range 200 {
+			_, _ = strm.Read()
+		}
+	}()
+
+	// Drain errors so the buffered channel does not stay full.
+	go func() {
+		for range strm.Errors() {
+		}
+	}()
+
+	_ = strm.Close()
+
+	<-done
+}

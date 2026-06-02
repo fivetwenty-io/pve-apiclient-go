@@ -272,8 +272,8 @@ func TestEncodeParams_DeeplyNestedMap(t *testing.T) {
 	}
 	got := encodeParams(map[string]interface{}{
 		testEncNet0: map[string]interface{}{
-			testEncBridge:    testEncVMBR0,
-			"bandwidth": inner, // level-2: encoded by encodeSingleValue → Sprintf
+			testEncBridge: testEncVMBR0,
+			"bandwidth":   inner, // level-2: encoded by encodeSingleValue → Sprintf
 		},
 	})
 
@@ -481,9 +481,9 @@ func TestEncodeParams_MapIterationDeterminism(t *testing.T) {
 
 	params := map[string]interface{}{
 		testEncNet0: map[string]interface{}{
-			testEncBridge:   testEncVMBR0,
-			testEncVirtio:   "52:54:00:aa:bb:cc",
-			"firewall": "1",
+			testEncBridge: testEncVMBR0,
+			testEncVirtio: "52:54:00:aa:bb:cc",
+			"firewall":    "1",
 		},
 	}
 	want := encodeParams(params).Get(testEncNet0)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -44,6 +45,36 @@ func newWSServer(t *testing.T, frameJSON string) *httptest.Server {
 	}))
 
 	return srv
+}
+
+// newPingCountingWSServer upgrades to WebSocket and increments *pings for every
+// ping frame received from the client, replying with the matching pong.
+func newPingCountingWSServer(t *testing.T, pings *int32) *httptest.Server {
+	t.Helper()
+
+	return httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		conn, upErr := wsUpgrader.Upgrade(respWriter, req, nil)
+		if upErr != nil {
+			return
+		}
+
+		defer func() { _ = conn.Close() }()
+
+		conn.SetPingHandler(func(appData string) error {
+			atomic.AddInt32(pings, 1)
+
+			return conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second))
+		})
+
+		_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
+		for {
+			_, _, readErr := conn.ReadMessage()
+			if readErr != nil {
+				return
+			}
+		}
+	}))
 }
 
 // wsClientURL builds a ws:// URL from an httptest.Server using the fixed /ws path.
@@ -590,7 +621,11 @@ func TestHandleMessage_RawFallback(t *testing.T) {
 func TestConnect_WithPingEnabled(t *testing.T) {
 	t.Parallel()
 
-	srv := newWSServer(t, "")
+	pings := new(int32)
+
+	// Server that counts client ping frames so the test can assert pings
+	// actually fired rather than just sleeping.
+	srv := newPingCountingWSServer(t, pings)
 	defer srv.Close()
 
 	cfg := pkgws.DefaultConfig()
@@ -618,7 +653,16 @@ func TestConnect_WithPingEnabled(t *testing.T) {
 		t.Fatalf("Connect: %v", connectErr)
 	}
 
-	time.Sleep(150 * time.Millisecond) // let at least two pings fire
+	// Poll until at least one ping is observed, up to a generous deadline, so
+	// the test is not tied to a fixed sleep duration.
+	deadline := time.Now().Add(2 * time.Second)
+	for atomic.LoadInt32(pings) == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if got := atomic.LoadInt32(pings); got == 0 {
+		t.Error("expected at least one ping frame to be sent, got none")
+	}
 
 	disconnectErr := wsClient.Disconnect()
 	if disconnectErr != nil {
@@ -648,4 +692,40 @@ func TestConnectWithRetry_ContextCancelled(t *testing.T) {
 	if err == nil {
 		t.Error("expected error when context cancelled during retry")
 	}
+}
+
+// TestStream_StopIdempotent verifies that Stop can be called repeatedly and
+// concurrently without panicking. Previously Stop closed stopChan (and
+// eventChan) unconditionally, so a second call panicked on a double close.
+func TestStream_StopIdempotent(t *testing.T) {
+	t.Parallel()
+
+	cfg := pkgws.DefaultConfig()
+	cfg.Host = testHost
+
+	wsClient, err := pkgws.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	stream := wsClient.NewStream(10)
+
+	const callers = 20
+
+	var waitGroup sync.WaitGroup
+
+	waitGroup.Add(callers)
+
+	for range callers {
+		go func() {
+			defer waitGroup.Done()
+
+			stream.Stop()
+		}()
+	}
+
+	waitGroup.Wait()
+
+	// A further direct call must also be a no-op.
+	stream.Stop()
 }

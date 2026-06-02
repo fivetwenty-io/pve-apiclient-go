@@ -93,7 +93,7 @@ func TestParseJSON_2xxNoErrors_Success(t *testing.T) {
 	t.Parallel()
 
 	payload := map[string]interface{}{
-		"data":   "some-value",
+		"data":     "some-value",
 		keySuccess: 1,
 	}
 

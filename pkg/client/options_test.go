@@ -256,7 +256,6 @@ func runSetDefaultsTest(t *testing.T) {
 	t.Skip("setDefaults is unexported - skipping test")
 }
 
-
 func TestOptions_GetBaseURL(t *testing.T) {
 	t.Parallel()
 

@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
@@ -44,7 +45,7 @@ func (s *service) EnsureBridge(ctx context.Context, node, bridge string, params 
 		params["iface"] = bridge
 	}
 
-	_, err = s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/network", node), params)
+	_, err = s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/network", url.PathEscape(node)), params)
 	if err != nil {
 		return fmt.Errorf("failed to create bridge: %w", err)
 	}
@@ -62,7 +63,7 @@ func (s *service) DeleteBridge(ctx context.Context, node, bridge string) error {
 		return nil
 	}
 
-	_, err = s.c.DeleteCtx(ctx, fmt.Sprintf("/nodes/%s/network/%s", node, bridge), nil)
+	_, err = s.c.DeleteCtx(ctx, fmt.Sprintf("/nodes/%s/network/%s", url.PathEscape(node), url.PathEscape(bridge)), nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete bridge: %w", err)
 	}
@@ -71,7 +72,7 @@ func (s *service) DeleteBridge(ctx context.Context, node, bridge string) error {
 }
 
 func (s *service) BridgeExists(ctx context.Context, node, bridge string) (bool, error) {
-	data, err := s.c.GetCtx(ctx, fmt.Sprintf("/nodes/%s/network", node), nil)
+	data, err := s.c.GetCtx(ctx, fmt.Sprintf("/nodes/%s/network", url.PathEscape(node)), nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to get network interfaces for node %q: %w", node, err)
 	}
@@ -90,7 +91,7 @@ func (s *service) BridgeExists(ctx context.Context, node, bridge string) (bool, 
 }
 
 func (s *service) Reload(ctx context.Context, node string) error {
-	_, err := s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/network", node), map[string]interface{}{"reload": 1})
+	_, err := s.c.PostCtx(ctx, fmt.Sprintf("/nodes/%s/network", url.PathEscape(node)), map[string]interface{}{"reload": 1})
 	if err != nil {
 		return fmt.Errorf("failed to reload network configuration for node %q: %w", node, err)
 	}

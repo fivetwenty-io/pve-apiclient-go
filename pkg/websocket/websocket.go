@@ -475,6 +475,7 @@ type Stream struct {
 	client    *Client
 	eventChan chan *Event
 	stopChan  chan struct{}
+	stopOnce  sync.Once
 }
 
 // NewStream creates a new event stream.
@@ -489,12 +490,20 @@ func (c *Client) NewStream(bufferSize int) *Stream {
 		stopChan:  make(chan struct{}),
 	}
 
-	// Register handler that sends to channel
+	// Register handler that sends to channel. Handlers are dispatched in their
+	// own goroutines, so check stopChan first to avoid delivering events after
+	// Stop. eventChan is deliberately never closed: a late handler must be able
+	// to hit the drop path rather than panic on a send to a closed channel.
 	handler := func(event *Event) {
+		select {
+		case <-stream.stopChan:
+			return
+		default:
+		}
+
 		select {
 		case stream.eventChan <- event:
 		case <-stream.stopChan:
-			return
 		default:
 			// Channel is full, drop the event
 		}
@@ -706,8 +715,11 @@ func (s *Stream) Events() <-chan *Event {
 	return s.eventChan
 }
 
-// Stop stops the stream.
+// Stop stops the stream. It is safe to call more than once and from multiple
+// goroutines; only stopChan is closed. eventChan is left open because handler
+// goroutines registered with the client may still attempt a send.
 func (s *Stream) Stop() {
-	close(s.stopChan)
-	close(s.eventChan)
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+	})
 }

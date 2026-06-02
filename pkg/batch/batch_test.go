@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	methodGET    = "GET"
-	pathTest     = "/test"
-	pathTest1    = "/test1"
-	pathTest2    = "/test2"
+	methodGET = "GET"
+	pathTest  = "/test"
+	pathTest1 = "/test1"
+	pathTest2 = "/test2"
 )
 
 func TestNewBatch(t *testing.T) {

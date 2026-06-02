@@ -265,3 +265,41 @@ func TestDetachDiskUnusedSlotIdempotent(t *testing.T) {
 		t.Fatalf("delete should target %s, got %q", diskUnused, deleteCalls[0])
 	}
 }
+
+// TestSnapshotPathParamsEscaped verifies that untrusted string path segments
+// (node and snapshot name) are percent-encoded before being placed in the URL,
+// preventing path traversal or query injection via a crafted value.
+func TestSnapshotPathParamsEscaped(t *testing.T) {
+	t.Parallel()
+
+	var gotPath string
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"data":null}`))
+	}))
+	defer srv.Close()
+
+	cli, err := pveclient.NewClient(optsFromServerURL(srv.URL))
+	if err != nil {
+		t.Fatalf("client: %v", err)
+	}
+
+	svc := qemu.New(cli)
+
+	delErr := svc.DeleteSnapshot(context.Background(), "no/de", 100, "a/b")
+	if delErr != nil {
+		t.Fatalf("DeleteSnapshot: %v", delErr)
+	}
+
+	if strings.Contains(gotPath, "no/de") || strings.Contains(gotPath, "snapshot/a/b") {
+		t.Fatalf("path params not escaped: %q", gotPath)
+	}
+
+	if !strings.Contains(gotPath, "no%2Fde") || !strings.Contains(gotPath, "a%2Fb") {
+		t.Fatalf("expected escaped node and name in path, got %q", gotPath)
+	}
+}

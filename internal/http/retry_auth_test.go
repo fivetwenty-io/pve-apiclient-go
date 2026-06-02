@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -79,21 +80,18 @@ func TestRetryMiddleware_POSTOptInRetryResendsBody(t *testing.T) {
 	var (
 		calls    int32
 		bodies   = make([]string, 0, 4)
-		bodiesMu = make(chan struct{}, 1)
+		bodiesMu sync.Mutex
 	)
-
-	bodiesMu <- struct{}{}
 
 	srv := newTestServer(t, func(writer http.ResponseWriter, r *http.Request) {
 		callNum := atomic.AddInt32(&calls, 1)
 
 		b, _ := io.ReadAll(r.Body)
 
-		<-bodiesMu
+		bodiesMu.Lock()
 
 		bodies = append(bodies, string(b))
-
-		bodiesMu <- struct{}{}
+		bodiesMu.Unlock()
 
 		if callNum < 2 {
 			writer.WriteHeader(http.StatusServiceUnavailable)
@@ -122,8 +120,8 @@ func TestRetryMiddleware_POSTOptInRetryResendsBody(t *testing.T) {
 		t.Fatalf("calls = %d, want >= 2 (opt-in retry of POST)", got)
 	}
 
-	<-bodiesMu
-	defer func() { bodiesMu <- struct{}{} }()
+	bodiesMu.Lock()
+	defer bodiesMu.Unlock()
 
 	for i, b := range bodies {
 		if b == "" {

@@ -260,11 +260,7 @@ func (s *Stream) Channel(ctx context.Context) <-chan interface{} {
 				}
 
 				if err != nil {
-					// Send error to error channel
-					select {
-					case s.errorChan <- err:
-					default:
-					}
+					s.trySendError(err)
 
 					return
 				}
@@ -491,7 +487,21 @@ func (s *Stream) recordError(err error) {
 	s.metrics.ErrorCount++
 	s.metrics.mu.Unlock()
 
-	// Try to send error to channel
+	s.trySendError(err)
+}
+
+// trySendError performs a non-blocking send on errorChan while holding the read
+// lock and only when the stream is open. Close acquires the write lock before
+// closing errorChan, so the read lock here guarantees the channel cannot be
+// closed mid-send, which would otherwise panic.
+func (s *Stream) trySendError(err error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.closed {
+		return
+	}
+
 	select {
 	case s.errorChan <- err:
 	default:
