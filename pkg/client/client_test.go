@@ -27,17 +27,17 @@ func getValidTestCases() []newClientTest {
 		{
 			name: "valid with username/password",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid with API token",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				APIToken: "root@pam!token=secret",
+				Host:     testHost,
+				APIToken: testAPIToken,
 			},
 			wantErr: false,
 		},
@@ -49,8 +49,8 @@ func getInvalidTestCases() []newClientTest {
 		{
 			name: "missing host",
 			opts: client.Options{
-				Username: "root@pam",
-				Password: "secret",
+				Username: testUsername,
+				Password: testPassword,
 			},
 			wantErr: true,
 			errMsg:  "host is required",
@@ -58,7 +58,7 @@ func getInvalidTestCases() []newClientTest {
 		{
 			name: "missing credentials",
 			opts: client.Options{
-				Host: "pve.example.com",
+				Host: testHost,
 			},
 			wantErr: true,
 			errMsg:  "authentication credentials required",
@@ -66,8 +66,8 @@ func getInvalidTestCases() []newClientTest {
 		{
 			name: "username without password",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
+				Host:     testHost,
+				Username: testUsername,
 			},
 			wantErr: true,
 			errMsg:  "password required when using username authentication",
@@ -75,24 +75,24 @@ func getInvalidTestCases() []newClientTest {
 		{
 			name: "invalid protocol",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 				Protocol: "ftp",
 			},
 			wantErr: true,
-			errMsg:  "invalid protocol",
+			errMsg:  testErrProtocol,
 		},
 		{
 			name: "invalid port",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 				Port:     70000,
 			},
 			wantErr: true,
-			errMsg:  "invalid port",
+			errMsg:  testErrPort,
 		},
 	}
 }
@@ -151,9 +151,9 @@ func TestClient_UpdateTicket(t *testing.T) {
 	t.Parallel()
 
 	opts := client.Options{
-		Host:     "pve.example.com",
-		Username: "root@pam",
-		Password: "secret",
+		Host:     testHost,
+		Username: testUsername,
+		Password: testPassword,
 	}
 
 	cli, err := client.NewClient(opts)
@@ -177,9 +177,9 @@ func TestClient_UpdateCSRFToken(t *testing.T) {
 	t.Parallel()
 
 	opts := client.Options{
-		Host:     "pve.example.com",
-		Username: "root@pam",
-		Password: "secret",
+		Host:     testHost,
+		Username: testUsername,
+		Password: testPassword,
 	}
 
 	cli, err := client.NewClient(opts)
@@ -187,7 +187,7 @@ func TestClient_UpdateCSRFToken(t *testing.T) {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 
-	testToken := "test:csrf:token" //nolint:gosec // Test credential
+	testToken := "test:csrf:token"
 	cli.UpdateCSRFToken(testToken)
 
 	// See comment in TestClient_UpdateTicket about testing private state
@@ -197,9 +197,9 @@ func TestClient_SetTimeout(t *testing.T) {
 	t.Parallel()
 
 	opts := client.Options{
-		Host:     "pve.example.com",
-		Username: "root@pam",
-		Password: "secret",
+		Host:     testHost,
+		Username: testUsername,
+		Password: testPassword,
 	}
 
 	cli, err := client.NewClient(opts)
@@ -217,9 +217,9 @@ func TestClient_SetKeepAlive(t *testing.T) {
 	t.Parallel()
 
 	opts := client.Options{
-		Host:     "pve.example.com",
-		Username: "root@pam",
-		Password: "secret",
+		Host:     testHost,
+		Username: testUsername,
+		Password: testPassword,
 	}
 
 	cli, err := client.NewClient(opts)
@@ -301,8 +301,8 @@ func TestClient_HTTPMethods(t *testing.T) {
 	opts := client.Options{
 		Host:     host,
 		Port:     port,
-		Protocol: "http",
-		APIToken: "root@pam!token=secret",
+		Protocol: testProtoHTTP,
+		APIToken: testAPIToken,
 	}
 
 	cli, err := client.NewClient(opts)

@@ -32,6 +32,15 @@ const (
 	testUserRoot      = "root"
 	testUserRootPAM   = "root@pam"
 	testSecretPass    = "secret"
+
+	testTokenID       = "root@pam!mytoken"
+	testTokenSecret   = "secret-value"
+	testTokenIDSecret = "root@pam!mytoken=secret-value"
+
+	testCaseValidToken  = "valid token"
+	testCaseNilToken    = "nil token"
+	testCaseEmptyID     = "empty ID"
+	testCaseEmptySecret = "empty secret"
 )
 
 // errInvalidTokenConfig is the sentinel error for TestInvalidAuthenticator_AllMethods.
@@ -133,9 +142,9 @@ func okFullTicket(ticket, csrf, username string) fullTicketBody { //nolint:unpar
 func TestAuthenticate_TFAChallengeReturnsError(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method != http.MethodPost || httpReq.URL.Path != pathAccessTicket {
-			http.NotFound(rw, httpReq)
+			http.NotFound(respWriter, httpReq)
 
 			return
 		}
@@ -147,7 +156,7 @@ func TestAuthenticate_TFAChallengeReturnsError(t *testing.T) {
 		body.Data.Challenge = testChallengeData
 		body.Data.TFATypes = []string{testTOTPType, "recovery"}
 		body.Success = 1
-		writeTFALogin(rw, body)
+		writeTFALogin(respWriter, body)
 	}))
 	defer srv.Close()
 
@@ -185,9 +194,9 @@ func TestAuthenticate_TFAChallengeReturnsError(t *testing.T) {
 func TestAuthenticate_TFAViaTicket2Field(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method != http.MethodPost || httpReq.URL.Path != pathAccessTicket {
-			http.NotFound(rw, httpReq)
+			http.NotFound(respWriter, httpReq)
 
 			return
 		}
@@ -196,7 +205,7 @@ func TestAuthenticate_TFAViaTicket2Field(t *testing.T) {
 
 		body.Data.Ticket2 = "PARTIAL-TICKET-2"
 		body.Success = 1
-		writeTFALogin(rw, body)
+		writeTFALogin(respWriter, body)
 	}))
 	defer srv.Close()
 
@@ -242,7 +251,7 @@ func TestCompleteTFA_ValidResponse(t *testing.T) {
 		receivedCookie   string
 	)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTFA {
 			_ = httpReq.ParseForm()
 			receivedResponse = httpReq.FormValue("response")
@@ -254,12 +263,12 @@ func TestCompleteTFA_ValidResponse(t *testing.T) {
 			body.Data.CSRFPreventionToken = wantCSRF
 			body.Data.Username = wantUsername
 			body.Success = 1
-			writeTFAComplete(rw, body)
+			writeTFAComplete(respWriter, body)
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -322,15 +331,15 @@ func TestCompleteTFA_ValidResponse(t *testing.T) {
 func TestCompleteTFA_WrongCode(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTFA {
-			rw.WriteHeader(http.StatusUnauthorized)
-			_, _ = io.WriteString(rw, `{"message":"invalid TFA code","success":0}`)
+			respWriter.WriteHeader(http.StatusUnauthorized)
+			_, _ = io.WriteString(respWriter, `{"message":"invalid TFA code","success":0}`)
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -361,14 +370,14 @@ func TestCompleteTFA_WrongCode(t *testing.T) {
 func TestCompleteTFA_NoTicketInResponse(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTFA {
-			writeTFAComplete(rw, tfaCompleteBody{Success: 1})
+			writeTFAComplete(respWriter, tfaCompleteBody{Success: 1})
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -422,15 +431,15 @@ func TestCompleteTFA_NetworkFailure(t *testing.T) {
 func TestCompleteTFA_InvalidJSON(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTFA {
-			rw.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(rw, `{invalid json}`)
+			respWriter.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(respWriter, `{invalid json}`)
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -463,16 +472,16 @@ func TestTicketAuthenticator_FullRoundTrip(t *testing.T) {
 		cookieName    = "PVEAuthCookie"
 	)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		switch {
 		case httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket:
-			writeFullTicket(rw, okFullTicket(wantTicketVal, wantCSRF, testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket(wantTicketVal, wantCSRF, testUserRootPAM))
 
 		case httpReq.Method == http.MethodDelete && httpReq.URL.Path == pathAccessTicket:
-			_, _ = io.WriteString(rw, `{"data":null,"success":1}`)
+			_, _ = io.WriteString(respWriter, `{"data":null,"success":1}`)
 
 		default:
-			http.NotFound(rw, httpReq)
+			http.NotFound(respWriter, httpReq)
 		}
 	}))
 	defer srv.Close()
@@ -529,10 +538,10 @@ func TestTicketAuthenticator_Logout_WithoutLogin(t *testing.T) {
 
 	requestCount := 0
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		requestCount++
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -559,16 +568,16 @@ func TestTicketAuthenticator_Refresh_WhenNotAuthenticated(t *testing.T) {
 
 	loginCalls := 0
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			loginCalls++
 
-			writeFullTicket(rw, okFullTicket("FRESH-TICKET", "FRESH-CSRF", testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket("FRESH-TICKET", "FRESH-CSRF", testUserRootPAM))
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -595,16 +604,16 @@ func TestTicketAuthenticator_Refresh_WhenAlreadyAuthenticated(t *testing.T) {
 
 	loginCalls := 0
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			loginCalls++
 
-			writeFullTicket(rw, okFullTicket("VALID-TICKET", "CSRF", testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket("VALID-TICKET", "CSRF", testUserRootPAM))
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -632,15 +641,15 @@ func TestTicketAuthenticator_RefreshForce_RenewsEvenWhenValid(t *testing.T) {
 
 	loginCalls := 0
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			loginCalls++
-			writeFullTicket(rw, okFullTicket(fmt.Sprintf("TICKET-%d", loginCalls), "CSRF", testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket(fmt.Sprintf("TICKET-%d", loginCalls), "CSRF", testUserRootPAM))
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -677,19 +686,19 @@ func TestTicketAuthenticator_RefreshForce_RenewsEvenWhenValid(t *testing.T) {
 func TestTicketAuthenticator_RefreshForce_TFAChallenge(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			var body tfaLoginBody
 
 			body.Data.NeedTFA = true
 			body.Data.Ticket2 = testPartialTicket
 			body.Success = 1
-			writeTFALogin(rw, body)
+			writeTFALogin(respWriter, body)
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -715,15 +724,15 @@ func TestTicketAuthenticator_RefreshForce_TFAChallenge(t *testing.T) {
 func TestAuthenticate_LoginFailedNoTicket(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			// 200 OK but no ticket in data — triggers ErrLoginFailedNoTicket.
-			writeTFAComplete(rw, tfaCompleteBody{Success: 1})
+			writeTFAComplete(respWriter, tfaCompleteBody{Success: 1})
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -768,15 +777,15 @@ func TestAuthenticate_NetworkFailure(t *testing.T) {
 func TestAuthenticate_HTTP401(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
-			rw.WriteHeader(http.StatusUnauthorized)
-			_, _ = io.WriteString(rw, `{"message":"authentication failure","errors":{}}`)
+			respWriter.WriteHeader(http.StatusUnauthorized)
+			_, _ = io.WriteString(respWriter, `{"message":"authentication failure","errors":{}}`)
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -1051,17 +1060,17 @@ func TestAuthenticate_OTPIncludedInLogin(t *testing.T) {
 
 	var receivedOTP string
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			_ = httpReq.ParseForm()
 			receivedOTP = httpReq.FormValue("otp")
 
-			writeFullTicket(rw, okFullTicket("TICKET", "CSRF", testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket("TICKET", "CSRF", testUserRootPAM))
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -1087,17 +1096,17 @@ func TestAuthenticate_TicketUsedAsPassword(t *testing.T) {
 
 	var receivedPassword string
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			_ = httpReq.ParseForm()
 			receivedPassword = httpReq.FormValue("password")
 
-			writeFullTicket(rw, okFullTicket("RENEWED-TICKET", "CSRF", testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket("RENEWED-TICKET", "CSRF", testUserRootPAM))
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -1135,17 +1144,17 @@ func TestNewTicketAuthenticator_DefaultRealm(t *testing.T) {
 
 	var receivedUsername string
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
 			_ = httpReq.ParseForm()
 			receivedUsername = httpReq.FormValue("username")
 
-			writeFullTicket(rw, okFullTicket("TICKET", "CSRF", testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket("TICKET", "CSRF", testUserRootPAM))
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 
@@ -1210,14 +1219,14 @@ func TestTicket_IsValid(t *testing.T) {
 func TestNewTicketAuthenticator_CookieNameFallback(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, httpReq *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, httpReq *http.Request) {
 		if httpReq.Method == http.MethodPost && httpReq.URL.Path == pathAccessTicket {
-			writeFullTicket(rw, okFullTicket("TICKET", "CSRF", testUserRootPAM))
+			writeFullTicket(respWriter, okFullTicket("TICKET", "CSRF", testUserRootPAM))
 
 			return
 		}
 
-		http.NotFound(rw, httpReq)
+		http.NotFound(respWriter, httpReq)
 	}))
 	defer srv.Close()
 

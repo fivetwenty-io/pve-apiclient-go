@@ -57,7 +57,7 @@ func TestClient_TFAHandler_AutoComplete(t *testing.T) {
 		}
 	}
 
-	opts := pve.Options{Host: host, Port: port, Protocol: "http", Username: "root@pam", Password: "secret"}
+	opts := pve.Options{Host: host, Port: port, Protocol: testProtoHTTP, Username: testUsername, Password: testPassword}
 
 	cli, err := pve.NewClient(opts)
 	if err != nil {
@@ -141,7 +141,7 @@ func setupLogoutTestClient(t *testing.T, srv *httptest.Server) pve.Client {
 	host := strings.Split(u.Host, ":")[0]
 	port := extractPortFromHost(u.Host)
 
-	opts := pve.Options{Host: host, Port: port, Protocol: "http", Username: "root@pam", Password: "secret"}
+	opts := pve.Options{Host: host, Port: port, Protocol: testProtoHTTP, Username: testUsername, Password: testPassword}
 
 	cli, err := pve.NewClient(opts)
 	if err != nil {

@@ -87,55 +87,55 @@ func TestNew_JSONFormat(t *testing.T) {
 func TestStream_Read_JSONLines(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"id":1}`, `{"id":2}`)
+	reader := newJSONLinesReader(`{"id":1}`, `{"id":2}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	item1, err := s.Read()
+	item1, err := strm.Read()
 	if err != nil {
 		t.Fatalf("Read #1: %v", err)
 	}
 
-	m1, ok := item1.(map[string]interface{})
-	if !ok {
+	map1, isMap := item1.(map[string]interface{})
+	if !isMap {
 		t.Fatalf("Read #1: want map, got %T", item1)
 	}
 
-	if m1["id"] != float64(1) {
-		t.Errorf("Read #1: want id=1, got %v", m1["id"])
+	if map1["id"] != float64(1) {
+		t.Errorf("Read #1: want id=1, got %v", map1["id"])
 	}
 
-	item2, err := s.Read()
+	item2, err := strm.Read()
 	if err != nil {
 		t.Fatalf("Read #2: %v", err)
 	}
 
-	m2, ok := item2.(map[string]interface{})
-	if !ok {
+	map2, isMap2 := item2.(map[string]interface{})
+	if !isMap2 {
 		t.Fatalf("Read #2: want map, got %T", item2)
 	}
 
-	if m2["id"] != float64(2) {
-		t.Errorf("Read #2: want id=2, got %v", m2["id"])
+	if map2["id"] != float64(2) {
+		t.Errorf("Read #2: want id=2, got %v", map2["id"])
 	}
 }
 
 func TestStream_Read_EOF(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"x":1}`)
+	reader := newJSONLinesReader(`{"x":1}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
 	// Drain first item.
-	_, err := s.Read()
+	_, err := strm.Read()
 	if err != nil {
 		t.Fatalf("first Read: %v", err)
 	}
 	// Next read should return EOF.
-	_, err = s.Read()
+	_, err = strm.Read()
 	if !errors.Is(err, io.EOF) {
 		t.Errorf("second Read: want io.EOF, got %v", err)
 	}
@@ -144,14 +144,16 @@ func TestStream_Read_EOF(t *testing.T) {
 func TestStream_Read_ClosedStream(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"x":1}`)
+	reader := newJSONLinesReader(`{"x":1}`)
 
-	s := stream.New(r, nil)
-	if err := s.Close(); err != nil {
+	strm := stream.New(reader, nil)
+
+	err := strm.Close()
+	if err != nil {
 		t.Fatalf("Close: %v", err)
 	}
 
-	_, err := s.Read()
+	_, err = strm.Read()
 	if !errors.Is(err, stream.ErrStreamClosed) {
 		t.Errorf("Read on closed: want ErrStreamClosed, got %v", err)
 	}
@@ -160,8 +162,8 @@ func TestStream_Read_ClosedStream(t *testing.T) {
 func TestStream_Read_ItemTooLarge(t *testing.T) {
 	t.Parallel()
 	// Single line larger than MaxItemSize.
-	big := strings.Repeat("x", 100) + "\n"
-	r := io.NopCloser(strings.NewReader(big))
+	bigLine := strings.Repeat("x", 100) + "\n"
+	reader := io.NopCloser(strings.NewReader(bigLine))
 	cfg := &stream.Config{
 		BufferSize:  4096,
 		MaxItemSize: 50, // smaller than line
@@ -170,10 +172,10 @@ func TestStream_Read_ItemTooLarge(t *testing.T) {
 		Delimiter:   "\n",
 	}
 
-	s := stream.New(r, cfg)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, cfg)
+	defer strm.Close() //nolint:errcheck
 
-	_, err := s.Read()
+	_, err := strm.Read()
 	if !errors.Is(err, stream.ErrItemSizeExceedsMaximum) {
 		t.Errorf("Read oversized: want ErrItemSizeExceedsMaximum, got %v", err)
 	}
@@ -184,12 +186,12 @@ func TestStream_Read_ItemTooLarge(t *testing.T) {
 func TestStream_ReadAll(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"n":1}`, `{"n":2}`, `{"n":3}`)
+	reader := newJSONLinesReader(`{"n":1}`, `{"n":2}`, `{"n":3}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	items, err := s.ReadAll()
+	items, err := strm.ReadAll()
 	if err != nil {
 		t.Fatalf("ReadAll: %v", err)
 	}
@@ -202,12 +204,12 @@ func TestStream_ReadAll(t *testing.T) {
 func TestStream_ReadAll_Empty(t *testing.T) {
 	t.Parallel()
 
-	r := io.NopCloser(strings.NewReader(""))
+	reader := io.NopCloser(strings.NewReader(""))
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	items, err := s.ReadAll()
+	items, err := strm.ReadAll()
 	if err != nil {
 		t.Fatalf("ReadAll empty: %v", err)
 	}
@@ -222,12 +224,12 @@ func TestStream_ReadAll_Empty(t *testing.T) {
 func TestStream_ReadN(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"i":1}`, `{"i":2}`, `{"i":3}`, `{"i":4}`)
+	reader := newJSONLinesReader(`{"i":1}`, `{"i":2}`, `{"i":3}`, `{"i":4}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	items, err := s.ReadN(2)
+	items, err := strm.ReadN(2)
 	if err != nil {
 		t.Fatalf("ReadN(2): %v", err)
 	}
@@ -240,12 +242,12 @@ func TestStream_ReadN(t *testing.T) {
 func TestStream_ReadN_LessThanN(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"i":1}`)
+	reader := newJSONLinesReader(`{"i":1}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	items, err := s.ReadN(10)
+	items, err := strm.ReadN(10)
 	if err != nil {
 		t.Fatalf("ReadN(10) with 1 item: %v", err)
 	}
@@ -260,18 +262,18 @@ func TestStream_ReadN_LessThanN(t *testing.T) {
 func TestStream_Channel(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"v":1}`, `{"v":2}`)
+	reader := newJSONLinesReader(`{"v":1}`, `{"v":2}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	ch := s.Channel(ctx)
+	itemChan := strm.Channel(ctx)
 
 	var count int
-	for range ch {
+	for range itemChan {
 		count++
 	}
 
@@ -283,14 +285,14 @@ func TestStream_Channel(t *testing.T) {
 func TestStream_Channel_ContextCancel(t *testing.T) {
 	t.Parallel()
 	// Infinite-ish stream via a blocking reader.
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		flusher, ok := w.(http.Flusher)
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, _ *http.Request) {
+		flusher, ok := respWriter.(http.Flusher)
 		if !ok {
 			return
 		}
 
 		for range 5 {
-			_, _ = w.Write([]byte(`{"v":1}` + "\n"))
+			_, _ = respWriter.Write([]byte(`{"v":1}` + "\n"))
 
 			flusher.Flush()
 			time.Sleep(20 * time.Millisecond)
@@ -302,20 +304,21 @@ func TestStream_Channel_ContextCancel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}
+	defer resp.Body.Close() //nolint:errcheck
 
-	s := stream.NewFromResponse(resp, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.NewFromResponse(resp, nil)
+	defer strm.Close() //nolint:errcheck
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ch := s.Channel(ctx)
+	itemChan := strm.Channel(ctx)
 	// Read 1 item then cancel.
-	<-ch
+	<-itemChan
 	cancel()
 	// Drain remaining; channel must close eventually.
 	done := make(chan struct{})
 
 	go func() {
-		for range ch {
+		for range itemChan {
 		}
 
 		close(done)
@@ -333,14 +336,14 @@ func TestStream_Channel_ContextCancel(t *testing.T) {
 func TestStream_Process(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"k":1}`, `{"k":2}`)
+	reader := newJSONLinesReader(`{"k":1}`, `{"k":2}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
 	var collected []interface{}
 
-	err := s.Process(context.Background(), func(item interface{}) error {
+	err := strm.Process(context.Background(), func(item interface{}) error {
 		collected = append(collected, item)
 
 		return nil
@@ -354,20 +357,20 @@ func TestStream_Process(t *testing.T) {
 	}
 }
 
+var errTestStop = errors.New("stop")
+
 func TestStream_Process_CallbackError(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"k":1}`)
+	reader := newJSONLinesReader(`{"k":1}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	sentinel := errors.New("stop")
-
-	err := s.Process(context.Background(), func(_ interface{}) error {
-		return sentinel
+	err := strm.Process(context.Background(), func(_ interface{}) error {
+		return errTestStop
 	})
-	if !errors.Is(err, sentinel) {
+	if !errors.Is(err, errTestStop) {
 		t.Errorf("Process callback error: want sentinel, got %v", err)
 	}
 }
@@ -375,15 +378,15 @@ func TestStream_Process_CallbackError(t *testing.T) {
 func TestStream_Process_ContextCancel(t *testing.T) {
 	t.Parallel()
 
-	r := io.NopCloser(strings.NewReader(strings.Repeat(`{"k":1}`+"\n", 100)))
+	reader := io.NopCloser(strings.NewReader(strings.Repeat(`{"k":1}`+"\n", 100)))
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := s.Process(ctx, func(_ interface{}) error { return nil })
+	err := strm.Process(ctx, func(_ interface{}) error { return nil })
 	if err == nil {
 		t.Error("Process with cancelled ctx: want error, got nil")
 	}
@@ -394,14 +397,14 @@ func TestStream_Process_ContextCancel(t *testing.T) {
 func TestStream_ProcessBatch(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"n":1}`, `{"n":2}`, `{"n":3}`, `{"n":4}`, `{"n":5}`)
+	reader := newJSONLinesReader(`{"n":1}`, `{"n":2}`, `{"n":3}`, `{"n":4}`, `{"n":5}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
 	var batches [][]interface{}
 
-	err := s.ProcessBatch(context.Background(), 2, func(batch []interface{}) error {
+	err := strm.ProcessBatch(context.Background(), 2, func(batch []interface{}) error {
 		cp := make([]interface{}, len(batch))
 		copy(cp, batch)
 		batches = append(batches, cp)
@@ -413,8 +416,8 @@ func TestStream_ProcessBatch(t *testing.T) {
 	}
 
 	total := 0
-	for _, b := range batches {
-		total += len(b)
+	for _, batchItem := range batches {
+		total += len(batchItem)
 	}
 
 	if total != 5 {
@@ -425,15 +428,15 @@ func TestStream_ProcessBatch(t *testing.T) {
 func TestStream_ProcessBatch_ContextCancelWithItems(t *testing.T) {
 	t.Parallel()
 	// Stream that requires multiple batches; cancel mid-way.
-	r := io.NopCloser(strings.NewReader(strings.Repeat(`{"n":1}`+"\n", 20)))
+	reader := io.NopCloser(strings.NewReader(strings.Repeat(`{"n":1}`+"\n", 20)))
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	calls := 0
-	err := s.ProcessBatch(ctx, 3, func(batch []interface{}) error {
+	err := strm.ProcessBatch(ctx, 3, func(batch []interface{}) error {
 		calls++
 		if calls == 1 {
 			cancel()
@@ -450,13 +453,13 @@ func TestStream_ProcessBatch_ContextCancelWithItems(t *testing.T) {
 func TestStream_Errors(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"x":1}`)
+	reader := newJSONLinesReader(`{"x":1}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	ch := s.Errors()
-	if ch == nil {
+	errChan := strm.Errors()
+	if errChan == nil {
 		t.Fatal("Errors() returned nil channel")
 	}
 }
@@ -466,20 +469,20 @@ func TestStream_Errors(t *testing.T) {
 func TestStream_Metrics(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"m":1}`, `{"m":2}`)
+	reader := newJSONLinesReader(`{"m":1}`, `{"m":2}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	_, _ = s.ReadAll()
+	_, _ = strm.ReadAll()
 
-	m := s.Metrics()
-	if m.ItemsRead != 2 {
-		t.Errorf("Metrics.ItemsRead: want 2, got %d", m.ItemsRead)
+	metrics := strm.Metrics()
+	if metrics.ItemsRead != 2 {
+		t.Errorf("Metrics.ItemsRead: want 2, got %d", metrics.ItemsRead)
 	}
 
-	if m.BytesRead <= 0 {
-		t.Errorf("Metrics.BytesRead: want >0, got %d", m.BytesRead)
+	if metrics.BytesRead <= 0 {
+		t.Errorf("Metrics.BytesRead: want >0, got %d", metrics.BytesRead)
 	}
 }
 
@@ -488,16 +491,16 @@ func TestStream_Metrics(t *testing.T) {
 func TestStream_Close_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"z":1}`)
+	reader := newJSONLinesReader(`{"z":1}`)
 
-	s := stream.New(r, nil)
+	strm := stream.New(reader, nil)
 
-	err := s.Close()
+	err := strm.Close()
 	if err != nil {
 		t.Fatalf("first Close: %v", err)
 	}
 	// Second close should succeed without error.
-	err = s.Close()
+	err = strm.Close()
 	if err != nil {
 		t.Errorf("second Close: %v", err)
 	}
@@ -508,9 +511,9 @@ func TestStream_Close_Idempotent(t *testing.T) {
 func TestNewFromResponse(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/x-ndjson")
-		_ = json.NewEncoder(w).Encode(map[string]int{"resp": 1})
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set("Content-Type", "application/x-ndjson")
+		_ = json.NewEncoder(respWriter).Encode(map[string]int{"resp": 1})
 	}))
 	defer srv.Close()
 
@@ -518,11 +521,12 @@ func TestNewFromResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}
+	defer resp.Body.Close() //nolint:errcheck
 
-	s := stream.NewFromResponse(resp, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.NewFromResponse(resp, nil)
+	defer strm.Close() //nolint:errcheck
 
-	items, err := s.ReadAll()
+	items, err := strm.ReadAll()
 	if err != nil {
 		t.Fatalf("ReadAll: %v", err)
 	}
@@ -537,20 +541,20 @@ func TestNewFromResponse(t *testing.T) {
 func TestReader_Read(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"r":1}`)
+	rawReader := newJSONLinesReader(`{"r":1}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(rawReader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	reader := stream.NewReader(s)
+	strmReader := stream.NewReader(strm)
 	buf := make([]byte, 1024)
 
-	n, err := reader.Read(buf)
+	bytesRead, err := strmReader.Read(buf)
 	if err != nil {
 		t.Fatalf("Reader.Read: %v", err)
 	}
 
-	if n == 0 {
+	if bytesRead == 0 {
 		t.Error("Reader.Read: want n>0")
 	}
 }
@@ -558,15 +562,15 @@ func TestReader_Read(t *testing.T) {
 func TestReader_Read_EOF(t *testing.T) {
 	t.Parallel()
 
-	r := io.NopCloser(strings.NewReader(""))
+	rawReader := io.NopCloser(strings.NewReader(""))
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(rawReader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	reader := stream.NewReader(s)
+	strmReader := stream.NewReader(strm)
 	buf := make([]byte, 64)
 
-	_, err := reader.Read(buf)
+	_, err := strmReader.Read(buf)
 	if err == nil {
 		t.Error("Reader.Read on empty stream: want error, got nil")
 	}
@@ -574,37 +578,44 @@ func TestReader_Read_EOF(t *testing.T) {
 
 // ---- Transform ----
 
+var errBadType = errors.New("bad type")
+
 func TestTransform_Read(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"n":5}`)
+	reader := newJSONLinesReader(`{"n":5}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	tr := stream.NewTransform(s, func(item interface{}) (interface{}, error) {
-		m, ok := item.(map[string]interface{})
-		if !ok {
-			return nil, errors.New("bad type")
+	transform := stream.NewTransform(strm, func(item interface{}) (interface{}, error) {
+		itemMap, isMap := item.(map[string]interface{})
+		if !isMap {
+			return nil, errBadType
 		}
 
-		m["doubled"] = m["n"].(float64) * 2
+		nVal, isFloat := itemMap["n"].(float64)
+		if !isFloat {
+			return nil, errBadType
+		}
 
-		return m, nil
+		itemMap["doubled"] = nVal * 2
+
+		return itemMap, nil
 	})
 
-	result, err := tr.Read()
+	result, err := transform.Read()
 	if err != nil {
 		t.Fatalf("Transform.Read: %v", err)
 	}
 
-	rm, ok := result.(map[string]interface{})
+	resultMap, ok := result.(map[string]interface{})
 	if !ok {
 		t.Fatalf("Transform.Read: want map, got %T", result)
 	}
 
-	if rm["doubled"] != float64(10) {
-		t.Errorf("Transform.Read: want doubled=10, got %v", rm["doubled"])
+	if resultMap["doubled"] != float64(10) {
+		t.Errorf("Transform.Read: want doubled=10, got %v", resultMap["doubled"])
 	}
 }
 
@@ -614,18 +625,20 @@ func TestTransform_Read_NilItem(t *testing.T) {
 	// To get a nil item we need a stream that returns nil without error —
 	// the only path is when decoder returns nil, nil. That path isn't reachable
 	// through normal JSON; test nil item via a closed stream instead.
-	r := newJSONLinesReader(`{"n":1}`)
+	reader := newJSONLinesReader(`{"n":1}`)
 
-	s := stream.New(r, nil)
-	if err := s.Close(); err != nil {
+	strm := stream.New(reader, nil)
+
+	err := strm.Close()
+	if err != nil {
 		t.Fatalf("Close: %v", err)
 	}
 
-	tr := stream.NewTransform(s, func(item interface{}) (interface{}, error) {
+	transform := stream.NewTransform(strm, func(item interface{}) (interface{}, error) {
 		return item, nil
 	})
 
-	_, err := tr.Read()
+	_, err = transform.Read()
 	if err == nil {
 		t.Error("Transform.Read on closed stream: want error, got nil")
 	}
@@ -636,53 +649,58 @@ func TestTransform_Read_NilItem(t *testing.T) {
 func TestFilter_Read(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"v":1}`, `{"v":2}`, `{"v":3}`)
+	reader := newJSONLinesReader(`{"v":1}`, `{"v":2}`, `{"v":3}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
-	f := stream.NewFilter(s, func(item interface{}) bool {
-		m, ok := item.(map[string]interface{})
-		if !ok {
+	filter := stream.NewFilter(strm, func(item interface{}) bool {
+		itemMap, isMap := item.(map[string]interface{})
+		if !isMap {
 			return false
 		}
 
-		return m["v"].(float64) > 1
+		vVal, isFloat := itemMap["v"].(float64)
+		if !isFloat {
+			return false
+		}
+
+		return vVal > 1
 	})
 
-	item1, err := f.Read()
+	item1, err := filter.Read()
 	if err != nil {
 		t.Fatalf("Filter.Read #1: %v", err)
 	}
 
-	m1, _ := item1.(map[string]interface{})
-	if m1["v"] != float64(2) {
-		t.Errorf("Filter: want v=2, got %v", m1["v"])
+	map1, _ := item1.(map[string]interface{})
+	if map1["v"] != float64(2) {
+		t.Errorf("Filter: want v=2, got %v", map1["v"])
 	}
 
-	item2, err := f.Read()
+	item2, err := filter.Read()
 	if err != nil {
 		t.Fatalf("Filter.Read #2: %v", err)
 	}
 
-	m2, _ := item2.(map[string]interface{})
-	if m2["v"] != float64(3) {
-		t.Errorf("Filter: want v=3, got %v", m2["v"])
+	map2, _ := item2.(map[string]interface{})
+	if map2["v"] != float64(3) {
+		t.Errorf("Filter: want v=3, got %v", map2["v"])
 	}
 }
 
 func TestFilter_Read_EOF_NoMatch(t *testing.T) {
 	t.Parallel()
 
-	r := newJSONLinesReader(`{"v":1}`)
+	reader := newJSONLinesReader(`{"v":1}`)
 
-	s := stream.New(r, nil)
-	defer s.Close() //nolint:errcheck
+	strm := stream.New(reader, nil)
+	defer strm.Close() //nolint:errcheck
 
 	// Filter rejects everything → hits EOF.
-	f := stream.NewFilter(s, func(_ interface{}) bool { return false })
+	filter := stream.NewFilter(strm, func(_ interface{}) bool { return false })
 
-	_, err := f.Read()
+	_, err := filter.Read()
 	if !errors.Is(err, io.EOF) {
 		t.Errorf("Filter no match: want io.EOF, got %v", err)
 	}

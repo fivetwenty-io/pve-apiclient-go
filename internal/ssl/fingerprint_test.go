@@ -6,7 +6,10 @@ import (
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/internal/ssl"
 )
 
-const testFingerprint = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+const (
+	testFingerprint  = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+	testFingerprint2 = "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00"
+)
 
 func TestNewFingerprintVerifier(t *testing.T) {
 	t.Parallel()
@@ -44,7 +47,7 @@ func TestFingerprintVerifier_AddTrustedFingerprints(t *testing.T) {
 
 	fingerprints := []string{
 		testFingerprint,
-		"11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
+		testFingerprint2,
 	}
 
 	fingerprintVerifier.AddTrustedFingerprints(fingerprints)
@@ -105,7 +108,7 @@ func TestFingerprintVerifier_GetTrustedFingerprints(t *testing.T) {
 
 	fingerprints := []string{
 		testFingerprint,
-		"11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
+		testFingerprint2,
 	}
 
 	fingerprintVerifier.AddTrustedFingerprints(fingerprints)
@@ -123,7 +126,7 @@ func TestFingerprintVerifier_ClearCache(t *testing.T) {
 
 	// Add some fingerprints
 	fingerprintVerifier.AddTrustedFingerprint(testFingerprint)
-	fingerprintVerifier.AddTrustedFingerprint("11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00")
+	fingerprintVerifier.AddTrustedFingerprint(testFingerprint2)
 
 	trustedFingerprints := fingerprintVerifier.GetTrustedFingerprints()
 	if len(trustedFingerprints) == 0 {
@@ -210,7 +213,7 @@ func TestCompareFingerprints(t *testing.T) {
 		{
 			name:     "different values",
 			fp1:      testFingerprint,
-			fp2:      "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
+			fp2:      testFingerprint2,
 			expected: false,
 		},
 	}

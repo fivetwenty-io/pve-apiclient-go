@@ -30,7 +30,7 @@ func TestEncodeParams_StringSlice(t *testing.T) {
 	t.Parallel()
 
 	got := encodeParams(map[string]interface{}{
-		"tags": []string{"alpha", "beta", "gamma"},
+		"tags": []string{testEncAlpha, testEncBeta, testEncGamma},
 	})
 
 	vals := got["tags"]
@@ -38,7 +38,7 @@ func TestEncodeParams_StringSlice(t *testing.T) {
 		t.Fatalf("[]string: want 3 entries, got %d: %v", len(vals), vals)
 	}
 
-	for i, want := range []string{"alpha", "beta", "gamma"} {
+	for i, want := range []string{testEncAlpha, testEncBeta, testEncGamma} {
 		if vals[i] != want {
 			t.Errorf("tags[%d] = %q, want %q", i, vals[i], want)
 		}
@@ -84,13 +84,13 @@ func TestEncodeParams_NestedMap(t *testing.T) {
 	t.Parallel()
 
 	got := encodeParams(map[string]interface{}{
-		"net0": map[string]interface{}{
-			"bridge": "vmbr0",
-			"virtio": "52:54:00:12:34:56",
+		testEncNet0: map[string]interface{}{
+			testEncBridge: testEncVMBR0,
+			testEncVirtio: "52:54:00:12:34:56",
 		},
 	})
 
-	v := got.Get("net0")
+	v := got.Get(testEncNet0)
 	// Keys are sorted, so bridge comes before virtio.
 	want := "bridge=vmbr0,virtio=52:54:00:12:34:56"
 	if v != want {
@@ -118,15 +118,15 @@ func TestEncodeParams_NilPointerOmitted(t *testing.T) {
 
 	got := encodeParams(map[string]interface{}{
 		"missing": p,
-		"present": "hello",
+		"present": testHello,
 	})
 
 	if _, found := got["missing"]; found {
 		t.Errorf("nil pointer should be omitted, but key 'missing' present")
 	}
 
-	if got.Get("present") != "hello" {
-		t.Errorf("present: got %q, want %q", got.Get("present"), "hello")
+	if got.Get("present") != testHello {
+		t.Errorf("present: got %q, want %q", got.Get("present"), testHello)
 	}
 }
 
@@ -228,10 +228,10 @@ func TestEncodeNestedMap_Sorted(t *testing.T) {
 func TestSortStrings(t *testing.T) {
 	t.Parallel()
 
-	ss := []string{"delta", "alpha", "gamma", "beta"}
+	ss := []string{"delta", testEncAlpha, "gamma", testEncBeta}
 	sortStrings(ss)
 
-	for i, want := range []string{"alpha", "beta", "delta", "gamma"} {
+	for i, want := range []string{testEncAlpha, testEncBeta, "delta", "gamma"} {
 		if ss[i] != want {
 			t.Errorf("sortStrings[%d] = %q, want %q", i, ss[i], want)
 		}
@@ -271,13 +271,13 @@ func TestEncodeParams_DeeplyNestedMap(t *testing.T) {
 		"burst": 200,
 	}
 	got := encodeParams(map[string]interface{}{
-		"net0": map[string]interface{}{
-			"bridge":    "vmbr0",
+		testEncNet0: map[string]interface{}{
+			testEncBridge:    testEncVMBR0,
 			"bandwidth": inner, // level-2: encoded by encodeSingleValue → Sprintf
 		},
 	})
 
-	v := got.Get("net0")
+	v := got.Get(testEncNet0)
 	if v == "" {
 		t.Fatal("deeply nested map: got empty string")
 	}
@@ -286,8 +286,8 @@ func TestEncodeParams_DeeplyNestedMap(t *testing.T) {
 		t.Errorf("deeply nested map: empty output")
 	}
 	// Verify outer keys are sorted (bandwidth < bridge lexicographically).
-	if len(got["net0"]) != 1 {
-		t.Errorf("deeply nested map: expected 1 url.Values entry, got %d", len(got["net0"]))
+	if len(got[testEncNet0]) != 1 {
+		t.Errorf("deeply nested map: expected 1 url.Values entry, got %d", len(got[testEncNet0]))
 	}
 }
 
@@ -299,14 +299,14 @@ func TestEncodeParams_ZeroTimeTime(t *testing.T) {
 		"ts": time.Time{}, // zero value: January 1, year 1 → Unix = large negative
 	})
 
-	v := got.Get("ts")
-	if v == "" {
+	tsVal := got.Get("ts")
+	if tsVal == "" {
 		t.Error("zero time.Time: key must be present")
 	}
 	// Encode the same value independently to confirm round-trip consistency.
 	want := strconv.FormatInt(time.Time{}.Unix(), 10)
-	if v != want {
-		t.Errorf("zero time.Time: got %q, want %q", v, want)
+	if tsVal != want {
+		t.Errorf("zero time.Time: got %q, want %q", tsVal, want)
 	}
 }
 
@@ -315,10 +315,10 @@ func TestEncodeParams_PointerToBoolTrue(t *testing.T) {
 	t.Parallel()
 
 	b := true
-	got := encodeParams(map[string]interface{}{"flag": &b})
+	got := encodeParams(map[string]interface{}{testEncFlag: &b})
 
-	if got.Get("flag") != "1" {
-		t.Errorf("*bool(true): got %q, want 1", got.Get("flag"))
+	if got.Get(testEncFlag) != "1" {
+		t.Errorf("*bool(true): got %q, want 1", got.Get(testEncFlag))
 	}
 }
 
@@ -327,10 +327,10 @@ func TestEncodeParams_PointerToBoolFalse(t *testing.T) {
 	t.Parallel()
 
 	b := false
-	got := encodeParams(map[string]interface{}{"flag": &b})
+	got := encodeParams(map[string]interface{}{testEncFlag: &b})
 
-	if got.Get("flag") != "0" {
-		t.Errorf("*bool(false): got %q, want 0", got.Get("flag"))
+	if got.Get(testEncFlag) != "0" {
+		t.Errorf("*bool(false): got %q, want 0", got.Get(testEncFlag))
 	}
 }
 
@@ -340,9 +340,9 @@ func TestEncodeParams_PointerToBoolNil(t *testing.T) {
 
 	var b *bool
 
-	got := encodeParams(map[string]interface{}{"flag": b})
+	got := encodeParams(map[string]interface{}{testEncFlag: b})
 
-	if _, found := got["flag"]; found {
+	if _, found := got[testEncFlag]; found {
 		t.Error("nil *bool: key must be omitted")
 	}
 }
@@ -390,7 +390,7 @@ func TestEncodeParams_MixedSlice(t *testing.T) {
 	t.Parallel()
 
 	got := encodeParams(map[string]interface{}{
-		"mixed": []interface{}{"hello", 42, true, 3.14},
+		"mixed": []interface{}{testHello, 42, true, 3.14},
 	})
 
 	vals := got["mixed"]
@@ -398,7 +398,7 @@ func TestEncodeParams_MixedSlice(t *testing.T) {
 		t.Fatalf("mixed slice: want 4 entries, got %d: %v", len(vals), vals)
 	}
 
-	if vals[0] != "hello" {
+	if vals[0] != testHello {
 		t.Errorf("mixed[0]: got %q, want hello", vals[0])
 	}
 
@@ -443,7 +443,7 @@ func TestEncodeParams_LargeUint64(t *testing.T) {
 func TestEncodeParams_UnicodeString(t *testing.T) {
 	t.Parallel()
 
-	unicode := "héllo wörld 日本語 🚀"
+	unicode := "héllo wörld 日本語 🚀" //nolint:gosmopolitan // intentional Unicode test fixture
 	got := encodeParams(map[string]interface{}{
 		"desc": unicode,
 	})
@@ -458,16 +458,16 @@ func TestEncodeParams_UnicodeString(t *testing.T) {
 func TestEncodeNestedMap_OrderDeterminism(t *testing.T) {
 	t.Parallel()
 
-	m := map[string]interface{}{
+	deterministicMap := map[string]interface{}{
 		"zebra":  "z",
 		"apple":  "a",
 		"mango":  "m",
 		"banana": "b",
 	}
-	want := encodeNestedMap(m)
+	want := encodeNestedMap(deterministicMap)
 
 	for i := range 50 {
-		got := encodeNestedMap(m)
+		got := encodeNestedMap(deterministicMap)
 		if got != want {
 			t.Errorf("iteration %d: non-deterministic output\n  got:  %q\n  want: %q", i, got, want)
 		}
@@ -480,16 +480,16 @@ func TestEncodeParams_MapIterationDeterminism(t *testing.T) {
 	t.Parallel()
 
 	params := map[string]interface{}{
-		"net0": map[string]interface{}{
-			"bridge":   "vmbr0",
-			"virtio":   "52:54:00:aa:bb:cc",
+		testEncNet0: map[string]interface{}{
+			testEncBridge:   testEncVMBR0,
+			testEncVirtio:   "52:54:00:aa:bb:cc",
 			"firewall": "1",
 		},
 	}
-	want := encodeParams(params).Get("net0")
+	want := encodeParams(params).Get(testEncNet0)
 
 	for i := range 50 {
-		got := encodeParams(params).Get("net0")
+		got := encodeParams(params).Get(testEncNet0)
 		if got != want {
 			t.Errorf("encodeParams map iteration %d non-deterministic\n  got:  %q\n  want: %q", i, got, want)
 		}
@@ -521,8 +521,8 @@ func TestOptionString_NetRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	optStr := OptionStringOf(
-		KV{Value: "virtio"},
-		KV{Key: "bridge", Value: "vmbr0"},
+		KV{Value: testEncVirtio},
+		KV{Key: testEncBridge, Value: testEncVMBR0},
 		KV{Key: "firewall", Value: true},
 	)
 
@@ -531,9 +531,9 @@ func TestOptionString_NetRoundTrip(t *testing.T) {
 		t.Errorf("net: got %q, want %q", got, want)
 	}
 
-	got := encodeParams(map[string]interface{}{"net0": optStr})
-	if got.Get("net0") != want {
-		t.Errorf("net via encodeParams: got %q, want %q", got.Get("net0"), want)
+	got := encodeParams(map[string]interface{}{testEncNet0: optStr})
+	if got.Get(testEncNet0) != want {
+		t.Errorf("net via encodeParams: got %q, want %q", got.Get(testEncNet0), want)
 	}
 }
 
@@ -700,10 +700,10 @@ func TestPlainSliceStillRepeated(t *testing.T) {
 func FuzzEncodeParam(f *testing.F) {
 	// Seed corpus from representative cases.
 	f.Add("key", "value")
-	f.Add("net0", "bridge=vmbr0,virtio=52:54:00:12:34:56")
+	f.Add(testEncNet0, "bridge=vmbr0,virtio=52:54:00:12:34:56")
 	f.Add("", "")
 	f.Add("key", "")
-	f.Add("unicode", "héllo 日本語")
+	f.Add("unicode", "héllo 日本語") //nolint:gosmopolitan // intentional Unicode fuzz corpus
 	f.Add("special", "a=b,c=d")
 	f.Add("key", "\x00\xff\n\t")
 

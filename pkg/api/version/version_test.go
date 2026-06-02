@@ -41,14 +41,14 @@ func TestVersionGet_DecodesTypedResponse(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api2/json/version", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api2/json/version", func(respWriter http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "method", http.StatusMethodNotAllowed)
+			http.Error(respWriter, "method", http.StatusMethodNotAllowed)
 
 			return
 		}
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(respWriter).Encode(map[string]any{
 			"data": map[string]any{
 				"release": "9.0",
 				"repoid":  "deadbeef",
@@ -137,14 +137,17 @@ func TestVersionGet_NilContextRejected(t *testing.T) {
 
 	// We construct a real client but no server is required because the
 	// nil-context check fires before any transport call.
-	c, err := pveclient.NewClient(pveclient.Options{
+	versionClient, err := pveclient.NewClient(pveclient.Options{
 		Host: "127.0.0.1", Port: 1, Protocol: "http", APIToken: "u@pam!t=s",
 	})
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
-	//nolint:staticcheck // SA1012: intentional nil context to exercise validation
-	_, err = version.New(c).Get(nil)
+	// A nil context typed through a variable exercises the runtime
+	// validation without tripping the static "nil literal" check.
+	var nilCtx context.Context
+
+	_, err = version.New(versionClient).Get(nilCtx)
 	if err == nil {
 		t.Fatal("expected error for nil context, got nil")
 	}

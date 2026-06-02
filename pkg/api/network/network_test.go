@@ -14,6 +14,12 @@ import (
 	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
+const (
+	keyData    = "data"
+	keySuccess = "success"
+	keyIface   = "iface"
+)
+
 func TestBridgeExistsAndEnsure(t *testing.T) {
 	t.Parallel()
 
@@ -22,13 +28,13 @@ func TestBridgeExistsAndEnsure(t *testing.T) {
 	mux.HandleFunc("/api2/json/nodes/n1/network", func(writer http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": []any{
-				map[string]any{"iface": "lo"},
-				map[string]any{"iface": "vmbr0"},
-			}, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: []any{
+				map[string]any{keyIface: "lo"},
+				map[string]any{keyIface: "vmbr0"},
+			}, keySuccess: 1})
 		case http.MethodPost:
 			ensured = true
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"ok": true}, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"ok": true}, keySuccess: 1})
 		default:
 			http.Error(writer, "method", http.StatusMethodNotAllowed)
 		}
@@ -108,16 +114,16 @@ func setupTestServer(state *testState) *httptest.Server {
 func handleNetworkRequest(writer http.ResponseWriter, request *http.Request, state *testState) {
 	switch request.Method {
 	case http.MethodGet:
-		err := json.NewEncoder(writer).Encode(map[string]any{"data": []any{
-			map[string]any{"iface": "vmbr9"},
-		}, "success": 1})
+		err := json.NewEncoder(writer).Encode(map[string]any{keyData: []any{
+			map[string]any{keyIface: "vmbr9"},
+		}, keySuccess: 1})
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
 	case http.MethodPost:
 		state.reloaded = true
 
-		err := json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"ok": true}, "success": 1})
+		err := json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"ok": true}, keySuccess: 1})
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
@@ -135,7 +141,7 @@ func handleBridgeRequest(writer http.ResponseWriter, request *http.Request, stat
 
 	state.deleted = true
 
-	err := json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"ok": true}, "success": 1})
+	err := json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"ok": true}, keySuccess: 1})
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}

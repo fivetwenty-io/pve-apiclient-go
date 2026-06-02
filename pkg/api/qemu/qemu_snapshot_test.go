@@ -14,6 +14,8 @@ import (
 	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
+const keyName = "name"
+
 func TestSnapshots_List_Create_Delete_Rollback(t *testing.T) {
 	t.Parallel()
 
@@ -45,15 +47,15 @@ func setupSnapshotHandlers(mux *http.ServeMux) {
 func handleSnapshotOperations(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case http.MethodGet:
-		err := json.NewEncoder(writer).Encode(map[string]any{"data": []any{
-			map[string]any{"name": "base", "vmstate": 0},
-			map[string]any{"name": "pre-upgrade", "vmstate": 0},
-		}, "success": 1})
+		err := json.NewEncoder(writer).Encode(map[string]any{keyData: []any{
+			map[string]any{keyName: "base", "vmstate": 0},
+			map[string]any{keyName: "pre-upgrade", "vmstate": 0},
+		}, keySuccess: 1})
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
 	case http.MethodPost:
-		err := json.NewEncoder(writer).Encode(map[string]any{"data": "UPID:create-snap", "success": 1})
+		err := json.NewEncoder(writer).Encode(map[string]any{keyData: "UPID:create-snap", keySuccess: 1})
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
@@ -64,7 +66,7 @@ func handleSnapshotOperations(writer http.ResponseWriter, request *http.Request)
 
 func handleSnapshotDelete(writer http.ResponseWriter, request *http.Request) {
 	if request.Method == http.MethodDelete {
-		err := json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"ok": true}, "success": 1})
+		err := json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"ok": true}, keySuccess: 1})
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
@@ -77,7 +79,7 @@ func handleSnapshotDelete(writer http.ResponseWriter, request *http.Request) {
 
 func handleSnapshotRollback(writer http.ResponseWriter, request *http.Request) {
 	if request.Method == http.MethodPost {
-		err := json.NewEncoder(writer).Encode(map[string]any{"data": "UPID:rollback", "success": 1})
+		err := json.NewEncoder(writer).Encode(map[string]any{keyData: "UPID:rollback", keySuccess: 1})
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
@@ -88,7 +90,7 @@ func handleSnapshotRollback(writer http.ResponseWriter, request *http.Request) {
 	http.Error(writer, "method", http.StatusMethodNotAllowed)
 }
 
-//nolint:ireturn // Test helper - returns interface for test setup
+//nolint:ireturn // test helper returns interface required by qemu.New
 func createSnapshotTestClient(t *testing.T, serverURL string) pveclient.Client {
 	t.Helper()
 

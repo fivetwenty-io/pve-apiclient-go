@@ -247,6 +247,12 @@ func getMatrixFeatureSupportTestCases() []matrixFeatureSupportTestCase {
 	return cases
 }
 
+const (
+	featurePBSIntegration = "pbs_integration"
+	featureSDN            = "sdn"
+	featureOpenVZ         = "openvz"
+)
+
 func getSupportedFeatureTestCases() []matrixFeatureSupportTestCase {
 	return []matrixFeatureSupportTestCase{
 		{
@@ -265,14 +271,14 @@ func getSupportedFeatureTestCases() []matrixFeatureSupportTestCase {
 		},
 		{
 			name:       "PVE 7.0 supports PBS integration",
-			feature:    "pbs_integration",
+			feature:    featurePBSIntegration,
 			version:    &compatibility.Version{Major: 7, Minor: 0, Patch: 0, Build: ""},
 			supported:  true,
 			hasWarning: false,
 		},
 		{
 			name:       "PVE 7.3 supports SDN",
-			feature:    "sdn",
+			feature:    featureSDN,
 			version:    &compatibility.Version{Major: 7, Minor: 3, Patch: 0, Build: ""},
 			supported:  true,
 			hasWarning: false,
@@ -298,21 +304,21 @@ func getUnsupportedFeatureTestCases() []matrixFeatureSupportTestCase {
 		},
 		{
 			name:       "PVE 6.4 doesn't support PBS integration",
-			feature:    "pbs_integration",
+			feature:    featurePBSIntegration,
 			version:    &compatibility.Version{Major: 6, Minor: 4, Patch: 0, Build: ""},
 			supported:  false,
 			hasWarning: false,
 		},
 		{
 			name:       "PVE 7.2 doesn't support SDN",
-			feature:    "sdn",
+			feature:    featureSDN,
 			version:    &compatibility.Version{Major: 7, Minor: 2, Patch: 0, Build: ""},
 			supported:  false,
 			hasWarning: false,
 		},
 		{
 			name:       "OpenVZ not available in PVE 6",
-			feature:    "openvz",
+			feature:    featureOpenVZ,
 			version:    &compatibility.Version{Major: 6, Minor: 0, Patch: 0, Build: ""},
 			supported:  false,
 			hasWarning: false,
@@ -324,7 +330,7 @@ func getDeprecatedFeatureTestCases() []matrixFeatureSupportTestCase {
 	return []matrixFeatureSupportTestCase{
 		{
 			name:       "OpenVZ deprecated in PVE 4",
-			feature:    "openvz",
+			feature:    featureOpenVZ,
 			version:    &compatibility.Version{Major: 4, Minor: 0, Patch: 0, Build: ""},
 			supported:  true,
 			hasWarning: true,

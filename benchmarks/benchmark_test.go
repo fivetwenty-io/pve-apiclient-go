@@ -19,40 +19,50 @@ import (
 
 var errEOF = errors.New("EOF")
 
+const (
+	benchAPIToken     = "test@pve!token=secret"
+	benchKeyData      = "data"
+	benchKeyCPU       = "cpu"
+	benchKeyName      = "name"
+	benchKeyNode      = "node"
+	benchKeyStatus    = "status"
+	benchStatusOnline = "online"
+)
+
 // Mock server for benchmarking.
 func createMockServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api2/json/access/ticket":
 			_ = json.NewEncoder(writer).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
+				benchKeyData: map[string]interface{}{
 					"ticket":              "PVE:test@pve:1234567890::abcdef",
 					"CSRFPreventionToken": "1234567890:abcdef",
 				},
 			})
 		case "/api2/json/nodes":
 			nodes := []map[string]interface{}{
-				{"node": "pve1", "status": "online", "cpu": 0.15},
-				{"node": "pve2", "status": "online", "cpu": 0.25},
-				{"node": "pve3", "status": "online", "cpu": 0.10},
+				{benchKeyNode: "pve1", benchKeyStatus: benchStatusOnline, benchKeyCPU: 0.15},
+				{benchKeyNode: "pve2", benchKeyStatus: benchStatusOnline, benchKeyCPU: 0.25},
+				{benchKeyNode: "pve3", benchKeyStatus: benchStatusOnline, benchKeyCPU: 0.10},
 			}
-			_ = json.NewEncoder(writer).Encode(map[string]interface{}{"data": nodes})
+			_ = json.NewEncoder(writer).Encode(map[string]interface{}{benchKeyData: nodes})
 		case "/api2/json/cluster/resources":
 			resources := make([]map[string]interface{}, 100)
 			for i := range 100 {
 				resources[i] = map[string]interface{}{
-					"vmid":   100 + i,
-					"name":   fmt.Sprintf("vm-%d", 100+i),
-					"type":   "qemu",
-					"status": "running",
-					"cpu":    0.1,
-					"mem":    1073741824,
+					"vmid":       100 + i,
+					benchKeyName: fmt.Sprintf("vm-%d", 100+i),
+					"type":       "qemu",
+					benchKeyStatus:    "running",
+					benchKeyCPU: 0.1,
+					"mem":        1073741824,
 				}
 			}
 
-			_ = json.NewEncoder(writer).Encode(map[string]interface{}{"data": resources})
+			_ = json.NewEncoder(writer).Encode(map[string]interface{}{benchKeyData: resources})
 		default:
-			_ = json.NewEncoder(writer).Encode(map[string]interface{}{"data": "ok"})
+			_ = json.NewEncoder(writer).Encode(map[string]interface{}{benchKeyData: "ok"})
 		}
 	}))
 }
@@ -64,7 +74,7 @@ func BenchmarkSimpleGet(b *testing.B) {
 
 	client, err := client.NewClient(client.Options{
 		Host:     server.URL,
-		APIToken: "test@pve!token=secret",
+		APIToken: benchAPIToken,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -87,7 +97,7 @@ func BenchmarkConcurrentRequests(b *testing.B) {
 
 	client, err := client.NewClient(client.Options{
 		Host:     server.URL,
-		APIToken: "test@pve!token=secret",
+		APIToken: benchAPIToken,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -129,7 +139,7 @@ func BenchmarkConnectionPool(b *testing.B) {
 
 	client, err := client.NewClient(client.Options{
 		Host:     server.URL,
-		APIToken: "test@pve!token=secret",
+		APIToken: benchAPIToken,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -199,9 +209,9 @@ func BenchmarkStreamProcessing(b *testing.B) {
 
 	for itemIndex := range 1000 {
 		item := map[string]interface{}{
-			"id":    itemIndex,
-			"name":  fmt.Sprintf("item-%d", itemIndex),
-			"value": itemIndex * 100,
+			"id":           itemIndex,
+			benchKeyName:   fmt.Sprintf("item-%d", itemIndex),
+			"value":        itemIndex * 100,
 		}
 
 		jsonData, err := json.Marshal(item)
@@ -325,7 +335,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 
 	client, err := client.NewClient(client.Options{
 		Host:     server.URL,
-		APIToken: "test@pve!token=secret",
+		APIToken: benchAPIToken,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -349,7 +359,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 
 	client, err := client.NewClient(client.Options{
 		Host:     server.URL,
-		APIToken: "test@pve!token=secret",
+		APIToken: benchAPIToken,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -375,7 +385,7 @@ func BenchmarkSequentialVsConcurrent(b *testing.B) {
 
 	client, err := client.NewClient(client.Options{
 		Host:     server.URL,
-		APIToken: "test@pve!token=secret",
+		APIToken: benchAPIToken,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -418,7 +428,7 @@ func BenchmarkLargePayload(b *testing.B) {
 		for i := range 10000 {
 			data[i] = map[string]interface{}{
 				"id":          i,
-				"name":        fmt.Sprintf("resource-%d", i),
+				benchKeyName: fmt.Sprintf("resource-%d", i),
 				"description": "This is a long description text that adds bulk to the response payload",
 				"metadata": map[string]interface{}{
 					"created":  time.Now().Unix(),
@@ -434,7 +444,7 @@ func BenchmarkLargePayload(b *testing.B) {
 
 	client, err := client.NewClient(client.Options{
 		Host:     server.URL,
-		APIToken: "test@pve!token=secret",
+		APIToken: benchAPIToken,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -465,7 +475,7 @@ type BenchmarkResults struct {
 func RunComparisonBenchmark(b *testing.B) {
 	b.Helper()
 
-	results := []BenchmarkResults{}
+	results := make([]BenchmarkResults, 0, 1)
 
 	// Add benchmark results
 	result := BenchmarkResults{

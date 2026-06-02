@@ -1,4 +1,4 @@
-package http
+package http //nolint:testpackage // white-box test: accesses unexported client fields and middleware
 
 import (
 	"context"

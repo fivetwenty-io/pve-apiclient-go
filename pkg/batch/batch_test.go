@@ -14,6 +14,13 @@ import (
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/batch"
 )
 
+const (
+	methodGET    = "GET"
+	pathTest     = "/test"
+	pathTest1    = "/test1"
+	pathTest2    = "/test2"
+)
+
 func TestNewBatch(t *testing.T) {
 	t.Parallel()
 
@@ -68,7 +75,7 @@ func TestBatchAdd(t *testing.T) {
 	for i := range 3 {
 		req := &batch.Request{
 			ID:      fmt.Sprintf("req-%d", i),
-			Method:  "GET",
+			Method:  methodGET,
 			Path:    fmt.Sprintf("/api/test/%d", i),
 			Params:  nil,
 			Headers: nil,
@@ -88,7 +95,7 @@ func TestBatchAdd(t *testing.T) {
 	// Try to exceed limit
 	err := batchInstance.Add(&batch.Request{
 		ID:      "",
-		Method:  "GET",
+		Method:  methodGET,
 		Path:    "/overflow",
 		Params:  nil,
 		Headers: nil,
@@ -106,16 +113,16 @@ func TestBatchAddDuplicate(t *testing.T) {
 
 	req1 := &batch.Request{
 		ID:      "duplicate",
-		Method:  "GET",
-		Path:    "/test1",
+		Method:  methodGET,
+		Path:    pathTest1,
 		Params:  nil,
 		Headers: nil,
 		Body:    nil,
 	}
 	req2 := &batch.Request{
 		ID:      "duplicate",
-		Method:  "GET",
-		Path:    "/test2",
+		Method:  methodGET,
+		Path:    pathTest2,
 		Params:  nil,
 		Headers: nil,
 		Body:    nil,
@@ -138,8 +145,8 @@ func TestBatchAddMultiple(t *testing.T) {
 	batchInstance := batch.New(batch.DefaultConfig())
 
 	requests := []*batch.Request{
-		{Method: "GET", Path: "/test1"},
-		{Method: "POST", Path: "/test2"},
+		{Method: methodGET, Path: pathTest1},
+		{Method: "POST", Path: pathTest2},
 		{Method: "PUT", Path: "/test3"},
 	}
 
@@ -161,8 +168,8 @@ func TestBatchClear(t *testing.T) {
 	// Add some requests
 	err := batchInstance.Add(&batch.Request{
 		ID:      "",
-		Method:  "GET",
-		Path:    "/test",
+		Method:  methodGET,
+		Path:    pathTest,
 		Params:  nil,
 		Headers: nil,
 		Body:    nil,
@@ -174,7 +181,7 @@ func TestBatchClear(t *testing.T) {
 	err = batchInstance.Add(&batch.Request{
 		ID:      "",
 		Method:  "POST",
-		Path:    "/test",
+		Path:    pathTest,
 		Params:  nil,
 		Headers: nil,
 		Body:    nil,
@@ -233,7 +240,7 @@ func createTestBatch(t *testing.T, requests []string) *batch.Batch {
 	for i, path := range requests {
 		err := batchInstance.Add(&batch.Request{
 			ID:      strconv.Itoa(i + 1),
-			Method:  "GET",
+			Method:  methodGET,
 			Path:    path,
 			Params:  nil,
 			Headers: nil,
@@ -260,7 +267,7 @@ func TestExecutor(t *testing.T) {
 	t.Parallel()
 
 	executor := createMockExecutor()
-	batchInstance := createTestBatch(t, []string{"/test1", "/test2", "/test3"})
+	batchInstance := createTestBatch(t, []string{pathTest1, pathTest2, "/test3"})
 
 	ctx := context.Background()
 
@@ -296,8 +303,8 @@ func TestExecutorWithCallback(t *testing.T) {
 
 	err := batchInstance.Add(&batch.Request{
 		ID:      "1",
-		Method:  "GET",
-		Path:    "/test",
+		Method:  methodGET,
+		Path:    pathTest,
 		Params:  nil,
 		Headers: nil,
 		Body:    nil,
@@ -365,7 +372,7 @@ func createConcurrencyTestBatch(t *testing.T, serverURL string, requestCount int
 	for i := range requestCount {
 		err := batchInstance.Add(&batch.Request{
 			ID:      fmt.Sprintf("req-%d", i),
-			Method:  "GET",
+			Method:  methodGET,
 			Path:    serverURL,
 			Params:  nil,
 			Headers: nil,
@@ -447,7 +454,7 @@ func TestExecutorTimeout(t *testing.T) {
 
 	err := batchInstance.Add(&batch.Request{
 		ID:      "1",
-		Method:  "GET",
+		Method:  methodGET,
 		Path:    server.URL,
 		Params:  nil,
 		Headers: nil,
@@ -478,8 +485,8 @@ func TestBuilder(t *testing.T) {
 	builder := batch.NewBuilder(batch.DefaultConfig())
 
 	batchInstance := builder.
-		AddRequest("GET", "/test1").
-		AddRequest("POST", "/test2").
+		AddRequest(methodGET, pathTest1).
+		AddRequest("POST", pathTest2).
 		AddRequestWithParams("PUT", "/test3", map[string]interface{}{
 			"key": "value",
 		}).
@@ -497,7 +504,7 @@ func createPipelineBatch(t *testing.T, batchPrefix string, paths []string) *batc
 	for i, path := range paths {
 		err := batchInstance.Add(&batch.Request{
 			ID:      fmt.Sprintf("%s-%d", batchPrefix, i+1),
-			Method:  "GET",
+			Method:  methodGET,
 			Path:    path,
 			Params:  nil,
 			Headers: nil,

@@ -12,6 +12,8 @@ import (
 	pveerrors "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/errors"
 )
 
+const exampleFingerprint = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+
 func main() {
 	log.Println("PVE API Client - Advanced Examples")
 	log.Println("==================================")
@@ -180,7 +182,7 @@ func demonstrateCustomClient(host string) {
 
 		// Cached fingerprints
 		CachedFingerprints: map[string]bool{
-			"AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99": true,
+			exampleFingerprint: true,
 		},
 
 		// Manual verification callback
@@ -230,7 +232,7 @@ func demonstrateFingerprintManagement() {
 
 	// Add trusted fingerprints
 	trustedFingerprints := []string{
-		"AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99",
+		exampleFingerprint,
 		"11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
 	}
 
@@ -255,7 +257,7 @@ func demonstrateFingerprintManagement() {
 	}
 
 	// Compare fingerprints
-	fp1 := "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+	fp1 := exampleFingerprint
 	fp2 := "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"
 
 	if ssl.CompareFingerprints(fp1, fp2) {

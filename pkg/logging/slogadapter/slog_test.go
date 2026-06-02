@@ -130,13 +130,13 @@ func TestAdapter_MultipleFields(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	a := slogadapter.New(captureLogger(&buf))
+	adapter := slogadapter.New(captureLogger(&buf))
 	fields := map[string]interface{}{
 		"host":   "pve1",
 		"status": 200,
 		"ok":     true,
 	}
-	a.Debug("multi", fields)
+	adapter.Debug("multi", fields)
 
 	out := buf.String()
 	if !strings.Contains(out, "pve1") {
@@ -162,7 +162,7 @@ func TestSet_InstallsLogger(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	l := captureLogger(&buf)
+	logger := captureLogger(&buf)
 
 	// Build a minimal internal http.Client to call SetLogger via Set.
 	opts := &ih.Options{
@@ -171,20 +171,22 @@ func TestSet_InstallsLogger(t *testing.T) {
 		Protocol: "https",
 	}
 
-	c, err := ih.NewClient(opts)
+	client, err := ih.NewClient(opts)
 	if err != nil {
 		t.Skipf("cannot build internal http client: %v", err)
 	}
 
-	slogadapter.Set(c, l)
+	slogadapter.Set(client, logger)
 	// Confirm adapter installed: emit a debug log via the adapter directly and
 	// verify JSON roundtrips (the adapter itself is already tested above).
-	a := slogadapter.New(l)
-	a.Info("installed", map[string]interface{}{"check": "ok"})
+	adapter := slogadapter.New(logger)
+	adapter.Info("installed", map[string]interface{}{"check": "ok"})
 
 	var rec map[string]interface{}
-	if err := json.NewDecoder(&buf).Decode(&rec); err != nil {
-		t.Fatalf("json decode: %v", err)
+
+	decodeErr := json.NewDecoder(&buf).Decode(&rec)
+	if decodeErr != nil {
+		t.Fatalf("json decode: %v", decodeErr)
 	}
 
 	if rec["msg"] != "installed" {

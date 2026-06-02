@@ -14,6 +14,13 @@ import (
 	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
+const (
+	keyData    = "data"
+	keySuccess = "success"
+	diskScsi1  = "scsi1"
+	diskUnused = "unused0"
+)
+
 // helper to build client.Options from test server URL.
 func optsFromServerURL(u string) pveclient.Options {
 	parsed, _ := url.Parse(u)
@@ -36,13 +43,13 @@ func TestQemuDiskAttachDetachResize(t *testing.T) {
 	// GET config returns existing scsi0
 	mux.HandleFunc("/api2/json/nodes/testnode/qemu/123/config", func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method == http.MethodGet {
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"scsi0": "local-lvm:vm-123-disk-0"}, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"scsi0": "local-lvm:vm-123-disk-0"}, keySuccess: 1})
 
 			return
 		}
 		// PUT attach or delete
 		if request.Method == http.MethodPut {
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"ok": true}, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"ok": true}, keySuccess: 1})
 
 			return
 		}
@@ -58,7 +65,7 @@ func TestQemuDiskAttachDetachResize(t *testing.T) {
 			return
 		}
 
-		_ = json.NewEncoder(writer).Encode(map[string]any{"data": "UPID:test:1", "success": 1})
+		_ = json.NewEncoder(writer).Encode(map[string]any{keyData: "UPID:test:1", keySuccess: 1})
 	})
 
 	srv := httptest.NewServer(mux)
@@ -78,8 +85,8 @@ func TestQemuDiskAttachDetachResize(t *testing.T) {
 		t.Fatalf("AttachDisk error: %v", err)
 	}
 
-	if diskID != "scsi1" {
-		t.Fatalf("expected scsi1, got %s", diskID)
+	if diskID != diskScsi1 {
+		t.Fatalf("expected %s, got %s", diskScsi1, diskID)
 	}
 
 	// Detach scsi0
@@ -108,37 +115,52 @@ func TestDetachDiskClearsUnusedSlot(t *testing.T) {
 
 	const volid = "data:vm-9000-disk-0"
 
-	// Stateful mock: first GET returns scsi1 holding the disk. After the
-	// initial delete:scsi1 PUT, the next GET returns the disk demoted to
-	// unused0 (PVE's documented behavior). After the delete:unused0 PUT,
-	// the config is empty.
-	var (
-		deleteCalls []string
-		state       = map[string]string{"scsi1": volid}
-	)
+	deleteCalls, state := setupDetachClearsUnusedSlotServer(t, volid)
+
+	svc := qemu.New(newClientFromTestServer(t, state))
+
+	err := svc.DetachDisk(context.Background(), "testnode", 123, diskScsi1)
+	if err != nil {
+		t.Fatalf("DetachDisk: %v", err)
+	}
+
+	assertDetachClearsUnusedSlot(t, deleteCalls, state.stateMap)
+}
+
+type detachTestState struct {
+	srv      *httptest.Server
+	stateMap map[string]string
+}
+
+func setupDetachClearsUnusedSlotServer(t *testing.T, volid string) (*[]string, *detachTestState) {
+	t.Helper()
+
+	var deleteCalls []string
+
+	stateMap := map[string]string{diskScsi1: volid}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api2/json/nodes/testnode/qemu/123/config", func(writer http.ResponseWriter, request *http.Request) {
 		switch request.Method {
 		case http.MethodGet:
 			data := map[string]any{}
-			for k, v := range state {
+			for k, v := range stateMap {
 				data[k] = v
 			}
 
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": data, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: data, keySuccess: 1})
 
 		case http.MethodPut:
 			_ = request.ParseForm()
 			deletes := request.PostForm.Get("delete")
 			deleteCalls = append(deleteCalls, deletes)
-			delete(state, deletes)
+			delete(stateMap, deletes)
 			// First delete moves disk to unused0; second clears it.
-			if deletes == "scsi1" {
-				state["unused0"] = volid
+			if deletes == diskScsi1 {
+				stateMap[diskUnused] = volid
 			}
 
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"ok": true}, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"ok": true}, keySuccess: 1})
 
 		default:
 			http.Error(writer, "method", http.StatusMethodNotAllowed)
@@ -146,33 +168,42 @@ func TestDetachDiskClearsUnusedSlot(t *testing.T) {
 	})
 
 	srv := httptest.NewServer(mux)
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 
-	cli, err := pveclient.NewClient(optsFromServerURL(srv.URL))
+	return &deleteCalls, &detachTestState{srv: srv, stateMap: stateMap}
+}
+
+//nolint:ireturn // test helper returns interface required by qemu.New
+func newClientFromTestServer(t *testing.T, state *detachTestState) pveclient.Client {
+	t.Helper()
+
+	cli, err := pveclient.NewClient(optsFromServerURL(state.srv.URL))
 	if err != nil {
 		t.Fatalf("client: %v", err)
 	}
 
-	svc := qemu.New(cli)
+	return cli
+}
 
-	if err := svc.DetachDisk(context.Background(), "testnode", 123, "scsi1"); err != nil {
-		t.Fatalf("DetachDisk: %v", err)
+func assertDetachClearsUnusedSlot(t *testing.T, deleteCalls *[]string, stateMap map[string]string) {
+	t.Helper()
+
+	calls := *deleteCalls
+
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 PUT delete calls, got %d (%v)", len(calls), calls)
 	}
 
-	if len(deleteCalls) != 2 {
-		t.Fatalf("expected 2 PUT delete calls, got %d (%v)", len(deleteCalls), deleteCalls)
+	if calls[0] != diskScsi1 {
+		t.Fatalf("first delete should target %s, got %q", diskScsi1, calls[0])
 	}
 
-	if deleteCalls[0] != "scsi1" {
-		t.Fatalf("first delete should target scsi1, got %q", deleteCalls[0])
+	if calls[1] != diskUnused {
+		t.Fatalf("second delete should target %s, got %q", diskUnused, calls[1])
 	}
 
-	if deleteCalls[1] != "unused0" {
-		t.Fatalf("second delete should target unused0, got %q", deleteCalls[1])
-	}
-
-	if _, ok := state["unused0"]; ok {
-		t.Fatalf("unused0 should have been cleared, state=%v", state)
+	if _, ok := stateMap[diskUnused]; ok {
+		t.Fatalf("%s should have been cleared, state=%v", diskUnused, stateMap)
 	}
 }
 
@@ -184,7 +215,7 @@ func TestDetachDiskUnusedSlotIdempotent(t *testing.T) {
 
 	var (
 		deleteCalls []string
-		state       = map[string]string{"unused0": "data:vm-9000-disk-0"}
+		state       = map[string]string{diskUnused: "data:vm-9000-disk-0"}
 	)
 
 	mux := http.NewServeMux()
@@ -196,7 +227,7 @@ func TestDetachDiskUnusedSlotIdempotent(t *testing.T) {
 				data[k] = v
 			}
 
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": data, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: data, keySuccess: 1})
 
 		case http.MethodPut:
 			_ = request.ParseForm()
@@ -204,7 +235,7 @@ func TestDetachDiskUnusedSlotIdempotent(t *testing.T) {
 			deleteCalls = append(deleteCalls, deletes)
 			delete(state, deletes)
 
-			_ = json.NewEncoder(writer).Encode(map[string]any{"data": map[string]any{"ok": true}, "success": 1})
+			_ = json.NewEncoder(writer).Encode(map[string]any{keyData: map[string]any{"ok": true}, keySuccess: 1})
 
 		default:
 			http.Error(writer, "method", http.StatusMethodNotAllowed)
@@ -221,7 +252,8 @@ func TestDetachDiskUnusedSlotIdempotent(t *testing.T) {
 
 	svc := qemu.New(cli)
 
-	if err := svc.DetachDisk(context.Background(), "testnode", 123, "unused0"); err != nil {
+	err = svc.DetachDisk(context.Background(), "testnode", 123, diskUnused)
+	if err != nil {
 		t.Fatalf("DetachDisk: %v", err)
 	}
 
@@ -229,7 +261,7 @@ func TestDetachDiskUnusedSlotIdempotent(t *testing.T) {
 		t.Fatalf("expected exactly one PUT delete, got %d (%v)", len(deleteCalls), deleteCalls)
 	}
 
-	if deleteCalls[0] != "unused0" {
-		t.Fatalf("delete should target unused0, got %q", deleteCalls[0])
+	if deleteCalls[0] != diskUnused {
+		t.Fatalf("delete should target %s, got %q", diskUnused, deleteCalls[0])
 	}
 }

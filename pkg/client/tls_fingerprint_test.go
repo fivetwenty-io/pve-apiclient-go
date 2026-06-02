@@ -73,8 +73,8 @@ func TestTLS_CachedFingerprint_AllowsConnection(t *testing.T) {
 	opts := pve.Options{
 		Host:               host,
 		Port:               port,
-		Protocol:           "https",
-		APIToken:           "root@pam!token=secret",
+		Protocol:           testProtoHTTPS,
+		APIToken:           testAPIToken,
 		CachedFingerprints: map[string]bool{fingerprint: true},
 	}
 
@@ -105,8 +105,8 @@ func TestTLS_ManualVerifyCallback_AcceptsAndRegisters(t *testing.T) {
 	opts := pve.Options{
 		Host:     host,
 		Port:     port,
-		Protocol: "https",
-		APIToken: "root@pam!token=secret",
+		Protocol: testProtoHTTPS,
+		APIToken: testAPIToken,
 		// No cached fingerprints; use verify callback to accept
 		VerifyFingerprintCallback: func(cert *x509.Certificate) bool {
 			verifyCalled.Store(true)
@@ -152,8 +152,8 @@ func TestTLS_ManualVerification_NoCallback_RejectsUnknown(t *testing.T) {
 	opts := pve.Options{
 		Host:               host,
 		Port:               port,
-		Protocol:           "https",
-		APIToken:           "root@pam!token=secret",
+		Protocol:           testProtoHTTPS,
+		APIToken:           testAPIToken,
 		ManualVerification: true,
 		Timeout:            1 * time.Second, // Set 1 second timeout to speed up test
 		// No cached fingerprints and no verify callback => should reject

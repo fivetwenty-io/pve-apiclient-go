@@ -14,46 +14,46 @@ import (
 func TestCounter_IncAndGet(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
+	coll := metrics.NewCollector("test")
 
-	co := c.NewCounter("hits", "total hits")
-	if co.Get() != 0 {
-		t.Fatalf("initial value: want 0, got %d", co.Get())
+	counter := coll.NewCounter("hits", "total hits")
+	if counter.Get() != 0 {
+		t.Fatalf("initial value: want 0, got %d", counter.Get())
 	}
 
-	co.Inc()
-	co.Inc()
+	counter.Inc()
+	counter.Inc()
 
-	if co.Get() != 2 {
-		t.Fatalf("after 2 Inc: want 2, got %d", co.Get())
+	if counter.Get() != 2 {
+		t.Fatalf("after 2 Inc: want 2, got %d", counter.Get())
 	}
 }
 
 func TestCounter_Add(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	co := c.NewCounter("bytes", "bytes sent")
-	co.Add(100)
-	co.Add(50)
+	coll := metrics.NewCollector("test")
+	counter := coll.NewCounter("bytes", "bytes sent")
+	counter.Add(100)
+	counter.Add(50)
 
-	if co.Get() != 150 {
-		t.Errorf("Add: want 150, got %d", co.Get())
+	if counter.Get() != 150 {
+		t.Errorf("Add: want 150, got %d", counter.Get())
 	}
 }
 
 func TestCounter_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	co1 := c.NewCounter("same", "same counter")
-	co2 := c.NewCounter("same", "same counter")
+	coll := metrics.NewCollector("test")
+	counter1 := coll.NewCounter("same", "same counter")
+	counter2 := coll.NewCounter("same", "same counter")
 
-	co1.Inc()
-	// Both references point to same metric; co2.Get() may or may not reflect co1's Inc
+	counter1.Inc()
+	// Both references point to same metric; counter2.Get() may or may not reflect counter1's Inc
 	// (impl returns existing counter on second call).
-	if co2.Get() != 1 {
-		t.Errorf("idempotent counter: want 1, got %d", co2.Get())
+	if counter2.Get() != 1 {
+		t.Errorf("idempotent counter: want 1, got %d", counter2.Get())
 	}
 }
 
@@ -62,51 +62,51 @@ func TestCounter_Idempotent(t *testing.T) {
 func TestGauge_SetIncDec(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	g := c.NewGauge("conn", "connections")
-	g.Set(10)
+	coll := metrics.NewCollector("test")
+	gauge := coll.NewGauge("conn", "connections")
+	gauge.Set(10)
 
-	if g.Get() != 10 {
-		t.Errorf("Set: want 10, got %d", g.Get())
+	if gauge.Get() != 10 {
+		t.Errorf("Set: want 10, got %d", gauge.Get())
 	}
 
-	g.Inc()
+	gauge.Inc()
 
-	if g.Get() != 11 {
-		t.Errorf("Inc: want 11, got %d", g.Get())
+	if gauge.Get() != 11 {
+		t.Errorf("Inc: want 11, got %d", gauge.Get())
 	}
 
-	g.Dec()
+	gauge.Dec()
 
-	if g.Get() != 10 {
-		t.Errorf("Dec: want 10, got %d", g.Get())
+	if gauge.Get() != 10 {
+		t.Errorf("Dec: want 10, got %d", gauge.Get())
 	}
 }
 
 func TestGauge_Add(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	g := c.NewGauge("mem", "memory bytes")
-	g.Add(1024)
-	g.Add(-512)
+	coll := metrics.NewCollector("test")
+	gauge := coll.NewGauge("mem", "memory bytes")
+	gauge.Add(1024)
+	gauge.Add(-512)
 
-	if g.Get() != 512 {
-		t.Errorf("Add: want 512, got %d", g.Get())
+	if gauge.Get() != 512 {
+		t.Errorf("Add: want 512, got %d", gauge.Get())
 	}
 }
 
 func TestGauge_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	g1 := c.NewGauge("same_g", "same gauge")
-	g2 := c.NewGauge("same_g", "same gauge")
+	coll := metrics.NewCollector("test")
+	gauge1 := coll.NewGauge("same_g", "same gauge")
+	gauge2 := coll.NewGauge("same_g", "same gauge")
 
-	g1.Set(99)
+	gauge1.Set(99)
 
-	if g2.Get() != 99 {
-		t.Errorf("idempotent gauge: want 99, got %d", g2.Get())
+	if gauge2.Get() != 99 {
+		t.Errorf("idempotent gauge: want 99, got %d", gauge2.Get())
 	}
 }
 
@@ -115,13 +115,13 @@ func TestGauge_Idempotent(t *testing.T) {
 func TestHistogram_ObserveAndGetStats(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	h := c.NewHistogram("duration", "request duration", []float64{0.1, 0.5, 1.0})
-	h.Observe(0.05)
-	h.Observe(0.3)
-	h.Observe(0.8)
+	coll := metrics.NewCollector("test")
+	hist := coll.NewHistogram("duration", "request duration", []float64{0.1, 0.5, 1.0})
+	hist.Observe(0.05)
+	hist.Observe(0.3)
+	hist.Observe(0.8)
 
-	count, sum, buckets := h.GetStats()
+	count, sum, buckets := hist.GetStats()
 	if count != 3 {
 		t.Errorf("count: want 3, got %d", count)
 	}
@@ -138,12 +138,12 @@ func TestHistogram_ObserveAndGetStats(t *testing.T) {
 func TestHistogram_DefaultBuckets(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
+	coll := metrics.NewCollector("test")
 	// nil buckets → default set applied.
-	h := c.NewHistogram("default_hist", "default buckets", nil)
-	h.Observe(0.01)
+	hist := coll.NewHistogram("default_hist", "default buckets", nil)
+	hist.Observe(0.01)
 
-	count, _, _ := h.GetStats()
+	count, _, _ := hist.GetStats()
 	if count != 1 {
 		t.Errorf("default buckets count: want 1, got %d", count)
 	}
@@ -152,13 +152,13 @@ func TestHistogram_DefaultBuckets(t *testing.T) {
 func TestHistogram_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	h1 := c.NewHistogram("same_h", "same", nil)
-	h2 := c.NewHistogram("same_h", "same", nil)
+	coll := metrics.NewCollector("test")
+	hist1 := coll.NewHistogram("same_h", "same", nil)
+	hist2 := coll.NewHistogram("same_h", "same", nil)
 
-	h1.Observe(1.0)
+	hist1.Observe(1.0)
 
-	cnt, _, _ := h2.GetStats()
+	cnt, _, _ := hist2.GetStats()
 	if cnt != 1 {
 		t.Errorf("idempotent histogram: want 1, got %d", cnt)
 	}
@@ -169,35 +169,35 @@ func TestHistogram_Idempotent(t *testing.T) {
 func TestSummary_ObserveAndGetQuantiles(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	s := c.NewSummary("latency", "request latency", time.Minute)
+	coll := metrics.NewCollector("test")
+	summary := coll.NewSummary("latency", "request latency", time.Minute)
 
 	for i := range 100 {
-		s.Observe(float64(i))
+		summary.Observe(float64(i))
 	}
 
-	q := s.GetQuantiles([]float64{0.5, 0.9, 0.99})
-	if len(q) != 3 {
-		t.Fatalf("quantiles: want 3 entries, got %d", len(q))
+	quantiles := summary.GetQuantiles([]float64{0.5, 0.9, 0.99})
+	if len(quantiles) != 3 {
+		t.Fatalf("quantiles: want 3 entries, got %d", len(quantiles))
 	}
 
-	if q[0.5] <= 0 {
-		t.Errorf("p50: want >0, got %f", q[0.5])
+	if quantiles[0.5] <= 0 {
+		t.Errorf("p50: want >0, got %f", quantiles[0.5])
 	}
 
-	if q[0.99] < q[0.5] {
-		t.Errorf("p99 (%f) < p50 (%f)", q[0.99], q[0.5])
+	if quantiles[0.99] < quantiles[0.5] {
+		t.Errorf("p99 (%f) < p50 (%f)", quantiles[0.99], quantiles[0.5])
 	}
 }
 
 func TestSummary_EmptyQuantiles(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	s := c.NewSummary("empty_s", "empty", time.Minute)
+	coll := metrics.NewCollector("test")
+	summary := coll.NewSummary("empty_s", "empty", time.Minute)
 
-	q := s.GetQuantiles([]float64{0.5, 0.99})
-	for _, v := range q {
+	quantiles := summary.GetQuantiles([]float64{0.5, 0.99})
+	for _, v := range quantiles {
 		if v != 0 {
 			t.Errorf("empty summary quantile: want 0, got %f", v)
 		}
@@ -207,13 +207,13 @@ func TestSummary_EmptyQuantiles(t *testing.T) {
 func TestSummary_DefaultMaxAge(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
+	coll := metrics.NewCollector("test")
 	// maxAge=0 → default applied; must not panic.
-	s := c.NewSummary("defage", "default max age", 0)
-	s.Observe(1.0)
+	summary := coll.NewSummary("defage", "default max age", 0)
+	summary.Observe(1.0)
 
-	q := s.GetQuantiles([]float64{0.5})
-	if q[0.5] == 0 {
+	quantiles := summary.GetQuantiles([]float64{0.5})
+	if quantiles[0.5] == 0 {
 		t.Errorf("default maxAge summary: want >0 for p50")
 	}
 }
@@ -221,14 +221,14 @@ func TestSummary_DefaultMaxAge(t *testing.T) {
 func TestSummary_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	s1 := c.NewSummary("same_s", "same", time.Minute)
-	s2 := c.NewSummary("same_s", "same", time.Minute)
+	coll := metrics.NewCollector("test")
+	summary1 := coll.NewSummary("same_s", "same", time.Minute)
+	summary2 := coll.NewSummary("same_s", "same", time.Minute)
 
-	s1.Observe(7.0)
+	summary1.Observe(7.0)
 
-	q := s2.GetQuantiles([]float64{0.5})
-	if q[0.5] == 0 {
+	quantiles := summary2.GetQuantiles([]float64{0.5})
+	if quantiles[0.5] == 0 {
 		t.Errorf("idempotent summary: want non-zero p50")
 	}
 }
@@ -238,14 +238,14 @@ func TestSummary_Idempotent(t *testing.T) {
 func TestCollector_SetLabels(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	c.SetLabels(map[string]string{"env": "test", "region": "us-east"})
-	co := c.NewCounter("labeled", "labeled counter")
-	co.Inc()
+	coll := metrics.NewCollector("test")
+	coll.SetLabels(map[string]string{"env": "test", "region": "us-east"})
+	counter := coll.NewCounter("labeled", "labeled counter")
+	counter.Inc()
 
 	var buf bytes.Buffer
 
-	err := c.Export(&buf)
+	err := coll.Export(&buf)
 	if err != nil {
 		t.Fatalf("Export: %v", err)
 	}
@@ -259,13 +259,13 @@ func TestCollector_SetLabels(t *testing.T) {
 func TestCollector_Export_Counters(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("myapp")
-	co := c.NewCounter("reqs", "total requests")
-	co.Add(42)
+	coll := metrics.NewCollector("myapp")
+	counter := coll.NewCounter("reqs", "total requests")
+	counter.Add(42)
 
 	var buf bytes.Buffer
 
-	err := c.Export(&buf)
+	err := coll.Export(&buf)
 	if err != nil {
 		t.Fatalf("Export: %v", err)
 	}
@@ -287,13 +287,13 @@ func TestCollector_Export_Counters(t *testing.T) {
 func TestCollector_Export_Gauges(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("myapp")
-	g := c.NewGauge("active", "active conns")
-	g.Set(5)
+	coll := metrics.NewCollector("myapp")
+	gauge := coll.NewGauge("active", "active conns")
+	gauge.Set(5)
 
 	var buf bytes.Buffer
 
-	err := c.Export(&buf)
+	err := coll.Export(&buf)
 	if err != nil {
 		t.Fatalf("Export: %v", err)
 	}
@@ -311,14 +311,14 @@ func TestCollector_Export_Gauges(t *testing.T) {
 func TestCollector_Export_Histograms(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("myapp")
-	h := c.NewHistogram("dur", "duration", []float64{0.1, 0.5})
-	h.Observe(0.05)
-	h.Observe(0.4)
+	coll := metrics.NewCollector("myapp")
+	hist := coll.NewHistogram("dur", "duration", []float64{0.1, 0.5})
+	hist.Observe(0.05)
+	hist.Observe(0.4)
 
 	var buf bytes.Buffer
 
-	err := c.Export(&buf)
+	err := coll.Export(&buf)
 	if err != nil {
 		t.Fatalf("Export: %v", err)
 	}
@@ -340,14 +340,14 @@ func TestCollector_Export_Histograms(t *testing.T) {
 func TestCollector_Export_Summaries(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("myapp")
-	s := c.NewSummary("lat", "latency", time.Minute)
-	s.Observe(0.2)
-	s.Observe(0.5)
+	coll := metrics.NewCollector("myapp")
+	summary := coll.NewSummary("lat", "latency", time.Minute)
+	summary.Observe(0.2)
+	summary.Observe(0.5)
 
 	var buf bytes.Buffer
 
-	err := c.Export(&buf)
+	err := coll.Export(&buf)
 	if err != nil {
 		t.Fatalf("Export: %v", err)
 	}
@@ -365,28 +365,28 @@ func TestCollector_Export_Summaries(t *testing.T) {
 func TestCollector_Reset(t *testing.T) {
 	t.Parallel()
 
-	c := metrics.NewCollector("test")
-	co := c.NewCounter("r", "reset")
-	g := c.NewGauge("rg", "reset gauge")
-	h := c.NewHistogram("rh", "reset hist", nil)
-	s := c.NewSummary("rs", "reset summary", time.Minute)
+	coll := metrics.NewCollector("test")
+	counter := coll.NewCounter("r", "reset")
+	gauge := coll.NewGauge("rg", "reset gauge")
+	hist := coll.NewHistogram("rh", "reset hist", nil)
+	summary := coll.NewSummary("rs", "reset summary", time.Minute)
 
-	co.Add(10)
-	g.Set(5)
-	h.Observe(1.0)
-	s.Observe(1.0)
+	counter.Add(10)
+	gauge.Set(5)
+	hist.Observe(1.0)
+	summary.Observe(1.0)
 
-	c.Reset()
+	coll.Reset()
 
-	if co.Get() != 0 {
-		t.Errorf("Reset counter: want 0, got %d", co.Get())
+	if counter.Get() != 0 {
+		t.Errorf("Reset counter: want 0, got %d", counter.Get())
 	}
 
-	if g.Get() != 0 {
-		t.Errorf("Reset gauge: want 0, got %d", g.Get())
+	if gauge.Get() != 0 {
+		t.Errorf("Reset gauge: want 0, got %d", gauge.Get())
 	}
 
-	cnt, _, _ := h.GetStats()
+	cnt, _, _ := hist.GetStats()
 	if cnt != 0 {
 		t.Errorf("Reset histogram: want count 0, got %d", cnt)
 	}
@@ -397,21 +397,21 @@ func TestCollector_Reset(t *testing.T) {
 func TestNewDefaultMetrics(t *testing.T) {
 	t.Parallel()
 
-	m := metrics.NewDefaultMetrics()
-	if m == nil {
+	defaultMetrics := metrics.NewDefaultMetrics()
+	if defaultMetrics == nil {
 		t.Fatal("NewDefaultMetrics returned nil")
 	}
 
-	m.RequestsTotal.Inc()
-	m.RequestsFailedTotal.Add(2)
-	m.RequestDuration.Observe(0.1)
-	m.ActiveConnections.Set(3)
-	m.BytesSent.Add(1024)
-	m.BytesReceived.Add(512)
+	defaultMetrics.RequestsTotal.Inc()
+	defaultMetrics.RequestsFailedTotal.Add(2)
+	defaultMetrics.RequestDuration.Observe(0.1)
+	defaultMetrics.ActiveConnections.Set(3)
+	defaultMetrics.BytesSent.Add(1024)
+	defaultMetrics.BytesReceived.Add(512)
 
 	var buf bytes.Buffer
 
-	err := m.Export(&buf)
+	err := defaultMetrics.Export(&buf)
 	if err != nil {
 		t.Fatalf("DefaultMetrics.Export: %v", err)
 	}
@@ -425,11 +425,11 @@ func TestNewDefaultMetrics(t *testing.T) {
 func TestDefaultMetrics_Reset(t *testing.T) {
 	t.Parallel()
 
-	m := metrics.NewDefaultMetrics()
-	m.RequestsTotal.Add(99)
-	m.Reset()
+	defaultMetrics := metrics.NewDefaultMetrics()
+	defaultMetrics.RequestsTotal.Add(99)
+	defaultMetrics.Reset()
 
-	if m.RequestsTotal.Get() != 0 {
-		t.Errorf("DefaultMetrics.Reset: want 0, got %d", m.RequestsTotal.Get())
+	if defaultMetrics.RequestsTotal.Get() != 0 {
+		t.Errorf("DefaultMetrics.Reset: want 0, got %d", defaultMetrics.RequestsTotal.Get())
 	}
 }

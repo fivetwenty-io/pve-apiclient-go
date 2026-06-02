@@ -15,6 +15,13 @@ import (
 	pveclient "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
+const (
+	statusRunning = "running"
+	keyStatus     = "status"
+	keyHostname   = "name"
+	hostnameMyCT  = "myct"
+)
+
 // ---- test helpers ----
 
 func optsFromURL(u string) pveclient.Options {
@@ -30,6 +37,7 @@ func optsFromURL(u string) pveclient.Options {
 	return pveclient.Options{Host: host, Port: port, Protocol: "http", APIToken: "user@pam!tok=sec"}
 }
 
+//nolint:ireturn // test helper returns interface required by lxc.NewClient
 func newTestClient(t *testing.T, srv *httptest.Server) pveclient.Client {
 	t.Helper()
 
@@ -43,7 +51,10 @@ func newTestClient(t *testing.T, srv *httptest.Server) pveclient.Client {
 
 // pveResponse wraps data in the PVE JSON envelope.
 func pveResponse(data interface{}) []byte {
-	b, _ := json.Marshal(map[string]interface{}{"data": data, "success": 1})
+	b, err := json.Marshal(map[string]interface{}{"data": data, "success": 1})
+	if err != nil {
+		panic("pveResponse: marshal failed: " + err.Error())
+	}
 
 	return b
 }
@@ -69,21 +80,21 @@ func TestNewClient(t *testing.T) {
 func TestClient_List_Empty(t *testing.T) {
 	t.Parallel()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodGet {
-			http.Error(w, "want GET", http.StatusMethodNotAllowed)
+			http.Error(respWriter, "want GET", http.StatusMethodNotAllowed)
 
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveResponse([]interface{}{}))
+		respWriter.Header().Set("Content-Type", "application/json")
+		_, _ = respWriter.Write(pveResponse([]interface{}{}))
 	}))
 	defer srv.Close()
 
-	c := lxc.NewClient(newTestClient(t, srv), "pve1")
+	lxcClient := lxc.NewClient(newTestClient(t, srv), "pve1")
 
-	containers, err := c.List(context.Background())
+	containers, err := lxcClient.List(context.Background())
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -98,15 +109,15 @@ func TestClient_List_WithContainers(t *testing.T) {
 
 	data := []interface{}{
 		map[string]interface{}{
-			"vmid":   float64(100),
-			"status": "running",
-			"name":   "web-01",
-			"uptime": float64(3600),
+			"vmid":      float64(100),
+			keyStatus:   statusRunning,
+			keyHostname: "web-01",
+			"uptime":    float64(3600),
 		},
 		map[string]interface{}{
-			"vmid":   float64(101),
-			"status": "stopped",
-			"name":   "db-01",
+			"vmid":      float64(101),
+			keyStatus:   "stopped",
+			keyHostname: "db-01",
 		},
 	}
 
@@ -131,8 +142,8 @@ func TestClient_List_WithContainers(t *testing.T) {
 		t.Errorf("containers[0].VMID: want 100, got %d", containers[0].VMID)
 	}
 
-	if containers[0].Status != "running" {
-		t.Errorf("containers[0].Status: want running, got %q", containers[0].Status)
+	if containers[0].Status != statusRunning {
+		t.Errorf("containers[0].Status: want %s, got %q", statusRunning, containers[0].Status)
 	}
 
 	if containers[0].Uptime != 3600 {
@@ -167,19 +178,19 @@ func TestClient_Create_Success(t *testing.T) {
 
 	const expectedUPID = "UPID:pve1:00001234:00000001:AABBCCDD:vzcreate:100:root@pam:"
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodPost {
-			http.Error(w, "want POST", http.StatusMethodNotAllowed)
+			http.Error(respWriter, "want POST", http.StatusMethodNotAllowed)
 
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveResponse(expectedUPID))
+		respWriter.Header().Set("Content-Type", "application/json")
+		_, _ = respWriter.Write(pveResponse(expectedUPID))
 	}))
 	defer srv.Close()
 
-	c := lxc.NewClient(newTestClient(t, srv), "pve1")
+	lxcClient := lxc.NewClient(newTestClient(t, srv), "pve1")
 	cfg := lxc.ContainerConfig{
 		VMID:         100,
 		OSTemplate:   "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst",
@@ -190,7 +201,7 @@ func TestClient_Create_Success(t *testing.T) {
 		Start:        true,
 	}
 
-	upid, err := c.Create(context.Background(), cfg)
+	upid, err := lxcClient.Create(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -205,7 +216,7 @@ func TestClient_Create_AllParams(t *testing.T) {
 
 	var captured map[string]interface{}
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		_ = req.ParseForm()
 		captured = make(map[string]interface{})
 
@@ -215,16 +226,16 @@ func TestClient_Create_AllParams(t *testing.T) {
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveResponse("UPID:pve1:x"))
+		respWriter.Header().Set("Content-Type", "application/json")
+		_, _ = respWriter.Write(pveResponse("UPID:pve1:x"))
 	}))
 	defer srv.Close()
 
-	c := lxc.NewClient(newTestClient(t, srv), "pve1")
+	lxcClient := lxc.NewClient(newTestClient(t, srv), "pve1")
 	cfg := lxc.ContainerConfig{
 		VMID:         200,
 		OSTemplate:   "local:vztmpl/debian-12.tar.zst",
-		Hostname:     "myct",
+		Hostname:     hostnameMyCT,
 		Description:  "desc",
 		Memory:       1024,
 		Swap:         512,
@@ -244,7 +255,7 @@ func TestClient_Create_AllParams(t *testing.T) {
 		Features:     map[string]string{"nesting": "1"},
 	}
 
-	_, err := c.Create(context.Background(), cfg)
+	_, err := lxcClient.Create(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Create all params: %v", err)
 	}
@@ -290,14 +301,14 @@ func TestClient_Status_Success(t *testing.T) {
 	t.Parallel()
 
 	data := map[string]interface{}{
-		"status":  "running",
-		"name":    "web-01",
-		"uptime":  float64(7200),
-		"cpus":    float64(2),
-		"maxmem":  float64(536870912),
-		"mem":     float64(268435456),
-		"maxdisk": float64(10737418240),
-		"disk":    float64(1073741824),
+		keyStatus:   statusRunning,
+		keyHostname: "web-01",
+		"uptime":    float64(7200),
+		"cpus":      float64(2),
+		"maxmem":    float64(536870912),
+		"mem":       float64(268435456),
+		"maxdisk":   float64(10737418240),
+		"disk":      float64(1073741824),
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -321,8 +332,8 @@ func TestClient_Status_Success(t *testing.T) {
 		t.Errorf("Status.VMID: want 100, got %d", status.VMID)
 	}
 
-	if status.Status != "running" {
-		t.Errorf("Status.Status: want running, got %q", status.Status)
+	if status.Status != statusRunning {
+		t.Errorf("Status.Status: want %s, got %q", statusRunning, status.Status)
 	}
 
 	if status.Uptime != 7200 {
@@ -383,21 +394,21 @@ func TestClient_Start_Success(t *testing.T) {
 
 	const upid = "UPID:pve1:00001234:00000001:AABB:vzstart:100:root@pam:"
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		if !strings.HasSuffix(req.URL.Path, "/status/start") {
-			http.Error(w, "bad path", http.StatusNotFound)
+			http.Error(respWriter, "bad path", http.StatusNotFound)
 
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveResponse(upid))
+		respWriter.Header().Set("Content-Type", "application/json")
+		_, _ = respWriter.Write(pveResponse(upid))
 	}))
 	defer srv.Close()
 
-	c := lxc.NewClient(newTestClient(t, srv), "pve1")
+	lxcClient := lxc.NewClient(newTestClient(t, srv), "pve1")
 
-	got, err := c.Start(context.Background(), 100)
+	got, err := lxcClient.Start(context.Background(), 100)
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -647,7 +658,7 @@ func TestClient_GetConfig_Success(t *testing.T) {
 	t.Parallel()
 
 	cfgData := map[string]interface{}{
-		"hostname": "myct",
+		"hostname": hostnameMyCT,
 		"memory":   float64(512),
 		"cores":    float64(2),
 	}
@@ -665,8 +676,8 @@ func TestClient_GetConfig_Success(t *testing.T) {
 		t.Fatalf("GetConfig: %v", err)
 	}
 
-	if config["hostname"] != "myct" {
-		t.Errorf("GetConfig hostname: want myct, got %v", config["hostname"])
+	if config["hostname"] != hostnameMyCT {
+		t.Errorf("GetConfig hostname: want %s, got %v", hostnameMyCT, config["hostname"])
 	}
 }
 
@@ -772,7 +783,7 @@ func TestClient_Clone_AllOpts(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := lxc.NewClient(newTestClient(t, srv), "pve1")
+	lxcClient := lxc.NewClient(newTestClient(t, srv), "pve1")
 	opts := lxc.CloneOptions{
 		Hostname:    "clone-01",
 		Description: "cloned ct",
@@ -782,7 +793,7 @@ func TestClient_Clone_AllOpts(t *testing.T) {
 		Full:        true,
 	}
 
-	_, err := c.Clone(context.Background(), 100, 201, opts)
+	_, err := lxcClient.Clone(context.Background(), 100, 201, opts)
 	if err != nil {
 		t.Fatalf("Clone all opts: %v", err)
 	}

@@ -22,6 +22,45 @@ import (
 )
 
 // ---------------------------------------------------------------------------
+// Test-local constants shared across multiple test functions.
+// ---------------------------------------------------------------------------
+
+const (
+	testHostPVE              = "pve.example.com"
+	testProtoHTTPS           = "https"
+	testAPITokenFull         = "root@pam!mytoken=s3cr3t"
+	testAPITokenShort        = "root@pam!tok=secret"
+	testUsername             = "root@pam"
+	testPassword             = "secret"
+	testFormKeyUsername      = "username"
+	testFormKeyPassword      = "password"
+	testContentTypeJSON      = "application/json"
+	testContentTypeForm      = "application/x-www-form-urlencoded"
+	testContentTypeTextPlain = "text/plain"
+	testHeaderContentType    = "Content-Type"
+	testRedacted             = "REDACTED"
+	testHello                = "hello"
+
+	// Encoder test constants.
+	testEncAlpha  = "alpha"
+	testEncBeta   = "beta"
+	testEncNet0   = "net0"
+	testEncBridge = "bridge"
+	testEncVirtio = "virtio"
+	testEncVMBR0  = "vmbr0"
+	testEncFlag   = "flag"
+	testEncGamma  = "gamma"
+)
+
+// Sentinel errors used in test helpers.
+var (
+	errTestChunk             = errors.New("chunk error")
+	errTestRenewalFailed     = errors.New("renewal failed")
+	errTestLogoutFailed      = errors.New("logout failed")
+	errTestConnectionRefused = errors.New("connection refused")
+)
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -70,14 +109,14 @@ func clientPointedAt(t *testing.T, serverURL string) *Client {
 
 	opts := minimalHTTPOptions()
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = serverURL
+	client.baseURL = serverURL
 
-	return c
+	return client
 }
 
 // testLogger captures log calls for assertion.
@@ -130,19 +169,19 @@ func TestOptions_BaseURL(t *testing.T) {
 		port  int
 		want  string
 	}{
-		{"https", "pve.example.com", 8006, "https://pve.example.com:8006/api2/json"},
+		{testProtoHTTPS, testHostPVE, 8006, "https://pve.example.com:8006/api2/json"},
 		{"http", "192.168.1.1", 80, "http://192.168.1.1:80/api2/json"},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.want, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.want, func(t *testing.T) {
 			t.Parallel()
 
-			o := &Options{Protocol: tc.proto, Host: tc.host, Port: tc.port}
+			o := &Options{Protocol: testCase.proto, Host: testCase.host, Port: testCase.port}
 			got := o.BaseURL()
 
-			if got != tc.want {
-				t.Errorf("BaseURL() = %q, want %q", got, tc.want)
+			if got != testCase.want {
+				t.Errorf("BaseURL() = %q, want %q", got, testCase.want)
 			}
 		})
 	}
@@ -158,17 +197,17 @@ func TestNewClient_DefaultTimeout(t *testing.T) {
 	opts := minimalHTTPOptions()
 	opts.Timeout = 30 * time.Second
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	if c.timeout != 30*time.Second {
-		t.Errorf("c.timeout = %v, want 30s", c.timeout)
+	if client.timeout != 30*time.Second {
+		t.Errorf("client.timeout = %v, want 30s", client.timeout)
 	}
 
-	if c.httpClient.Timeout != 30*time.Second {
-		t.Errorf("httpClient.Timeout = %v, want 30s", c.httpClient.Timeout)
+	if client.httpClient.Timeout != 30*time.Second {
+		t.Errorf("httpClient.Timeout = %v, want 30s", client.httpClient.Timeout)
 	}
 }
 
@@ -178,13 +217,13 @@ func TestNewClient_ZeroTimeout(t *testing.T) {
 	opts := minimalHTTPOptions()
 	opts.Timeout = 0
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	if c.httpClient.Timeout != 0 {
-		t.Errorf("expected zero timeout, got %v", c.httpClient.Timeout)
+	if client.httpClient.Timeout != 0 {
+		t.Errorf("expected zero timeout, got %v", client.httpClient.Timeout)
 	}
 }
 
@@ -193,13 +232,13 @@ func TestNewClient_DefaultMaxRetries(t *testing.T) {
 
 	opts := minimalHTTPOptions()
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	if c.maxRetries != constants.DefaultMaxRetries {
-		t.Errorf("maxRetries = %d, want %d", c.maxRetries, constants.DefaultMaxRetries)
+	if client.maxRetries != constants.DefaultMaxRetries {
+		t.Errorf("maxRetries = %d, want %d", client.maxRetries, constants.DefaultMaxRetries)
 	}
 }
 
@@ -208,14 +247,14 @@ func TestNewClient_MiddlewareChain_NoCache(t *testing.T) {
 
 	opts := minimalHTTPOptions()
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
 	// Without cache, chain: authMiddleware, retryMiddleware, loggingMiddleware
-	if len(c.middleware) != 3 {
-		t.Errorf("middleware count = %d, want 3", len(c.middleware))
+	if len(client.middleware) != 3 {
+		t.Errorf("middleware count = %d, want 3", len(client.middleware))
 	}
 }
 
@@ -225,17 +264,17 @@ func TestNewClient_MiddlewareChain_WithCache(t *testing.T) {
 	opts := minimalHTTPOptions()
 	opts.CacheConfig = &cache.Config{Enabled: true, MaxSize: 10 * 1024 * 1024, DefaultTTL: time.Minute, CleanupInterval: 5 * time.Minute}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
 	// With cache: cachingMiddleware + authMiddleware + retryMiddleware + loggingMiddleware
-	if len(c.middleware) != 4 {
-		t.Errorf("middleware count = %d, want 4", len(c.middleware))
+	if len(client.middleware) != 4 {
+		t.Errorf("middleware count = %d, want 4", len(client.middleware))
 	}
 
-	if c.cache == nil {
+	if client.cache == nil {
 		t.Error("cache should be non-nil when CacheConfig.Enabled=true")
 	}
 }
@@ -244,9 +283,9 @@ func TestNewClient_TLS_InsecureSkipVerify(t *testing.T) {
 	t.Parallel()
 
 	opts := &Options{
-		Host:      "pve.example.com",
+		Host:      testHostPVE,
 		Port:      8006,
-		Protocol:  "https",
+		Protocol:  testProtoHTTPS,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 		SSLOptions: &SSLOptions{
@@ -254,12 +293,12 @@ func TestNewClient_TLS_InsecureSkipVerify(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	transport, ok := c.httpClient.Transport.(*http.Transport)
+	transport, ok := client.httpClient.Transport.(*http.Transport)
 	if !ok {
 		t.Fatal("transport is not *http.Transport")
 	}
@@ -277,9 +316,9 @@ func TestNewClient_TLS_StrictVerify(t *testing.T) {
 	t.Parallel()
 
 	opts := &Options{
-		Host:      "pve.example.com",
+		Host:      testHostPVE,
 		Port:      8006,
-		Protocol:  "https",
+		Protocol:  testProtoHTTPS,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 		SSLOptions: &SSLOptions{
@@ -287,12 +326,12 @@ func TestNewClient_TLS_StrictVerify(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	transport, ok := c.httpClient.Transport.(*http.Transport)
+	transport, ok := client.httpClient.Transport.(*http.Transport)
 	if !ok {
 		t.Fatal("transport is not *http.Transport")
 	}
@@ -316,9 +355,9 @@ func TestNewClient_TLS_FingerprintCallback(t *testing.T) {
 	var called bool
 
 	opts := &Options{
-		Host:      "pve.example.com",
+		Host:      testHostPVE,
 		Port:      8006,
-		Protocol:  "https",
+		Protocol:  testProtoHTTPS,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 		VerifyFingerprintCallback: func(_ *x509.Certificate) bool {
@@ -328,12 +367,12 @@ func TestNewClient_TLS_FingerprintCallback(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	transport, ok := c.httpClient.Transport.(*http.Transport)
+	transport, ok := client.httpClient.Transport.(*http.Transport)
 	if !ok {
 		t.Fatal("transport is not *http.Transport")
 	}
@@ -350,14 +389,14 @@ func TestNewClient_APIToken_Authenticator(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.APIToken = "root@pam!mytoken=s3cr3t"
+	opts.APIToken = testAPITokenFull
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	if c.authenticator == nil {
+	if client.authenticator == nil {
 		t.Fatal("authenticator should not be nil for API token")
 	}
 }
@@ -366,15 +405,15 @@ func TestNewClient_Username_Authenticator(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.Username = "root@pam"
-	opts.Password = "secret"
+	opts.Username = testUsername
+	opts.Password = testPassword
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	if c.authenticator == nil {
+	if client.authenticator == nil {
 		t.Fatal("authenticator should not be nil for username/password")
 	}
 }
@@ -384,12 +423,12 @@ func TestNewClient_NoAuth_NilAuthenticator(t *testing.T) {
 
 	opts := minimalHTTPOptions()
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	if c.authenticator != nil {
+	if client.authenticator != nil {
 		t.Error("authenticator should be nil when no auth credentials provided")
 	}
 }
@@ -401,19 +440,19 @@ func TestNewClient_NoAuth_NilAuthenticator(t *testing.T) {
 func TestDo_GET_Success(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("expected GET, got %s", r.Method)
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(pveEnvelope(t, "pong"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		respWriter.WriteHeader(http.StatusOK)
+		_, _ = respWriter.Write(pveEnvelope(t, "pong"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	resp, err := c.Do("GET", "/version", nil)
+	resp, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
@@ -432,7 +471,7 @@ func TestDo_POST_Success(t *testing.T) {
 
 	var gotBody string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
@@ -440,15 +479,15 @@ func TestDo_POST_Success(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		gotBody = string(b)
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "created"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "created"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	resp, err := c.Do("POST", "/access/ticket", map[string]interface{}{
-		"username": "root@pam",
-		"password": "secret",
+	resp, err := client.Do("POST", "/access/ticket", map[string]interface{}{
+		testFormKeyUsername: testUsername,
+		testFormKeyPassword: testPassword,
 	})
 	if err != nil {
 		t.Fatalf("Do POST: %v", err)
@@ -468,16 +507,16 @@ func TestDo_GET_WithQueryParams(t *testing.T) {
 
 	var gotQuery string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.RawQuery
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	_, err := c.Do("GET", "/nodes", map[string]interface{}{
+	_, err := client.Do("GET", "/nodes", map[string]interface{}{
 		"type": "node",
 	})
 	if err != nil {
@@ -492,18 +531,18 @@ func TestDo_GET_WithQueryParams(t *testing.T) {
 func TestDo_DELETE_Success(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {
 			t.Errorf("expected DELETE, got %s", r.Method)
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, nil))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, nil))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	resp, err := c.Do("DELETE", "/nodes/pve/qemu/100", nil)
+	resp, err := client.Do("DELETE", "/nodes/pve/qemu/100", nil)
 	if err != nil {
 		t.Fatalf("Do DELETE: %v", err)
 	}
@@ -516,23 +555,23 @@ func TestDo_DELETE_Success(t *testing.T) {
 func TestDo_PUT_Success(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
 			t.Errorf("expected PUT, got %s", r.Method)
 		}
 
-		ct := r.Header.Get("Content-Type")
-		if ct != "application/x-www-form-urlencoded" {
+		ct := r.Header.Get(testHeaderContentType)
+		if ct != testContentTypeForm {
 			t.Errorf("Content-Type = %q, want application/x-www-form-urlencoded", ct)
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "updated"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "updated"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	resp, err := c.Do("PUT", "/nodes/pve/qemu/100/config", map[string]interface{}{
+	resp, err := client.Do("PUT", "/nodes/pve/qemu/100/config", map[string]interface{}{
 		"memory": 2048,
 	})
 	if err != nil {
@@ -553,14 +592,14 @@ func TestDo_Headers_UserAgent(t *testing.T) {
 
 	var gotUA string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		gotUA = r.Header.Get("User-Agent")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, nil))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, nil))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	_, _ = c.Do("GET", "/version", nil)
+	client := clientPointedAt(t, srv.URL)
+	_, _ = client.Do("GET", "/version", nil)
 
 	if !strings.Contains(gotUA, "pve-apiclient-go") {
 		t.Errorf("User-Agent = %q, want pve-apiclient-go/*", gotUA)
@@ -572,16 +611,16 @@ func TestDo_Headers_Accept(t *testing.T) {
 
 	var gotAccept string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		gotAccept = r.Header.Get("Accept")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, nil))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, nil))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	_, _ = c.Do("GET", "/version", nil)
+	client := clientPointedAt(t, srv.URL)
+	_, _ = client.Do("GET", "/version", nil)
 
-	if gotAccept != "application/json" {
+	if gotAccept != testContentTypeJSON {
 		t.Errorf("Accept = %q, want application/json", gotAccept)
 	}
 }
@@ -591,16 +630,16 @@ func TestDo_Headers_ContentType_POST(t *testing.T) {
 
 	var gotCT string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		gotCT = r.Header.Get("Content-Type")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, nil))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
+		gotCT = r.Header.Get(testHeaderContentType)
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, nil))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	_, _ = c.Do("POST", "/access/ticket", map[string]interface{}{"username": "root@pam", "password": "x"})
+	client := clientPointedAt(t, srv.URL)
+	_, _ = client.Do("POST", "/access/ticket", map[string]interface{}{testFormKeyUsername: testUsername, testFormKeyPassword: "x"})
 
-	if gotCT != "application/x-www-form-urlencoded" {
+	if gotCT != testContentTypeForm {
 		t.Errorf("Content-Type = %q, want application/x-www-form-urlencoded", gotCT)
 	}
 }
@@ -610,14 +649,14 @@ func TestDo_Headers_NoContentType_GET(t *testing.T) {
 
 	var gotCT string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		gotCT = r.Header.Get("Content-Type")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, nil))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
+		gotCT = r.Header.Get(testHeaderContentType)
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, nil))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	_, _ = c.Do("GET", "/version", nil)
+	client := clientPointedAt(t, srv.URL)
+	_, _ = client.Do("GET", "/version", nil)
 
 	if gotCT != "" {
 		t.Errorf("GET Content-Type should be empty, got %q", gotCT)
@@ -631,15 +670,15 @@ func TestDo_Headers_NoContentType_GET(t *testing.T) {
 func TestDo_404_ReturnsError(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"errors":{"path":"not found"}}`))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(http.StatusNotFound)
+		_, _ = respWriter.Write([]byte(`{"errors":{"path":"not found"}}`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	_, err := c.Do("GET", "/nonexistent", nil)
+	_, err := client.Do("GET", "/nonexistent", nil)
 	if err == nil {
 		t.Fatal("expected error for 404, got nil")
 	}
@@ -648,15 +687,15 @@ func TestDo_404_ReturnsError(t *testing.T) {
 func TestDo_500_ReturnsError(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"message":"server error"}`))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(http.StatusInternalServerError)
+		_, _ = respWriter.Write([]byte(`{"message":"server error"}`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	_, err := c.Do("GET", "/crash", nil)
+	_, err := client.Do("GET", "/crash", nil)
 	if err == nil {
 		t.Fatal("expected error for 500, got nil")
 	}
@@ -666,15 +705,15 @@ func TestDo_401_ReturnsError(t *testing.T) {
 	t.Parallel()
 
 	// Return 401 on all requests (including auth retry).
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte(`{"message":"unauthorized"}`))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(http.StatusUnauthorized)
+		_, _ = respWriter.Write([]byte(`{"message":"unauthorized"}`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	_, err := c.Do("GET", "/nodes", nil)
+	_, err := client.Do("GET", "/nodes", nil)
 	if err == nil {
 		t.Fatal("expected error for 401, got nil")
 	}
@@ -687,16 +726,16 @@ func TestDo_401_ReturnsError(t *testing.T) {
 func TestDo_MalformedJSON_ReturnsRawBody(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`not json at all`))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		respWriter.WriteHeader(http.StatusOK)
+		_, _ = respWriter.Write([]byte(`not json at all`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
 	// parseResponse returns a Response with raw body as Data plus an error.
-	resp, err := c.Do("GET", "/version", nil)
+	resp, err := client.Do("GET", "/version", nil)
 	if err == nil {
 		t.Fatal("expected error for malformed JSON, got nil")
 	}
@@ -717,25 +756,25 @@ func TestDo_MalformedJSON_ReturnsRawBody(t *testing.T) {
 func TestDoWithContext_Cancellation(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		// Block until client cancels.
 		select {
 		case <-r.Context().Done():
-			w.WriteHeader(http.StatusServiceUnavailable)
+			respWriter.WriteHeader(http.StatusServiceUnavailable)
 		case <-time.After(5 * time.Second):
-			w.WriteHeader(http.StatusOK)
+			respWriter.WriteHeader(http.StatusOK)
 		}
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	done := make(chan error, 1)
 
 	go func() {
-		_, err := c.DoWithContext(ctx, "GET", "/slow", nil)
+		_, err := client.DoWithContext(ctx, "GET", "/slow", nil)
 		done <- err
 	}()
 
@@ -756,22 +795,22 @@ func TestDoWithContext_Cancellation(t *testing.T) {
 func TestDoWithContext_Deadline(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 		case <-time.After(5 * time.Second):
 		}
 
-		w.WriteHeader(http.StatusOK)
+		respWriter.WriteHeader(http.StatusOK)
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	_, err := c.DoWithContext(ctx, "GET", "/slow", nil)
+	_, err := client.DoWithContext(ctx, "GET", "/slow", nil)
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}
@@ -786,24 +825,24 @@ func TestRetryMiddleware_RetriesOn5xx(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		n := atomic.AddInt32(&calls, 1)
 		if n < 3 {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte(`{"message":"unavailable"}`))
+			respWriter.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = respWriter.Write([]byte(`{"message":"unavailable"}`))
 
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "recovered"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "recovered"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 3
-	c.retryDelay = time.Millisecond // fast for test
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 3
+	client.retryDelay = time.Millisecond // fast for test
 
-	resp, err := c.Do("GET", "/version", nil)
+	resp, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("expected success after retries, got: %v", err)
 	}
@@ -822,17 +861,17 @@ func TestRetryMiddleware_NoRetryOn4xx(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`{"message":"bad request"}`))
+		respWriter.WriteHeader(http.StatusBadRequest)
+		_, _ = respWriter.Write([]byte(`{"message":"bad request"}`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 3
-	c.retryDelay = time.Millisecond
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 3
+	client.retryDelay = time.Millisecond
 
-	_, err := c.Do("GET", "/bad", nil)
+	_, err := client.Do("GET", "/bad", nil)
 	if err == nil {
 		t.Fatal("expected error for 400")
 	}
@@ -848,20 +887,20 @@ func TestRetryMiddleware_PerRequestRetryOverride(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		w.WriteHeader(http.StatusServiceUnavailable)
+		respWriter.WriteHeader(http.StatusServiceUnavailable)
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 5
-	c.retryDelay = time.Millisecond
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 5
+	client.retryDelay = time.Millisecond
 
 	// Override to 1 retry via context.
 	ctx := WithRetries(context.Background(), 1)
 	ctx = WithRetryDelay(ctx, time.Millisecond)
 
-	_, _ = c.DoWithContext(ctx, "GET", "/flaky", nil)
+	_, _ = client.DoWithContext(ctx, "GET", "/flaky", nil)
 
 	// 1 retry → 2 total calls (initial + 1).
 	if atomic.LoadInt32(&calls) != 2 {
@@ -872,18 +911,18 @@ func TestRetryMiddleware_PerRequestRetryOverride(t *testing.T) {
 func TestRetryMiddleware_ExhaustedReturnsError(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write([]byte(`{"message":"unavailable"}`))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = respWriter.Write([]byte(`{"message":"unavailable"}`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 2
-	c.retryDelay = time.Millisecond
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 2
+	client.retryDelay = time.Millisecond
 
 	// retryMiddleware returns last retryable response after exhausting attempts;
 	// parseResponse then wraps 5xx into an API error.
-	_, err := c.Do("GET", "/always503", nil)
+	_, err := client.Do("GET", "/always503", nil)
 	if err == nil {
 		t.Fatal("expected error when all retries exhausted")
 	}
@@ -896,26 +935,26 @@ func TestRetryMiddleware_ExhaustedReturnsError(t *testing.T) {
 func TestLoggingMiddleware_WritesWhenEnabled(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	lg := &testLogger{}
-	c.SetLogger(lg)
-	c.SetLogConfig(LogConfig{Enabled: true, LogQueryParams: true})
+	logger := &testLogger{}
+	client.SetLogger(logger)
+	client.SetLogConfig(LogConfig{Enabled: true, LogQueryParams: true})
 
-	_, err := c.Do("GET", "/version", nil)
+	_, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 
-	lg.mu.Lock()
-	infoCount := len(lg.infos)
-	lg.mu.Unlock()
+	logger.mu.Lock()
+	infoCount := len(logger.infos)
+	logger.mu.Unlock()
 
 	if infoCount == 0 {
 		t.Error("expected at least one Info log when logging enabled")
@@ -925,27 +964,27 @@ func TestLoggingMiddleware_WritesWhenEnabled(t *testing.T) {
 func TestLoggingMiddleware_SilentWhenDisabled(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	lg := &testLogger{}
-	c.SetLogger(lg)
+	logger := &testLogger{}
+	client.SetLogger(logger)
 	// logConfig.Enabled defaults to false
-	c.SetLogConfig(LogConfig{Enabled: false})
+	client.SetLogConfig(LogConfig{Enabled: false})
 
-	_, err := c.Do("GET", "/version", nil)
+	_, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 
-	lg.mu.Lock()
-	infoCount := len(lg.infos)
-	lg.mu.Unlock()
+	logger.mu.Lock()
+	infoCount := len(logger.infos)
+	logger.mu.Unlock()
 
 	if infoCount != 0 {
 		t.Errorf("expected no Info logs when logging disabled, got %d", infoCount)
@@ -955,28 +994,28 @@ func TestLoggingMiddleware_SilentWhenDisabled(t *testing.T) {
 func TestLoggingMiddleware_SuppressedByContext(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	lg := &testLogger{}
-	c.SetLogger(lg)
+	logger := &testLogger{}
+	client.SetLogger(logger)
 	// Enabled=true but no request headers/body logged.
-	c.SetLogConfig(LogConfig{Enabled: true})
+	client.SetLogConfig(LogConfig{Enabled: true})
 
 	// Disable per-request middleware logging via context.
 	// Note: logResponse in recordRequestComplete fires regardless of per-request opts,
 	// so exactly 1 info log is expected (from logResponse), not from loggingMiddleware.
 	ctx := WithLogging(context.Background(), false)
-	_, _ = c.DoWithContext(ctx, "GET", "/version", nil)
+	_, _ = client.DoWithContext(ctx, "GET", "/version", nil)
 
-	lg.mu.Lock()
-	infoCount := len(lg.infos)
-	lg.mu.Unlock()
+	logger.mu.Lock()
+	infoCount := len(logger.infos)
+	logger.mu.Unlock()
 
 	// loggingMiddleware skips; logResponse always runs → 1 log expected.
 	if infoCount != 1 {
@@ -991,19 +1030,19 @@ func TestLoggingMiddleware_SuppressedByContext(t *testing.T) {
 func TestHook_Fired(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
 	var fired bool
 
-	c.AddHook(func(e *Event) { fired = true })
+	client.AddHook(func(e *Event) { fired = true })
 
-	_, _ = c.Do("GET", "/version", nil)
+	_, _ = client.Do("GET", "/version", nil)
 
 	if !fired {
 		t.Error("hook should have been fired")
@@ -1013,17 +1052,17 @@ func TestHook_Fired(t *testing.T) {
 func TestHook_PanickingHookDoesNotCrash(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
-	c.AddHook(func(_ *Event) { panic("hook panic") })
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
+	client.AddHook(func(_ *Event) { panic("hook panic") })
 
 	// Should not panic.
-	_, err := c.Do("GET", "/version", nil)
+	_, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
@@ -1036,22 +1075,22 @@ func TestHook_PanickingHookDoesNotCrash(t *testing.T) {
 func TestMetrics_Increments(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	before := c.Metrics()
+	before := client.Metrics()
 
-	_, err := c.Do("GET", "/version", nil)
+	_, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 
-	after := c.Metrics()
+	after := client.Metrics()
 
 	if after.Requests-before.Requests != 1 {
 		t.Errorf("Requests delta = %d, want 1", after.Requests-before.Requests)
@@ -1061,17 +1100,17 @@ func TestMetrics_Increments(t *testing.T) {
 func TestMetrics_ErrorIncrement(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`{}`))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(http.StatusBadRequest)
+		_, _ = respWriter.Write([]byte(`{}`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	before := c.Metrics()
-	_, _ = c.Do("GET", "/bad", nil)
-	after := c.Metrics()
+	before := client.Metrics()
+	_, _ = client.Do("GET", "/bad", nil)
+	after := client.Metrics()
 
 	// A 4xx counts as a request; it hits parseResponse which wraps into error.
 	if after.Requests <= before.Requests {
@@ -1088,19 +1127,19 @@ func TestSetTimeout(t *testing.T) {
 
 	opts := minimalHTTPOptions()
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.SetTimeout(42 * time.Second)
+	client.SetTimeout(42 * time.Second)
 
-	if c.timeout != 42*time.Second {
-		t.Errorf("timeout = %v, want 42s", c.timeout)
+	if client.timeout != 42*time.Second {
+		t.Errorf("timeout = %v, want 42s", client.timeout)
 	}
 
-	if c.httpClient.Timeout != 42*time.Second {
-		t.Errorf("httpClient.Timeout = %v, want 42s", c.httpClient.Timeout)
+	if client.httpClient.Timeout != 42*time.Second {
+		t.Errorf("httpClient.Timeout = %v, want 42s", client.httpClient.Timeout)
 	}
 }
 
@@ -1109,11 +1148,11 @@ func TestSetMaxRetries(t *testing.T) {
 
 	opts := minimalHTTPOptions()
 
-	c, _ := NewClient(opts)
-	c.SetMaxRetries(7)
+	client, _ := NewClient(opts)
+	client.SetMaxRetries(7)
 
-	if c.maxRetries != 7 {
-		t.Errorf("maxRetries = %d, want 7", c.maxRetries)
+	if client.maxRetries != 7 {
+		t.Errorf("maxRetries = %d, want 7", client.maxRetries)
 	}
 }
 
@@ -1122,11 +1161,11 @@ func TestSetRetryDelay(t *testing.T) {
 
 	opts := minimalHTTPOptions()
 
-	c, _ := NewClient(opts)
-	c.SetRetryDelay(200 * time.Millisecond)
+	client, _ := NewClient(opts)
+	client.SetRetryDelay(200 * time.Millisecond)
 
-	if c.retryDelay != 200*time.Millisecond {
-		t.Errorf("retryDelay = %v, want 200ms", c.retryDelay)
+	if client.retryDelay != 200*time.Millisecond {
+		t.Errorf("retryDelay = %v, want 200ms", client.retryDelay)
 	}
 }
 
@@ -1137,9 +1176,9 @@ func TestSetRetryDelay(t *testing.T) {
 func TestCacheStats_NilWhenNoCache(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 
-	if c.CacheStats() != nil {
+	if client.CacheStats() != nil {
 		t.Error("CacheStats() should be nil when caching not configured")
 	}
 }
@@ -1147,9 +1186,9 @@ func TestCacheStats_NilWhenNoCache(t *testing.T) {
 func TestInvalidateCache_ZeroWhenNoCache(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 
-	n := c.InvalidateCache("/nodes/*")
+	n := client.InvalidateCache("/nodes/*")
 	if n != 0 {
 		t.Errorf("InvalidateCache with no cache = %d, want 0", n)
 	}
@@ -1158,9 +1197,9 @@ func TestInvalidateCache_ZeroWhenNoCache(t *testing.T) {
 func TestClearCache_NopWhenNoCache(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 	// Must not panic.
-	c.ClearCache()
+	client.ClearCache()
 }
 
 func TestCachingMiddleware_HitsCache(t *testing.T) {
@@ -1168,29 +1207,29 @@ func TestCachingMiddleware_HitsCache(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "cached-value"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "cached-value"))
 	})
 
 	opts := minimalHTTPOptions()
 	opts.CacheConfig = &cache.Config{Enabled: true, MaxSize: 10 * 1024 * 1024, DefaultTTL: time.Minute, CleanupInterval: 5 * time.Minute}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = srv.URL
+	client.baseURL = srv.URL
 
 	// Two identical GET requests → should hit cache on second.
-	_, err = c.Do("GET", "/version", nil)
+	_, err = client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("first Do: %v", err)
 	}
 
-	_, err = c.Do("GET", "/version", nil)
+	_, err = client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("second Do: %v", err)
 	}
@@ -1207,9 +1246,9 @@ func TestCachingMiddleware_HitsCache(t *testing.T) {
 func TestLogout_NilAuthenticator(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 
-	err := c.Logout()
+	err := client.Logout()
 	if err != nil {
 		t.Errorf("Logout with nil authenticator should return nil, got: %v", err)
 	}
@@ -1222,9 +1261,9 @@ func TestLogout_NilAuthenticator(t *testing.T) {
 func TestIsAuthenticated_NilAuthenticator(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 
-	if c.isAuthenticated() {
+	if client.isAuthenticated() {
 		t.Error("isAuthenticated() with nil authenticator should return false")
 	}
 }
@@ -1233,12 +1272,12 @@ func TestNeedsLogin_WithCredentials(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.Username = "root@pam"
-	opts.Password = "secret"
+	opts.Username = testUsername
+	opts.Password = testPassword
 
-	c, _ := NewClient(opts)
+	client, _ := NewClient(opts)
 
-	if !c.needsLogin() {
+	if !client.needsLogin() {
 		t.Error("needsLogin() should return true when username+password set and no token/ticket")
 	}
 }
@@ -1247,13 +1286,13 @@ func TestNeedsLogin_WithToken_False(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.Username = "root@pam"
-	opts.Password = "secret"
+	opts.Username = testUsername
+	opts.Password = testPassword
 	opts.APIToken = "root@pam!t=secret"
 
-	c, _ := NewClient(opts)
+	client, _ := NewClient(opts)
 
-	if c.needsLogin() {
+	if client.needsLogin() {
 		t.Error("needsLogin() should return false when APIToken is set")
 	}
 }
@@ -1261,9 +1300,9 @@ func TestNeedsLogin_WithToken_False(t *testing.T) {
 func TestNeedsLogin_NilOptions(t *testing.T) {
 	t.Parallel()
 
-	c := &Client{} // No options
+	client := &Client{} // No options
 
-	if c.needsLogin() {
+	if client.needsLogin() {
 		t.Error("needsLogin() with nil options should return false")
 	}
 }
@@ -1275,9 +1314,9 @@ func TestNeedsLogin_NilOptions(t *testing.T) {
 func TestAuthenticate_NilAuthenticator_NoError(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 
-	err := c.Authenticate()
+	err := client.Authenticate()
 	if err != nil {
 		t.Errorf("Authenticate() with nil authenticator should return nil, got: %v", err)
 	}
@@ -1292,15 +1331,15 @@ func TestDo_PathWithoutLeadingSlash(t *testing.T) {
 
 	var gotPath string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	_, _ = c.Do("GET", "version", nil) // no leading slash
+	client := clientPointedAt(t, srv.URL)
+	_, _ = client.Do("GET", "version", nil) // no leading slash
 
 	if !strings.HasPrefix(gotPath, "/") {
 		t.Errorf("server path should start with /, got: %q", gotPath)
@@ -1361,7 +1400,7 @@ func TestFromContext_EmptyContext_ReturnsEmptyOpts(t *testing.T) {
 	opts := FromContext(context.Background())
 
 	if opts == nil {
-		t.Error("FromContext with no value should return non-nil RequestOptions")
+		t.Fatal("FromContext with no value should return non-nil RequestOptions")
 	}
 
 	if opts.Retries != nil || opts.Logging != nil {
@@ -1435,10 +1474,10 @@ func TestBuildStoragePath(t *testing.T) {
 func TestRequestBuilder_BuildURL_WithQueryParams(t *testing.T) {
 	t.Parallel()
 
-	rb := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "/nodes")
-	rb.AddQueryParam("type", "node")
+	reqBuilder := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "/nodes")
+	reqBuilder.AddQueryParam("type", "node")
 
-	url := rb.BuildURL()
+	url := reqBuilder.BuildURL()
 
 	if !strings.Contains(url, "type=node") {
 		t.Errorf("URL should contain type=node, got: %q", url)
@@ -1449,16 +1488,16 @@ func TestRequestBuilder_BuildBody_FormEncoded(t *testing.T) {
 	t.Parallel()
 
 	rb := NewRequestBuilder("POST", "https://pve.example.com:8006/api2/json", "/access/ticket")
-	rb.AddFormParam("username", "root@pam")
-	rb.AddFormParam("password", "secret")
+	rb.AddFormParam(testFormKeyUsername, testUsername)
+	rb.AddFormParam(testFormKeyPassword, testPassword)
 
-	body, ct, err := rb.BuildBody()
+	body, contentType, err := rb.BuildBody()
 	if err != nil {
 		t.Fatalf("BuildBody: %v", err)
 	}
 
-	if ct != "application/x-www-form-urlencoded" {
-		t.Errorf("content-type = %q, want application/x-www-form-urlencoded", ct)
+	if contentType != testContentTypeForm {
+		t.Errorf("content-type = %q, want application/x-www-form-urlencoded", contentType)
 	}
 
 	b, _ := io.ReadAll(body)
@@ -1473,13 +1512,13 @@ func TestRequestBuilder_BuildBody_JSON(t *testing.T) {
 	rb := NewRequestBuilder("POST", "https://pve.example.com:8006/api2/json", "/nodes")
 	rb.SetJSONBody(map[string]string{"key": "value"})
 
-	body, ct, err := rb.BuildBody()
+	body, contentType, err := rb.BuildBody()
 	if err != nil {
 		t.Fatalf("BuildBody: %v", err)
 	}
 
-	if ct != "application/json" {
-		t.Errorf("content-type = %q, want application/json", ct)
+	if contentType != testContentTypeJSON {
+		t.Errorf("content-type = %q, want application/json", contentType)
 	}
 
 	b, _ := io.ReadAll(body)
@@ -1521,13 +1560,13 @@ func TestRequestBuilder_AddFile_Multipart(t *testing.T) {
 	rb.AddFormParam("storage", "local")
 	rb.AddFile("file", "test.iso", bytes.NewReader([]byte("ISO content")))
 
-	body, ct, err := rb.BuildBody()
+	body, contentType, err := rb.BuildBody()
 	if err != nil {
 		t.Fatalf("BuildBody multipart: %v", err)
 	}
 
-	if !strings.HasPrefix(ct, "multipart/form-data") {
-		t.Errorf("content-type = %q, want multipart/form-data", ct)
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		t.Errorf("content-type = %q, want multipart/form-data", contentType)
 	}
 
 	b, _ := io.ReadAll(body)
@@ -1539,45 +1578,45 @@ func TestRequestBuilder_AddFile_Multipart(t *testing.T) {
 func TestRequestBuilder_AddHeaders(t *testing.T) {
 	t.Parallel()
 
-	rb := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "/nodes")
-	rb.AddHeader("X-Custom", "val1").AddHeaders(map[string]string{"X-Other": "val2"})
+	reqBuilder := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "/nodes")
+	reqBuilder.AddHeader("X-Custom", "val1").AddHeaders(map[string]string{"X-Other": "val2"})
 
-	if rb.headers["X-Custom"] != "val1" {
-		t.Errorf("X-Custom = %q, want val1", rb.headers["X-Custom"])
+	if reqBuilder.headers["X-Custom"] != "val1" {
+		t.Errorf("X-Custom = %q, want val1", reqBuilder.headers["X-Custom"])
 	}
 
-	if rb.headers["X-Other"] != "val2" {
-		t.Errorf("X-Other = %q, want val2", rb.headers["X-Other"])
+	if reqBuilder.headers["X-Other"] != "val2" {
+		t.Errorf("X-Other = %q, want val2", reqBuilder.headers["X-Other"])
 	}
 }
 
 func TestRequestBuilder_AddQueryParams(t *testing.T) {
 	t.Parallel()
 
-	rb := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "/nodes")
-	rb.AddQueryParams(map[string]interface{}{"a": "1", "b": true})
+	reqBuilder := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "/nodes")
+	reqBuilder.AddQueryParams(map[string]interface{}{"a": "1", "b": true})
 
-	if rb.queryParams.Get("a") != "1" {
-		t.Errorf("a = %q, want 1", rb.queryParams.Get("a"))
+	if reqBuilder.queryParams.Get("a") != "1" {
+		t.Errorf("a = %q, want 1", reqBuilder.queryParams.Get("a"))
 	}
 
-	if rb.queryParams.Get("b") != "1" {
-		t.Errorf("b (bool true) = %q, want 1", rb.queryParams.Get("b"))
+	if reqBuilder.queryParams.Get("b") != "1" {
+		t.Errorf("b (bool true) = %q, want 1", reqBuilder.queryParams.Get("b"))
 	}
 }
 
 func TestRequestBuilder_AddFormParams(t *testing.T) {
 	t.Parallel()
 
-	rb := NewRequestBuilder("POST", "https://pve.example.com:8006/api2/json", "/access/ticket")
-	rb.AddFormParams(map[string]interface{}{"username": "root@pam", "enabled": false})
+	reqBuilder := NewRequestBuilder("POST", "https://pve.example.com:8006/api2/json", "/access/ticket")
+	reqBuilder.AddFormParams(map[string]interface{}{testFormKeyUsername: testUsername, "enabled": false})
 
-	if rb.formParams.Get("username") != "root@pam" {
-		t.Errorf("username = %q, want root@pam", rb.formParams.Get("username"))
+	if reqBuilder.formParams.Get(testFormKeyUsername) != testUsername {
+		t.Errorf("username = %q, want root@pam", reqBuilder.formParams.Get(testFormKeyUsername))
 	}
 
-	if rb.formParams.Get("enabled") != "0" {
-		t.Errorf("enabled (bool false) = %q, want 0", rb.formParams.Get("enabled"))
+	if reqBuilder.formParams.Get("enabled") != "0" {
+		t.Errorf("enabled (bool false) = %q, want 0", reqBuilder.formParams.Get("enabled"))
 	}
 }
 
@@ -1590,7 +1629,7 @@ func TestDefaultRequestConfig(t *testing.T) {
 
 	cfg := DefaultRequestConfig()
 
-	if cfg.DefaultHeaders["Accept"] != "application/json" {
+	if cfg.DefaultHeaders["Accept"] != testContentTypeJSON {
 		t.Errorf("Accept = %q, want application/json", cfg.DefaultHeaders["Accept"])
 	}
 
@@ -1614,20 +1653,20 @@ func TestDefaultRequestConfig(t *testing.T) {
 func TestResponseParser_Parse_JSONEnvelope(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
 	body := []byte(`{"data":{"vmid":100},"success":1}`)
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader(body)),
 		Request:    req,
 	}
 
 	var result map[string]interface{}
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -1640,19 +1679,19 @@ func TestResponseParser_Parse_JSONEnvelope(t *testing.T) {
 func TestResponseParser_Parse_4xx(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusNotFound,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"errors":{"path":"not found"}}`))),
 		Request:    req,
 	}
 
 	var result interface{}
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
@@ -1661,19 +1700,19 @@ func TestResponseParser_Parse_4xx(t *testing.T) {
 func TestResponseParser_Parse_TextContent(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/plain"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeTextPlain}},
 		Body:       io.NopCloser(bytes.NewReader([]byte("hello world"))),
 		Request:    req,
 	}
 
 	var result string
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse text: %v", err)
 	}
@@ -1686,19 +1725,19 @@ func TestResponseParser_Parse_TextContent(t *testing.T) {
 func TestResponseParser_Parse_NonPointerTarget(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/plain"}},
-		Body:       io.NopCloser(bytes.NewReader([]byte("hello"))),
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeTextPlain}},
+		Body:       io.NopCloser(bytes.NewReader([]byte(testHello))),
 		Request:    req,
 	}
 
 	var result string // non-pointer passed directly
 
-	err := rp.Parse(resp, result) // NOT &result → assignResult should error
+	err := respParser.Parse(resp, result) // NOT &result → assignResult should error
 	if err == nil {
 		t.Fatal("expected error when passing non-pointer target")
 	}
@@ -1707,22 +1746,22 @@ func TestResponseParser_Parse_NonPointerTarget(t *testing.T) {
 func TestResponseParser_RegisterCustomParser(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
-	rp.RegisterCustomParser("/special", func(_ *http.Response) (interface{}, error) {
+	respParser := NewResponseParser()
+	respParser.RegisterCustomParser("/special", func(_ *http.Response) (interface{}, error) {
 		return "custom", nil
 	})
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/special", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/special", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{}`))),
 		Request:    req,
 	}
 
 	var result string
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("custom parser: %v", err)
 	}
@@ -1735,20 +1774,20 @@ func TestResponseParser_RegisterCustomParser(t *testing.T) {
 func TestResponseParser_Parse_StrictMode_InvalidJSON(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
-	rp.StrictMode = true
+	respParser := NewResponseParser()
+	respParser.StrictMode = true
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`not json`))),
 		Request:    req,
 	}
 
 	var result interface{}
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err == nil {
 		t.Fatal("expected error in strict mode for invalid JSON")
 	}
@@ -1761,10 +1800,10 @@ func TestResponseParser_Parse_StrictMode_InvalidJSON(t *testing.T) {
 func TestResponseHandler_Handle(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":"result"}`))),
 		Request:    req,
 	}
@@ -1784,10 +1823,10 @@ func TestResponseHandler_Handle(t *testing.T) {
 func TestResponseHandler_HandleInto(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":{"key":"val"}}`))),
 		Request:    req,
 	}
@@ -1809,10 +1848,10 @@ func TestResponseHandler_HandleInto(t *testing.T) {
 func TestResponseHandler_HandleList(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":["a","b","c"]}`))),
 		Request:    req,
 	}
@@ -1832,11 +1871,11 @@ func TestResponseHandler_HandleList(t *testing.T) {
 func TestResponseHandler_HandleString(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
-		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":"hello"}`))),
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
+		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":"` + testHello + `"}`))),
 		Request:    req,
 	}
 
@@ -1847,7 +1886,7 @@ func TestResponseHandler_HandleString(t *testing.T) {
 		t.Fatalf("HandleString: %v", err)
 	}
 
-	if result != "hello" {
+	if result != testHello {
 		t.Errorf("result = %q, want 'hello'", result)
 	}
 }
@@ -1855,10 +1894,10 @@ func TestResponseHandler_HandleString(t *testing.T) {
 func TestResponseHandler_HandleBool(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":true}`))),
 		Request:    req,
 	}
@@ -1878,10 +1917,10 @@ func TestResponseHandler_HandleBool(t *testing.T) {
 func TestResponseHandler_HandleInt(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":42}`))),
 		Request:    req,
 	}
@@ -1901,10 +1940,10 @@ func TestResponseHandler_HandleInt(t *testing.T) {
 func TestResponseHandler_HandleFloat(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":3.14}`))),
 		Request:    req,
 	}
@@ -1924,10 +1963,10 @@ func TestResponseHandler_HandleFloat(t *testing.T) {
 func TestResponseHandler_HandleMap(t *testing.T) {
 	t.Parallel()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"data":{"node":"pve","status":"online"}}`))),
 		Request:    req,
 	}
@@ -1957,11 +1996,11 @@ func TestStreamHandler_Handle(t *testing.T) {
 		Body:       io.NopCloser(strings.NewReader(content)),
 	}
 
-	sh := NewStreamHandler()
+	streamHandler := NewStreamHandler()
 
 	var received []byte
 
-	sh.OnChunk = func(b []byte) error {
+	streamHandler.OnChunk = func(b []byte) error {
 		received = append(received, b...)
 
 		return nil
@@ -1969,13 +2008,13 @@ func TestStreamHandler_Handle(t *testing.T) {
 
 	var completeCalled bool
 
-	sh.OnComplete = func() error {
+	streamHandler.OnComplete = func() error {
 		completeCalled = true
 
 		return nil
 	}
 
-	err := sh.Handle(resp)
+	err := streamHandler.Handle(resp)
 	if err != nil {
 		t.Fatalf("Handle: %v", err)
 	}
@@ -1999,7 +2038,7 @@ func TestStreamHandler_Handle_ChunkError(t *testing.T) {
 
 	sh := NewStreamHandler()
 	sh.OnChunk = func(_ []byte) error {
-		return errors.New("chunk error")
+		return errTestChunk
 	}
 
 	err := sh.Handle(resp)
@@ -2025,15 +2064,15 @@ func TestRedact_SensitiveHeaders(t *testing.T) {
 	redactKeys := []string{"authorization", "cookie", "csrfpreventiontoken"}
 	result := redact(headers, redactKeys)
 
-	if result["Authorization"] != "REDACTED" {
+	if result["Authorization"] != testRedacted {
 		t.Errorf("Authorization = %v, want REDACTED", result["Authorization"])
 	}
 
-	if result["Cookie"] != "REDACTED" {
+	if result["Cookie"] != testRedacted {
 		t.Errorf("Cookie = %v, want REDACTED", result["Cookie"])
 	}
 
-	if result["CSRFPreventionToken"] != "REDACTED" {
+	if result["CSRFPreventionToken"] != testRedacted {
 		t.Errorf("CSRFPreventionToken = %v, want REDACTED", result["CSRFPreventionToken"])
 	}
 
@@ -2072,32 +2111,32 @@ func TestChain_Then(t *testing.T) {
 
 	var order []int
 
-	m1 := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	firstMW := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(respWriter http.ResponseWriter, r *http.Request) {
 			order = append(order, 1)
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(respWriter, r)
 		})
 	}
 
-	m2 := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	secondMW := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(respWriter http.ResponseWriter, r *http.Request) {
 			order = append(order, 2)
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(respWriter, r)
 		})
 	}
 
-	final := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	final := http.HandlerFunc(func(respWriter http.ResponseWriter, _ *http.Request) {
 		order = append(order, 3)
 
-		w.WriteHeader(http.StatusOK)
+		respWriter.WriteHeader(http.StatusOK)
 	})
 
-	chain := NewChain(m1, m2)
+	chain := NewChain(firstMW, secondMW)
 	handler := chain.Then(final)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
@@ -2125,85 +2164,85 @@ func TestChain_Append(t *testing.T) {
 func TestHeaderMiddleware_Apply(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Injected") != "yes" {
 			t.Errorf("X-Injected header missing")
 		}
 
-		w.WriteHeader(http.StatusOK)
+		respWriter.WriteHeader(http.StatusOK)
 	})
 
-	hm := NewHeaderMiddleware(map[string]string{"X-Injected": "yes"})
+	headerMW := NewHeaderMiddleware(map[string]string{"X-Injected": "yes"})
 
-	req, _ := http.NewRequest(http.MethodGet, srv.URL, nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	httpClient := &http.Client{}
 
 	next := Handler(func(r *http.Request) (*http.Response, error) {
 		return httpClient.Do(r)
 	})
 
-	resp, err := hm.Apply(req, next)
+	resp, err := headerMW.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 }
 
 func TestCompressionMiddleware_Apply(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		enc := r.Header.Get("Accept-Encoding")
 		if !strings.Contains(enc, "gzip") {
 			t.Errorf("Accept-Encoding should contain gzip, got: %q", enc)
 		}
 
-		w.WriteHeader(http.StatusOK)
+		respWriter.WriteHeader(http.StatusOK)
 	})
 
-	cm := NewCompressionMiddleware()
+	compressionMW := NewCompressionMiddleware()
 
-	req, _ := http.NewRequest(http.MethodGet, srv.URL, nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	httpClient := &http.Client{}
 
 	next := Handler(func(r *http.Request) (*http.Response, error) {
 		return httpClient.Do(r)
 	})
 
-	resp, err := cm.Apply(req, next)
+	resp, err := compressionMW.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 }
 
 func TestLoggingMiddlewareApply_Apply(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(http.StatusOK)
 	})
 
 	var buf bytes.Buffer
 
 	lg := log.New(&buf, "", 0)
-	lm := NewLoggingMiddleware(lg)
+	loggingMW := NewLoggingMiddleware(lg)
 
-	req, _ := http.NewRequest(http.MethodGet, srv.URL, nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	httpClient := &http.Client{}
 
 	next := Handler(func(r *http.Request) (*http.Response, error) {
 		return httpClient.Do(r)
 	})
 
-	resp, err := lm.Apply(req, next)
+	resp, err := loggingMW.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if !strings.Contains(buf.String(), "GET") {
 		t.Errorf("log should contain method, got: %q", buf.String())
@@ -2213,53 +2252,67 @@ func TestLoggingMiddlewareApply_Apply(t *testing.T) {
 func TestLoggingMiddlewareApply_NilLogger(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(http.StatusOK)
 	})
 
 	// NewLoggingMiddleware(nil) must not panic.
-	lm := NewLoggingMiddleware(nil)
+	loggingMW := NewLoggingMiddleware(nil)
 
-	req, _ := http.NewRequest(http.MethodGet, srv.URL, nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	httpClient := &http.Client{}
 
 	next := Handler(func(r *http.Request) (*http.Response, error) {
 		return httpClient.Do(r)
 	})
 
-	resp, err := lm.Apply(req, next)
+	resp, err := loggingMW.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
+}
+
+// applyMetricsMiddleware is a shared helper that sets up a MetricsMiddleware,
+// sends one request to a test server, and returns the collected metrics.
+func applyMetricsMiddleware(t *testing.T, serverStatus int, urlSuffix string) map[string]interface{} {
+	t.Helper()
+
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.WriteHeader(serverStatus)
+	})
+
+	metricsMiddleware := NewMetricsMiddleware()
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL+urlSuffix, nil)
+	httpClient := &http.Client{}
+
+	next := Handler(func(r *http.Request) (*http.Response, error) {
+		return httpClient.Do(r)
+	})
+
+	resp, err := metricsMiddleware.Apply(req, next)
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	defer func() { _ = resp.Body.Close() }()
+
+	return metricsMiddleware.GetMetrics()
 }
 
 func TestMetricsMiddleware_Apply(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	metrics := applyMetricsMiddleware(t, http.StatusOK, "/path")
 
-	mm := NewMetricsMiddleware()
-
-	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/path", nil)
-	httpClient := &http.Client{}
-
-	next := Handler(func(r *http.Request) (*http.Response, error) {
-		return httpClient.Do(r)
-	})
-
-	resp, err := mm.Apply(req, next)
-	if err != nil {
-		t.Fatalf("Apply: %v", err)
+	totalReqs, ok := metrics["total_requests"].(int64)
+	if !ok {
+		t.Fatal("total_requests is not int64")
 	}
 
-	defer resp.Body.Close()
-
-	metrics := mm.GetMetrics()
-	if metrics["total_requests"].(int64) != 1 {
+	if totalReqs != 1 {
 		t.Errorf("total_requests = %v, want 1", metrics["total_requests"])
 	}
 }
@@ -2267,28 +2320,14 @@ func TestMetricsMiddleware_Apply(t *testing.T) {
 func TestMetricsMiddleware_ErrorPath(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	})
+	metrics := applyMetricsMiddleware(t, http.StatusInternalServerError, "/fail")
 
-	mm := NewMetricsMiddleware()
-
-	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/fail", nil)
-	httpClient := &http.Client{}
-
-	next := Handler(func(r *http.Request) (*http.Response, error) {
-		return httpClient.Do(r)
-	})
-
-	resp, err := mm.Apply(req, next)
-	if err != nil {
-		t.Fatalf("Apply: %v", err)
+	totalErrs, ok := metrics["total_errors"].(int64)
+	if !ok {
+		t.Fatal("total_errors is not int64")
 	}
 
-	defer resp.Body.Close()
-
-	metrics := mm.GetMetrics()
-	if metrics["total_errors"].(int64) != 1 {
+	if totalErrs != 1 {
 		t.Errorf("total_errors = %v, want 1", metrics["total_errors"])
 	}
 }
@@ -2296,9 +2335,9 @@ func TestMetricsMiddleware_ErrorPath(t *testing.T) {
 func TestTimeoutMiddleware_Apply_Timeout(t *testing.T) {
 	t.Parallel()
 
-	tm := NewTimeoutMiddleware(20 * time.Millisecond)
+	timeoutMW := NewTimeoutMiddleware(20 * time.Millisecond)
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 
 	next := Handler(func(_ *http.Request) (*http.Response, error) {
 		time.Sleep(200 * time.Millisecond)
@@ -2306,7 +2345,11 @@ func TestTimeoutMiddleware_Apply_Timeout(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 	})
 
-	_, err := tm.Apply(req, next)
+	timeoutResp, err := timeoutMW.Apply(req, next)
+	if timeoutResp != nil && timeoutResp.Body != nil {
+		defer func() { _ = timeoutResp.Body.Close() }()
+	}
+
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}
@@ -2319,20 +2362,20 @@ func TestTimeoutMiddleware_Apply_Timeout(t *testing.T) {
 func TestTimeoutMiddleware_Apply_Success(t *testing.T) {
 	t.Parallel()
 
-	tm := NewTimeoutMiddleware(500 * time.Millisecond)
+	timeoutMW := NewTimeoutMiddleware(500 * time.Millisecond)
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 
 	next := Handler(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 	})
 
-	resp, err := tm.Apply(req, next)
+	resp, err := timeoutMW.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("StatusCode = %d, want 200", resp.StatusCode)
@@ -2342,9 +2385,9 @@ func TestTimeoutMiddleware_Apply_Success(t *testing.T) {
 func TestRateLimitMiddleware_Apply(t *testing.T) {
 	t.Parallel()
 
-	rl := NewRateLimitMiddleware(100, 5)
+	rateLimiter := NewRateLimitMiddleware(100, 5)
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 
 	called := false
 	next := Handler(func(_ *http.Request) (*http.Response, error) {
@@ -2353,12 +2396,12 @@ func TestRateLimitMiddleware_Apply(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 	})
 
-	resp, err := rl.Apply(req, next)
+	resp, err := rateLimiter.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if !called {
 		t.Error("next handler should have been called")
@@ -2374,15 +2417,15 @@ func TestUploadWithContext_Success(t *testing.T) {
 
 	var gotContentType string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		gotContentType = r.Header.Get("Content-Type")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "uploaded"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
+		gotContentType = r.Header.Get(testHeaderContentType)
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "uploaded"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	resp, err := c.UploadWithContext(
+	resp, err := client.UploadWithContext(
 		context.Background(),
 		"/nodes/pve/storage/local/upload",
 		map[string]string{"storage": "local", "content": "iso"},
@@ -2410,17 +2453,17 @@ func TestUploadWithContext_Success(t *testing.T) {
 func TestDo_APILevelError_SuccessZeroWithMessage(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		respWriter.WriteHeader(http.StatusOK)
 		// success=0 with message → API-level error
-		_, _ = w.Write([]byte(`{"success":0,"message":"permission denied"}`))
+		_, _ = respWriter.Write([]byte(`{"success":0,"message":"permission denied"}`))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	_, err := c.Do("GET", "/nodes", nil)
+	_, err := client.Do("GET", "/nodes", nil)
 	if err == nil {
 		t.Fatal("expected error for success=0 with message")
 	}
@@ -2437,29 +2480,29 @@ func TestDo_APILevelError_SuccessZeroWithMessage(t *testing.T) {
 func TestDo_ConcurrentRequests(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	var wg sync.WaitGroup
+	var waitGroup sync.WaitGroup
 
 	const goroutines = 20
 
-	wg.Add(goroutines)
+	waitGroup.Add(goroutines)
 
 	for range goroutines {
 		go func() {
-			defer wg.Done()
+			defer waitGroup.Done()
 
-			_, _ = c.Do("GET", "/version", nil)
+			_, _ = client.Do("GET", "/version", nil)
 		}()
 	}
 
-	wg.Wait()
+	waitGroup.Wait()
 }
 
 // ---------------------------------------------------------------------------
@@ -2469,43 +2512,43 @@ func TestDo_ConcurrentRequests(t *testing.T) {
 func TestSetHeader_DoesNotPanic(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 	// SetHeader is a no-op stub; must not panic.
-	c.SetHeader("X-Test", "value")
+	client.SetHeader("X-Test", "value")
 }
 
 func TestRemoveHeader_DoesNotPanic(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 	// RemoveHeader is a no-op stub; must not panic.
-	c.RemoveHeader("X-Test")
+	client.RemoveHeader("X-Test")
 }
 
 func TestSetMetrics_DoesNotPanic(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 	// SetMetrics with nil should be a no-op.
-	c.SetMetrics(nil)
+	client.SetMetrics(nil)
 }
 
 func TestSetTFAHandler_DoesNotPanic(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
-	c.SetTFAHandler(nil)
+	client, _ := NewClient(minimalHTTPOptions())
+	client.SetTFAHandler(nil)
 }
 
 func TestLogConfigAccessor(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
-	cfg := c.LogConfig()
+	client, _ := NewClient(minimalHTTPOptions())
+	cfg := client.LogConfig()
 
 	// Verify returned config matches what was set.
-	c.SetLogConfig(LogConfig{Enabled: false, SampleRate: 0.5})
-	cfg2 := c.LogConfig()
+	client.SetLogConfig(LogConfig{Enabled: false, SampleRate: 0.5})
+	cfg2 := client.LogConfig()
 
 	if cfg2.Enabled != false {
 		t.Error("LogConfig() should return current config")
@@ -2528,12 +2571,12 @@ func TestCacheStats_WithCache(t *testing.T) {
 	opts := minimalHTTPOptions()
 	opts.CacheConfig = &cache.Config{Enabled: true, MaxSize: 10 * 1024 * 1024, DefaultTTL: time.Minute, CleanupInterval: 5 * time.Minute}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	stats := c.CacheStats()
+	stats := client.CacheStats()
 	if stats == nil {
 		t.Fatal("CacheStats() should be non-nil when cache enabled")
 	}
@@ -2544,25 +2587,25 @@ func TestClearCache_WithCache(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "val"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "val"))
 	})
 
 	opts := minimalHTTPOptions()
 	opts.CacheConfig = &cache.Config{Enabled: true, MaxSize: 10 * 1024 * 1024, DefaultTTL: time.Minute, CleanupInterval: 5 * time.Minute}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = srv.URL
+	client.baseURL = srv.URL
 
-	_, _ = c.Do("GET", "/version", nil)
-	c.ClearCache()
-	_, _ = c.Do("GET", "/version", nil)
+	_, _ = client.Do("GET", "/version", nil)
+	client.ClearCache()
+	_, _ = client.Do("GET", "/version", nil)
 
 	// After clear, second request hits server.
 	if atomic.LoadInt32(&calls) != 2 {
@@ -2575,27 +2618,27 @@ func TestInvalidateCache_WithCache(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "val"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "val"))
 	})
 
 	opts := minimalHTTPOptions()
 	opts.CacheConfig = &cache.Config{Enabled: true, MaxSize: 10 * 1024 * 1024, DefaultTTL: time.Minute, CleanupInterval: 5 * time.Minute}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = srv.URL
+	client.baseURL = srv.URL
 
 	// Populate cache.
-	_, _ = c.Do("GET", "/version", nil)
+	_, _ = client.Do("GET", "/version", nil)
 
 	// Invalidate and refetch.
-	n := c.InvalidateCache("*")
+	n := client.InvalidateCache("*")
 	_ = n // may or may not invalidate depending on key format
 
 	// Verify no panic.
@@ -2610,23 +2653,23 @@ func TestApplyAuthHeaders_APIToken(t *testing.T) {
 
 	var gotAuth string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
 	opts := minimalHTTPOptions()
-	opts.APIToken = "root@pam!mytoken=s3cr3t"
+	opts.APIToken = testAPITokenFull
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = srv.URL
+	client.baseURL = srv.URL
 
-	_, err = c.Do("GET", "/version", nil)
+	_, err = client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
@@ -2645,35 +2688,35 @@ func TestAutoLogin_Fires_WhenEnabled(t *testing.T) {
 
 	var loginCalls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		// First request: POST to /access/ticket (login).
 		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "ticket") {
 			atomic.AddInt32(&loginCalls, 1)
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"data":{"ticket":"PVE:root@pam:ticket","CSRFPreventionToken":"csrf"}}`))
+			respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+			_, _ = respWriter.Write([]byte(`{"data":{"ticket":"PVE:root@pam:ticket","CSRFPreventionToken":"csrf"}}`))
 
 			return
 		}
 		// Normal response.
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
 	opts := minimalHTTPOptions()
-	opts.Username = "root@pam"
-	opts.Password = "secret"
+	opts.Username = testUsername
+	opts.Password = testPassword
 	opts.AutoLogin = true
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = srv.URL
+	client.baseURL = srv.URL
 
 	// shouldAutoLogin returns true, performAutoLogin runs.
 	// Even if auth fails (mock returns wrong format), the function ran.
-	_, _ = c.Do("GET", "/version", nil)
+	_, _ = client.Do("GET", "/version", nil)
 
 	// We can't assert specific login count without full auth server,
 	// but ensure no panic and code path exercised.
@@ -2688,18 +2731,18 @@ func TestRecordRequestError_OnNetworkFailure(t *testing.T) {
 
 	opts := minimalHTTPOptions()
 	// Point to a non-listening port to force connection error.
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = "http://127.0.0.1:1" // no listener
-	c.maxRetries = 0
+	client.baseURL = "http://127.0.0.1:1" // no listener
+	client.maxRetries = 0
 
 	// recordRequestError is called when executeWithMiddleware fails.
 	// The ClientMetrics.Errors counter is NOT updated by recordRequestError
 	// (only by recordRequestComplete); verify the request returns an error.
-	_, doErr := c.Do("GET", "/version", nil)
+	_, doErr := client.Do("GET", "/version", nil)
 	if doErr == nil {
 		t.Error("expected error on connection refused")
 	}
@@ -2712,27 +2755,27 @@ func TestRecordRequestError_OnNetworkFailure(t *testing.T) {
 func TestLogRequest_WithHeaders(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	lg := &testLogger{}
-	c.SetLogger(lg)
-	c.SetLogConfig(LogConfig{
+	logger := &testLogger{}
+	client.SetLogger(logger)
+	client.SetLogConfig(LogConfig{
 		Enabled:          true,
 		LogRequestHeader: true,
 		LogQueryParams:   true,
 	})
 
-	_, _ = c.Do("GET", "/version", map[string]interface{}{"type": "node"})
+	_, _ = client.Do("GET", "/version", map[string]interface{}{"type": "node"})
 
-	lg.mu.Lock()
-	count := len(lg.infos)
-	lg.mu.Unlock()
+	logger.mu.Lock()
+	count := len(logger.infos)
+	logger.mu.Unlock()
 
 	if count == 0 {
 		t.Error("expected info logs with headers enabled")
@@ -2747,17 +2790,18 @@ func TestEnsureAuthentication_AlreadyAuthenticated(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.APIToken = "root@pam!tok=secret"
+	opts.APIToken = testAPITokenShort
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
 	// APIToken authenticator is always "authenticated" after Authenticate().
 	// ensureAuthentication with IsAuthenticated=true returns nil immediately.
-	if err := c.ensureAuthentication(); err != nil {
-		t.Errorf("ensureAuthentication() = %v, want nil when already auth'd", err)
+	ensureErr := client.ensureAuthentication()
+	if ensureErr != nil {
+		t.Errorf("ensureAuthentication() = %v, want nil when already auth'd", ensureErr)
 	}
 }
 
@@ -2768,31 +2812,31 @@ func TestEnsureAuthentication_AlreadyAuthenticated(t *testing.T) {
 func TestLogResponse_WithBody(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "body-data"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "body-data"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
-	lg := &testLogger{}
-	c.SetLogger(lg)
-	c.SetLogConfig(LogConfig{
+	logger := &testLogger{}
+	client.SetLogger(logger)
+	client.SetLogConfig(LogConfig{
 		Enabled:           true,
 		LogResponseBody:   true,
 		LogResponseHeader: true,
 		MaxBodyBytes:      512,
 	})
 
-	_, err := c.Do("GET", "/version", nil)
+	_, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 
-	lg.mu.Lock()
-	count := len(lg.infos)
-	lg.mu.Unlock()
+	logger.mu.Lock()
+	count := len(logger.infos)
+	logger.mu.Unlock()
 
 	if count == 0 {
 		t.Error("expected info logs with response body logging enabled")
@@ -2807,9 +2851,9 @@ func TestNewClient_CachedFingerprints(t *testing.T) {
 	t.Parallel()
 
 	opts := &Options{
-		Host:      "pve.example.com",
+		Host:      testHostPVE,
 		Port:      8006,
-		Protocol:  "https",
+		Protocol:  testProtoHTTPS,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 		CachedFingerprints: map[string]bool{
@@ -2818,12 +2862,12 @@ func TestNewClient_CachedFingerprints(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient with CachedFingerprints: %v", err)
 	}
 
-	transport, ok := c.httpClient.Transport.(*http.Transport)
+	transport, ok := client.httpClient.Transport.(*http.Transport)
 	if !ok {
 		t.Fatal("transport is not *http.Transport")
 	}
@@ -2838,20 +2882,20 @@ func TestNewClient_ManualVerification(t *testing.T) {
 	t.Parallel()
 
 	opts := &Options{
-		Host:               "pve.example.com",
+		Host:               testHostPVE,
 		Port:               8006,
-		Protocol:           "https",
+		Protocol:           testProtoHTTPS,
 		Timeout:            5 * time.Second,
 		KeepAlive:          5,
 		ManualVerification: true,
 	}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient with ManualVerification: %v", err)
 	}
 
-	transport, ok := c.httpClient.Transport.(*http.Transport)
+	transport, ok := client.httpClient.Transport.(*http.Transport)
 	if !ok {
 		t.Fatal("transport is not *http.Transport")
 	}
@@ -2871,9 +2915,9 @@ func TestNewClient_RegisterFingerprintCallback(t *testing.T) {
 	var registered string
 
 	opts := &Options{
-		Host:      "pve.example.com",
+		Host:      testHostPVE,
 		Port:      8006,
-		Protocol:  "https",
+		Protocol:  testProtoHTTPS,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 		// Trigger fingerprint verification code path.
@@ -2949,19 +2993,19 @@ func TestEncodeSingleValue_BoolFalse(t *testing.T) {
 func TestResponseParser_StringToInt(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/plain"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeTextPlain}},
 		Body:       io.NopCloser(strings.NewReader("42")),
 		Request:    req,
 	}
 
 	var result int64
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse text→int64: %v", err)
 	}
@@ -2974,19 +3018,19 @@ func TestResponseParser_StringToInt(t *testing.T) {
 func TestResponseParser_StringToFloat(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/plain"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeTextPlain}},
 		Body:       io.NopCloser(strings.NewReader("3.14")),
 		Request:    req,
 	}
 
 	var result float64
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse text→float64: %v", err)
 	}
@@ -2999,19 +3043,19 @@ func TestResponseParser_StringToFloat(t *testing.T) {
 func TestResponseParser_StringToBool(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/plain"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeTextPlain}},
 		Body:       io.NopCloser(strings.NewReader("true")),
 		Request:    req,
 	}
 
 	var result bool
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse text→bool: %v", err)
 	}
@@ -3024,12 +3068,12 @@ func TestResponseParser_StringToBool(t *testing.T) {
 func TestResponseParser_CannotConvert_Error(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/plain"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeTextPlain}},
 		Body:       io.NopCloser(strings.NewReader("not-a-struct")),
 		Request:    req,
 	}
@@ -3038,7 +3082,7 @@ func TestResponseParser_CannotConvert_Error(t *testing.T) {
 
 	var result myStruct
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	// Should error because string cannot be assigned to struct.
 	if err == nil {
 		t.Fatal("expected error when assigning string to struct")
@@ -3052,17 +3096,17 @@ func TestResponseParser_CannotConvert_Error(t *testing.T) {
 func TestLogTicketRenewalFailure(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 
-	lg := &testLogger{}
-	c.SetLogger(lg)
-	c.SetLogConfig(LogConfig{Enabled: true})
+	logger := &testLogger{}
+	client.SetLogger(logger)
+	client.SetLogConfig(LogConfig{Enabled: true})
 
-	c.logTicketRenewalFailure(errors.New("renewal failed"))
+	client.logTicketRenewalFailure(errTestRenewalFailed)
 
-	lg.mu.Lock()
-	warnCount := len(lg.warns)
-	lg.mu.Unlock()
+	logger.mu.Lock()
+	warnCount := len(logger.warns)
+	logger.mu.Unlock()
 
 	if warnCount == 0 {
 		t.Error("expected a Warn log for ticket renewal failure")
@@ -3072,9 +3116,9 @@ func TestLogTicketRenewalFailure(t *testing.T) {
 func TestLogTicketRenewalFailure_NoLogger(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
+	client, _ := NewClient(minimalHTTPOptions())
 	// Must not panic when no logger set.
-	c.logTicketRenewalFailure(errors.New("renewal failed"))
+	client.logTicketRenewalFailure(errTestRenewalFailed)
 }
 
 // ---------------------------------------------------------------------------
@@ -3096,13 +3140,13 @@ func TestDefaultRequestConfig_Encoders(t *testing.T) {
 	}
 
 	// BodyEncoder should JSON-marshal.
-	b, err := cfg.BodyEncoder(map[string]string{"k": "v"})
+	encodedBody, err := cfg.BodyEncoder(map[string]string{"k": "v"})
 	if err != nil {
 		t.Fatalf("BodyEncoder: %v", err)
 	}
 
-	if !strings.Contains(string(b), `"k"`) {
-		t.Errorf("BodyEncoder = %q, missing key k", string(b))
+	if !strings.Contains(string(encodedBody), `"k"`) {
+		t.Errorf("BodyEncoder = %q, missing key k", string(encodedBody))
 	}
 }
 
@@ -3113,18 +3157,18 @@ func TestDefaultRequestConfig_Encoders(t *testing.T) {
 func TestSetMetrics_RecordRequestComplete(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
 	m := pmetrics.NewDefaultMetrics()
-	c.SetMetrics(m)
+	client.SetMetrics(m)
 
-	_, err := c.Do("GET", "/version", nil)
+	_, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
@@ -3137,35 +3181,35 @@ func TestSetMetrics_RecordRequestComplete(t *testing.T) {
 func TestSetMetrics_RecordRequestError(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
-	c.baseURL = "http://127.0.0.1:1" // no listener
-	c.maxRetries = 0
+	client, _ := NewClient(minimalHTTPOptions())
+	client.baseURL = "http://127.0.0.1:1" // no listener
+	client.maxRetries = 0
 
 	m := pmetrics.NewDefaultMetrics()
-	c.SetMetrics(m)
+	client.SetMetrics(m)
 
 	// Should exercise recordRequestError path (prom.Dec on active connections etc.)
-	_, _ = c.Do("GET", "/version", nil)
+	_, _ = client.Do("GET", "/version", nil)
 }
 
 func TestSetMetrics_RecordRequestStart_ContentLength(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
 	m := pmetrics.NewDefaultMetrics()
-	c.SetMetrics(m)
+	client.SetMetrics(m)
 
 	// POST with body → ContentLength > 0 → BytesSent path.
-	_, err := c.Do("POST", "/access/ticket", map[string]interface{}{
-		"username": "root@pam",
-		"password": "secret",
+	_, err := client.Do("POST", "/access/ticket", map[string]interface{}{
+		testFormKeyUsername: testUsername,
+		testFormKeyPassword: testPassword,
 	})
 	if err != nil {
 		t.Fatalf("Do POST: %v", err)
@@ -3182,15 +3226,15 @@ func (f *failLogoutAuthenticator) Authenticate() error           { return nil }
 func (f *failLogoutAuthenticator) IsAuthenticated() bool         { return true }
 func (f *failLogoutAuthenticator) GetHeaders() map[string]string { return nil }
 func (f *failLogoutAuthenticator) Refresh() error                { return nil }
-func (f *failLogoutAuthenticator) Logout() error                 { return errors.New("logout failed") }
+func (f *failLogoutAuthenticator) Logout() error                 { return errTestLogoutFailed }
 
 func TestLogout_ErrorPropagated(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
-	c.authenticator = &failLogoutAuthenticator{}
+	client, _ := NewClient(minimalHTTPOptions())
+	client.authenticator = &failLogoutAuthenticator{}
 
-	err := c.Logout()
+	err := client.Logout()
 	if err == nil {
 		t.Fatal("expected error from failing logout")
 	}
@@ -3207,10 +3251,10 @@ func TestLogout_ErrorPropagated(t *testing.T) {
 func TestHandleAuthenticationRetry_401_NilAuth(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
-	// c.authenticator is nil
+	client, _ := NewClient(minimalHTTPOptions())
+	// client.authenticator is nil
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp401 := &http.Response{
 		StatusCode: http.StatusUnauthorized,
 		Body:       io.NopCloser(strings.NewReader("")),
@@ -3221,10 +3265,16 @@ func TestHandleAuthenticationRetry_401_NilAuth(t *testing.T) {
 	})
 
 	// With nil authenticator, 401 is returned as-is.
-	result, err := c.handleAuthenticationRetry(req, resp401, next)
+	result, err := client.handleAuthenticationRetry(req, resp401, next)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
+
+	defer func() {
+		if result != nil && result.Body != nil {
+			_ = result.Body.Close()
+		}
+	}()
 
 	if result != resp401 {
 		t.Error("401 with nil authenticator should return original response")
@@ -3239,9 +3289,9 @@ func TestNewClient_HTTPS_BadCACert(t *testing.T) {
 	t.Parallel()
 
 	opts := &Options{
-		Host:      "pve.example.com",
+		Host:      testHostPVE,
 		Port:      8006,
-		Protocol:  "https",
+		Protocol:  testProtoHTTPS,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 		SSLOptions: &SSLOptions{
@@ -3259,9 +3309,9 @@ func TestNewClient_HTTPS_BadClientCerts(t *testing.T) {
 	t.Parallel()
 
 	opts := &Options{
-		Host:      "pve.example.com",
+		Host:      testHostPVE,
 		Port:      8006,
-		Protocol:  "https",
+		Protocol:  testProtoHTTPS,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 		SSLOptions: &SSLOptions{
@@ -3296,22 +3346,23 @@ func TestPerformAutoLogin_AlreadyAuthenticated_NoOp(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.Username = "root@pam"
-	opts.Password = "secret"
+	opts.Username = testUsername
+	opts.Password = testPassword
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
 	// Force loginAttempted=true to trigger the double-check branch.
-	c.loginMutex.Lock()
-	c.loginAttempted = true
-	c.loginMutex.Unlock()
+	client.loginMutex.Lock()
+	client.loginAttempted = true
+	client.loginMutex.Unlock()
 
 	// performAutoLogin should return nil immediately (double-check: loginAttempted=true).
-	if err := c.performAutoLogin(); err != nil {
-		t.Errorf("performAutoLogin with loginAttempted=true = %v, want nil", err)
+	autoLoginErr := client.performAutoLogin()
+	if autoLoginErr != nil {
+		t.Errorf("performAutoLogin with loginAttempted=true = %v, want nil", autoLoginErr)
 	}
 }
 
@@ -3322,25 +3373,25 @@ func TestPerformAutoLogin_AlreadyAuthenticated_NoOp(t *testing.T) {
 func TestRequestBuilder_BuildBody_Multipart_LargeFile(t *testing.T) {
 	t.Parallel()
 
-	rb := NewRequestBuilder("POST", "https://pve.example.com:8006/api2/json", "/upload")
-	rb.AddFormParam("storage", "local")
+	reqBuilder := NewRequestBuilder("POST", "https://pve.example.com:8006/api2/json", "/upload")
+	reqBuilder.AddFormParam("storage", "local")
 
 	// Multi-field + multi-file to exercise full multipart path.
-	rb.AddFile("file1", "a.iso", strings.NewReader("content-a"))
-	rb.AddFile("file2", "b.iso", strings.NewReader("content-b"))
+	reqBuilder.AddFile("file1", "a.iso", strings.NewReader("content-a"))
+	reqBuilder.AddFile("file2", "b.iso", strings.NewReader("content-b"))
 
-	body, ct, err := rb.BuildBody()
+	body, contentType, err := reqBuilder.BuildBody()
 	if err != nil {
 		t.Fatalf("BuildBody multipart multi-file: %v", err)
 	}
 
-	if !strings.HasPrefix(ct, "multipart/form-data") {
-		t.Errorf("content-type = %q, want multipart/form-data", ct)
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		t.Errorf("content-type = %q, want multipart/form-data", contentType)
 	}
 
-	b, _ := io.ReadAll(body)
-	if !strings.Contains(string(b), "content-a") || !strings.Contains(string(b), "content-b") {
-		t.Errorf("multipart body missing file contents: %q", string(b))
+	bodyBytes, _ := io.ReadAll(body)
+	if !strings.Contains(string(bodyBytes), "content-a") || !strings.Contains(string(bodyBytes), "content-b") {
+		t.Errorf("multipart body missing file contents: %q", string(bodyBytes))
 	}
 }
 
@@ -3351,8 +3402,8 @@ func TestRequestBuilder_BuildBody_Multipart_LargeFile(t *testing.T) {
 func TestRequestBuilder_BuildURL_NoLeadingSlash(t *testing.T) {
 	t.Parallel()
 
-	rb := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "nodes")
-	url := rb.BuildURL()
+	reqBuilder := NewRequestBuilder("GET", "https://pve.example.com:8006/api2/json", "nodes")
+	url := reqBuilder.BuildURL()
 
 	if !strings.HasPrefix(url, "https://") {
 		t.Errorf("BuildURL = %q, should start with https://", url)
@@ -3370,20 +3421,20 @@ func TestRequestBuilder_BuildURL_NoLeadingSlash(t *testing.T) {
 func TestResponseParser_AssignConvertible(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	// data is a JSON number; target is float64 → direct assignable.
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(strings.NewReader(`{"data":1.5}`)),
 		Request:    req,
 	}
 
 	var result float64
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse float: %v", err)
 	}
@@ -3400,10 +3451,10 @@ func TestResponseParser_AssignConvertible(t *testing.T) {
 func TestEnsureAuthentication_NilAuthenticator(t *testing.T) {
 	t.Parallel()
 
-	c, _ := NewClient(minimalHTTPOptions())
-	// c.authenticator == nil
+	client, _ := NewClient(minimalHTTPOptions())
+	// client.authenticator == nil
 
-	err := c.ensureAuthentication()
+	err := client.ensureAuthentication()
 	if err != nil {
 		t.Errorf("ensureAuthentication with nil auth = %v, want nil", err)
 	}
@@ -3417,18 +3468,18 @@ func TestIsAuthenticated_WithAPIToken(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.APIToken = "root@pam!tok=secret"
+	opts.APIToken = testAPITokenShort
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
 	// Before Authenticate(), API token auth is not authenticated.
 	// After Authenticate(), it is (no-op for tokens).
-	_ = c.authenticator.Authenticate()
+	_ = client.authenticator.Authenticate()
 
-	if !c.isAuthenticated() {
+	if !client.isAuthenticated() {
 		t.Error("isAuthenticated() should return true after Authenticate() with API token")
 	}
 }
@@ -3440,16 +3491,16 @@ func TestIsAuthenticated_WithAPIToken(t *testing.T) {
 func TestDoWithContext_ResponseBodyClose_NilLogger(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 	// No logger set → body close error warning code path (logger == nil branch).
 
-	_, err := c.Do("GET", "/version", nil)
+	_, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
@@ -3465,9 +3516,15 @@ func TestMetricsMiddleware_GetMetrics_AvgDuration(t *testing.T) {
 	mm := NewMetricsMiddleware()
 
 	// No requests yet → avg duration = 0.
-	m := mm.GetMetrics()
-	if m["average_duration"].(string) != "0s" {
-		t.Errorf("average_duration without requests = %v, want 0s", m["average_duration"])
+	metricsResult := mm.GetMetrics()
+
+	avgDur, ok := metricsResult["average_duration"].(string)
+	if !ok {
+		t.Fatal("average_duration is not a string")
+	}
+
+	if avgDur != "0s" {
+		t.Errorf("average_duration without requests = %v, want 0s", metricsResult["average_duration"])
 	}
 }
 
@@ -3480,34 +3537,34 @@ func TestHandleAuthenticationRetry_401_WithAuth(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		n := atomic.AddInt32(&calls, 1)
 		if n == 1 {
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(`{"message":"unauthorized"}`))
+			respWriter.WriteHeader(http.StatusUnauthorized)
+			_, _ = respWriter.Write([]byte(`{"message":"unauthorized"}`))
 
 			return
 		}
 		// Second call (retry after auth): success.
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
 	opts := minimalHTTPOptions()
-	opts.APIToken = "root@pam!tok=secret"
+	opts.APIToken = testAPITokenShort
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = srv.URL
-	c.maxRetries = 0
-	_ = c.authenticator.Authenticate()
+	client.baseURL = srv.URL
+	client.maxRetries = 0
+	_ = client.authenticator.Authenticate()
 
 	// The auth middleware calls handleAuthenticationRetry on 401.
 	// API token Refresh() is a no-op; retry should succeed on second call.
-	resp, err := c.Do("GET", "/version", nil)
+	resp, err := client.Do("GET", "/version", nil)
 	if err != nil {
 		// Tolerate error since retry after Refresh may return 401 again via
 		// parseResponse. Key goal: handleAuthenticationRetry code path hit.
@@ -3524,20 +3581,20 @@ func TestHandleAuthenticationRetry_401_WithAuth(t *testing.T) {
 func TestResponseParser_ParseJSON_NoDataField(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	// Envelope without "data" field — should try to unmarshal whole body.
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeJSON}},
 		Body:       io.NopCloser(strings.NewReader(`{"key":"val"}`)),
 		Request:    req,
 	}
 
 	var result map[string]interface{}
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse no-data envelope: %v", err)
 	}
@@ -3553,24 +3610,24 @@ func TestResponseParser_ParseJSON_NoDataField(t *testing.T) {
 func TestResponseParser_TryAssign_String(t *testing.T) {
 	t.Parallel()
 
-	rp := NewResponseParser()
+	respParser := NewResponseParser()
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/plain"}},
-		Body:       io.NopCloser(strings.NewReader("hello")),
+		Header:     http.Header{testHeaderContentType: []string{testContentTypeTextPlain}},
+		Body:       io.NopCloser(strings.NewReader(testHello)),
 		Request:    req,
 	}
 
 	var result string
 
-	err := rp.Parse(resp, &result)
+	err := respParser.Parse(resp, &result)
 	if err != nil {
 		t.Fatalf("Parse direct string: %v", err)
 	}
 
-	if result != "hello" {
+	if result != testHello {
 		t.Errorf("result = %q, want 'hello'", result)
 	}
 }
@@ -3618,29 +3675,29 @@ func TestLoggingMiddlewareApply_LargeResponseBody(t *testing.T) {
 
 	largeBody := strings.Repeat("X", 2048)
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(largeBody))
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
+		_, _ = respWriter.Write([]byte(largeBody))
 	})
 
 	var buf bytes.Buffer
 
 	lg := log.New(&buf, "", 0)
-	lm := NewLoggingMiddleware(lg)
-	lm.logBody = true
+	loggingMW := NewLoggingMiddleware(lg)
+	loggingMW.logBody = true
 
-	req, _ := http.NewRequest(http.MethodGet, srv.URL, nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	httpClient := &http.Client{}
 
 	next := Handler(func(r *http.Request) (*http.Response, error) {
 		return httpClient.Do(r)
 	})
 
-	resp, err := lm.Apply(req, next)
+	resp, err := loggingMW.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Log should contain truncated marker.
 	if !strings.Contains(buf.String(), "truncated") {
@@ -3658,15 +3715,19 @@ func TestLoggingMiddlewareApply_NextError(t *testing.T) {
 	var buf bytes.Buffer
 
 	lg := log.New(&buf, "", 0)
-	lm := NewLoggingMiddleware(lg)
+	loggingMW := NewLoggingMiddleware(lg)
 
-	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1:1/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://127.0.0.1:1/path", nil)
 
 	next := Handler(func(_ *http.Request) (*http.Response, error) {
-		return nil, errors.New("connection refused")
+		return nil, errTestConnectionRefused
 	})
 
-	_, err := lm.Apply(req, next)
+	nextErrResp, err := loggingMW.Apply(req, next)
+	if nextErrResp != nil && nextErrResp.Body != nil {
+		defer func() { _ = nextErrResp.Body.Close() }()
+	}
+
 	if err == nil {
 		t.Fatal("expected error from next")
 	}
@@ -3683,23 +3744,23 @@ func TestLoggingMiddlewareApply_NextError(t *testing.T) {
 func TestRateLimitMiddleware_TokenRefill(t *testing.T) {
 	t.Parallel()
 
-	rl := NewRateLimitMiddleware(10, 5)
+	rateLimiter := NewRateLimitMiddleware(10, 5)
 	// Start with 3 tokens; refill should fire when time elapses.
-	rl.tokens = 3
-	rl.lastRequest = time.Now().Add(-2 * time.Second) // 2s elapsed → +20 tokens capped to burst=5
+	rateLimiter.tokens = 3
+	rateLimiter.lastRequest = time.Now().Add(-2 * time.Second) // 2s elapsed → +20 tokens capped to burst=5
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com/path", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/path", nil)
 
 	next := Handler(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 	})
 
-	resp, err := rl.Apply(req, next)
+	resp, err := rateLimiter.Apply(req, next)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 }
 
 // ---------------------------------------------------------------------------
@@ -3711,26 +3772,26 @@ func TestCachingMiddleware_POST_NotCached(t *testing.T) {
 
 	var calls int32
 
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, _ *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
 	opts := minimalHTTPOptions()
 	opts.CacheConfig = &cache.Config{Enabled: true, MaxSize: 10 * 1024 * 1024, DefaultTTL: time.Minute, CleanupInterval: 5 * time.Minute}
 
-	c, err := NewClient(opts)
+	client, err := NewClient(opts)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	c.baseURL = srv.URL
-	c.maxRetries = 0
+	client.baseURL = srv.URL
+	client.maxRetries = 0
 
 	// Two POST requests to same path — both should hit server (not cached).
-	_, _ = c.Do("POST", "/access/ticket", map[string]interface{}{"username": "root@pam", "password": "x"})
-	_, _ = c.Do("POST", "/access/ticket", map[string]interface{}{"username": "root@pam", "password": "x"})
+	_, _ = client.Do("POST", "/access/ticket", map[string]interface{}{testFormKeyUsername: testUsername, testFormKeyPassword: "x"})
+	_, _ = client.Do("POST", "/access/ticket", map[string]interface{}{testFormKeyUsername: testUsername, testFormKeyPassword: "x"})
 
 	if atomic.LoadInt32(&calls) != 2 {
 		t.Errorf("calls = %d, want 2 (POST not cached)", calls)
@@ -3744,24 +3805,24 @@ func TestCachingMiddleware_POST_NotCached(t *testing.T) {
 func TestUploadWithContext_Cancelled(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 		case <-time.After(5 * time.Second):
 		}
 
-		w.WriteHeader(http.StatusOK)
+		respWriter.WriteHeader(http.StatusOK)
 	})
 
-	c := clientPointedAt(t, srv.URL)
-	c.maxRetries = 0
+	client := clientPointedAt(t, srv.URL)
+	client.maxRetries = 0
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	done := make(chan error, 1)
 
 	go func() {
-		_, err := c.UploadWithContext(ctx, "/upload", map[string]string{}, "file", "f.iso", strings.NewReader("data"))
+		_, err := client.UploadWithContext(ctx, "/upload", map[string]string{}, "file", "f.iso", strings.NewReader("data"))
 		done <- err
 	}()
 
@@ -3791,17 +3852,17 @@ func TestDo_PostHotPath_BoolEncodedAs01(t *testing.T) {
 
 	var gotBody string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
 		gotBody = string(b)
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	_, err := c.Do("POST", "/nodes/x/qemu/100/config", map[string]interface{}{
+	_, err := client.Do("POST", "/nodes/x/qemu/100/config", map[string]interface{}{
 		"onboot":   true,
 		"protect":  false,
 		"shutdown": "{}",
@@ -3824,22 +3885,22 @@ func TestDo_PostHotPath_BoolEncodedAs01(t *testing.T) {
 }
 
 // TestDo_GetHotPath_SliceRepeatedKeys guards CRIT-1 on the GET path:
-// slices must encode as repeated query keys, not Go-style "[a b c]".
+// slices must encode as repeated query keys, not Go-style "[a b client]".
 func TestDo_GetHotPath_SliceRepeatedKeys(t *testing.T) {
 	t.Parallel()
 
 	var gotQuery string
 
-	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(t, func(respWriter http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.RawQuery
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(pveEnvelope(t, "ok"))
+		respWriter.Header().Set(testHeaderContentType, testContentTypeJSON)
+		_, _ = respWriter.Write(pveEnvelope(t, "ok"))
 	})
 
-	c := clientPointedAt(t, srv.URL)
+	client := clientPointedAt(t, srv.URL)
 
-	_, err := c.Do("GET", "/cluster/log", map[string]interface{}{
+	_, err := client.Do("GET", "/cluster/log", map[string]interface{}{
 		"tag": []string{"a", "b"},
 	})
 	if err != nil {

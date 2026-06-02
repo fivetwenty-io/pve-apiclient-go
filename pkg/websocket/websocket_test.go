@@ -20,8 +20,8 @@ import (
 func newWSServer(t *testing.T, frameJSON string) *httptest.Server {
 	t.Helper()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := wsUpgrader.Upgrade(w, r, nil)
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		conn, err := wsUpgrader.Upgrade(respWriter, req, nil)
 		if err != nil {
 			return
 		}
@@ -36,7 +36,8 @@ func newWSServer(t *testing.T, frameJSON string) *httptest.Server {
 		_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
+			_, _, readErr := conn.ReadMessage()
+			if readErr != nil {
 				break
 			}
 		}
@@ -45,9 +46,9 @@ func newWSServer(t *testing.T, frameJSON string) *httptest.Server {
 	return srv
 }
 
-// wsURL builds a ws:// URL from an httptest.Server.
-func wsURL(srv *httptest.Server, path string) string {
-	return "ws://" + srv.Listener.Addr().String() + path
+// wsClientURL builds a ws:// URL from an httptest.Server using the fixed /ws path.
+func wsClientURL(srv *httptest.Server) string {
+	return "ws://" + srv.Listener.Addr().String() + "/ws"
 }
 
 // newClient builds a pkgws.Client connected to addr (ws://...).
@@ -55,7 +56,7 @@ func newClient(t *testing.T, addr string) *pkgws.Client {
 	t.Helper()
 
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "127.0.0.1"
+	cfg.Host = testLocalhost
 
 	// Parse port from addr "ws://host:port/path"
 	noScheme := strings.TrimPrefix(addr, "ws://")
@@ -74,7 +75,9 @@ func newClient(t *testing.T, addr string) *pkgws.Client {
 		}
 
 		var port int
-		if _, err := fmt.Sscanf(portStr, "%d", &port); err == nil {
+
+		_, scanErr := fmt.Sscanf(portStr, "%d", &port)
+		if scanErr == nil {
 			cfg.Port = port
 		}
 	}
@@ -87,17 +90,19 @@ func newClient(t *testing.T, addr string) *pkgws.Client {
 	cfg.MaxReconnectAttempts = 1
 	cfg.ReconnectInterval = 10 * time.Millisecond
 
-	c, err := pkgws.New(cfg)
+	wsClient, err := pkgws.New(cfg)
 	if err != nil {
 		t.Fatalf("pkgws.New: %v", err)
 	}
 
-	return c
+	return wsClient
 }
 
 // --- DefaultConfig / New ---
 
 func TestDefaultConfig_NonNil(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
 	if cfg == nil {
 		t.Fatal("DefaultConfig returned nil")
@@ -109,6 +114,8 @@ func TestDefaultConfig_NonNil(t *testing.T) {
 }
 
 func TestNew_RequiresHost(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
 	cfg.Host = ""
 
@@ -119,6 +126,8 @@ func TestNew_RequiresHost(t *testing.T) {
 }
 
 func TestNew_NilConfigUsesDefault(t *testing.T) {
+	t.Parallel()
+
 	// nil config should get defaulted, but host is empty → error.
 	_, err := pkgws.New(nil)
 	if err == nil {
@@ -127,15 +136,17 @@ func TestNew_NilConfigUsesDefault(t *testing.T) {
 }
 
 func TestNew_ValidConfig(t *testing.T) {
-	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	t.Parallel()
 
-	c, err := pkgws.New(cfg)
+	cfg := pkgws.DefaultConfig()
+	cfg.Host = testHost
+
+	wsClient, err := pkgws.New(cfg)
 	if err != nil {
 		t.Fatalf("pkgws.New: %v", err)
 	}
 
-	if c == nil {
+	if wsClient == nil {
 		t.Fatal("expected non-nil Client")
 	}
 }
@@ -143,93 +154,107 @@ func TestNew_ValidConfig(t *testing.T) {
 // --- SetHeaders / SetAuth ---
 
 func TestSetHeaders(t *testing.T) {
-	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	t.Parallel()
 
-	c, _ := pkgws.New(cfg)
-	h := http.Header{}
-	h.Set("X-Custom", "value")
-	c.SetHeaders(h) // must not panic
+	cfg := pkgws.DefaultConfig()
+	cfg.Host = testHost
+
+	wsClient, _ := pkgws.New(cfg)
+	headers := http.Header{}
+	headers.Set("X-Custom", "value")
+	wsClient.SetHeaders(headers) // must not panic
 }
 
 func TestSetAuth(t *testing.T) {
-	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	t.Parallel()
 
-	c, _ := pkgws.New(cfg)
-	c.SetAuth("ticket-value", "csrf-value") // must not panic
+	cfg := pkgws.DefaultConfig()
+	cfg.Host = testHost
+
+	wsClient, _ := pkgws.New(cfg)
+	wsClient.SetAuth("ticket-value", "csrf-value") // must not panic
 }
 
 func TestSetAuth_EmptyValues(t *testing.T) {
-	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	t.Parallel()
 
-	c, _ := pkgws.New(cfg)
-	c.SetAuth("", "") // must not panic
+	cfg := pkgws.DefaultConfig()
+	cfg.Host = testHost
+
+	wsClient, _ := pkgws.New(cfg)
+	wsClient.SetAuth("", "") // must not panic
 }
 
 // --- Connect / Disconnect / IsConnected ---
 
 func TestConnect_HappyPath(t *testing.T) {
+	t.Parallel()
+
 	srv := newWSServer(t, "")
 	defer srv.Close()
 
-	addr := wsURL(srv, "/ws")
-	c := newClient(t, addr)
+	wsClient := newClient(t, wsClientURL(srv))
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	if !c.IsConnected() {
+	if !wsClient.IsConnected() {
 		t.Error("IsConnected should be true after Connect")
 	}
 
-	if err := c.Disconnect(); err != nil {
+	err = wsClient.Disconnect()
+	if err != nil {
 		t.Errorf("Disconnect: %v", err)
 	}
 }
 
 func TestConnect_AlreadyConnected(t *testing.T) {
+	t.Parallel()
+
 	srv := newWSServer(t, "")
 	defer srv.Close()
 
-	c := newClient(t, wsURL(srv, "/ws"))
+	wsClient := newClient(t, wsClientURL(srv))
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("first Connect: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 
-	err = c.Connect(context.Background())
+	err = wsClient.Connect(context.Background())
 	if err == nil {
 		t.Error("second Connect should return errAlreadyConnected")
 	}
 }
 
 func TestDisconnect_NotConnected(t *testing.T) {
-	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	t.Parallel()
 
-	c, _ := pkgws.New(cfg)
+	cfg := pkgws.DefaultConfig()
+	cfg.Host = testHost
+
+	wsClient, _ := pkgws.New(cfg)
 
 	// Disconnect without connecting is a no-op.
-	err := c.Disconnect()
+	err := wsClient.Disconnect()
 	if err != nil {
 		t.Errorf("Disconnect on unconnected client: %v", err)
 	}
 }
 
 func TestIsConnected_False_BeforeConnect(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	cfg.Host = testHost
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
-	if c.IsConnected() {
+	if wsClient.IsConnected() {
 		t.Error("IsConnected should be false before Connect")
 	}
 }
@@ -237,31 +262,35 @@ func TestIsConnected_False_BeforeConnect(t *testing.T) {
 // --- ConnectWithRetry ---
 
 func TestConnectWithRetry_SuccessOnFirstAttempt(t *testing.T) {
+	t.Parallel()
+
 	srv := newWSServer(t, "")
 	defer srv.Close()
 
-	c := newClient(t, wsURL(srv, "/ws"))
+	wsClient := newClient(t, wsClientURL(srv))
 
-	err := c.ConnectWithRetry(context.Background())
+	err := wsClient.ConnectWithRetry(context.Background())
 	if err != nil {
 		t.Fatalf("ConnectWithRetry: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 }
 
 func TestConnectWithRetry_FailsWhenRefused(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "127.0.0.1"
+	cfg.Host = testLocalhost
 	cfg.Port = 1 // always refused
 	cfg.Secure = false
 	cfg.MaxReconnectAttempts = 1
 	cfg.ReconnectInterval = 1 * time.Millisecond
 	cfg.HandshakeTimeout = 50 * time.Millisecond
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
-	err := c.ConnectWithRetry(context.Background())
+	err := wsClient.ConnectWithRetry(context.Background())
 	if err == nil {
 		t.Error("expected error when connection refused")
 	}
@@ -270,30 +299,32 @@ func TestConnectWithRetry_FailsWhenRefused(t *testing.T) {
 // --- Event handlers: On / OnAll / Off ---
 
 func TestOn_ReceivesEvent(t *testing.T) {
+	t.Parallel()
+
 	eventJSON := `{"type":"node.update","id":"ev1","resource":"node/pve1","action":"update","status":"ok"}`
 
 	srv := newWSServer(t, eventJSON)
 	defer srv.Close()
 
-	c := newClient(t, wsURL(srv, "/ws"))
+	wsClient := newClient(t, wsClientURL(srv))
 
 	received := make(chan *pkgws.Event, 1)
 
-	c.On("node.update", func(e *pkgws.Event) {
-		received <- e
+	wsClient.On("node.update", func(wsEvent *pkgws.Event) {
+		received <- wsEvent
 	})
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 
 	select {
-	case e := <-received:
-		if e.Type != "node.update" {
-			t.Errorf("event type: want node.update, got %q", e.Type)
+	case wsEvent := <-received:
+		if wsEvent.Type != "node.update" {
+			t.Errorf("event type: want node.update, got %q", wsEvent.Type)
 		}
 	case <-time.After(2 * time.Second):
 		t.Error("timeout waiting for event")
@@ -301,25 +332,27 @@ func TestOn_ReceivesEvent(t *testing.T) {
 }
 
 func TestOnAll_ReceivesAllEvents(t *testing.T) {
+	t.Parallel()
+
 	eventJSON := `{"type":"storage.update","id":"ev2"}`
 
 	srv := newWSServer(t, eventJSON)
 	defer srv.Close()
 
-	c := newClient(t, wsURL(srv, "/ws"))
+	wsClient := newClient(t, wsClientURL(srv))
 
 	var count int32
 
-	c.OnAll(func(_ *pkgws.Event) {
+	wsClient.OnAll(func(_ *pkgws.Event) {
 		atomic.AddInt32(&count, 1)
 	})
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 
 	// Wait for at least one event.
 	deadline := time.Now().Add(2 * time.Second)
@@ -337,72 +370,83 @@ func TestOnAll_ReceivesAllEvents(t *testing.T) {
 }
 
 func TestOff_RemovesHandler(t *testing.T) {
-	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	t.Parallel()
 
-	c, _ := pkgws.New(cfg)
-	c.On("test.event", func(_ *pkgws.Event) {})
-	c.Off("test.event") // must not panic
+	cfg := pkgws.DefaultConfig()
+	cfg.Host = testHost
+
+	wsClient, _ := pkgws.New(cfg)
+	wsClient.On("test.event", func(_ *pkgws.Event) {})
+	wsClient.Off("test.event") // must not panic
 }
 
 // --- Send / SendText ---
 
 func TestSend_NotConnected(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	cfg.Host = testHost
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
-	err := c.Send(map[string]string{"key": "value"})
+	err := wsClient.Send(map[string]string{"key": "value"})
 	if err == nil {
 		t.Error("Send without connection should error")
 	}
 }
 
 func TestSendText_NotConnected(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	cfg.Host = testHost
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
-	err := c.SendText("hello")
+	err := wsClient.SendText("hello")
 	if err == nil {
 		t.Error("SendText without connection should error")
 	}
 }
 
 func TestSend_HappyPath(t *testing.T) {
+	t.Parallel()
+
 	srv := newWSServer(t, "")
 	defer srv.Close()
 
-	c := newClient(t, wsURL(srv, "/ws"))
+	wsClient := newClient(t, wsClientURL(srv))
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 
-	if err := c.Send(map[string]string{"action": "ping"}); err != nil {
-		t.Errorf("Send: %v", err)
+	sendErr := wsClient.Send(map[string]string{"action": "ping"})
+	if sendErr != nil {
+		t.Errorf("Send: %v", sendErr)
 	}
 }
 
 func TestSendText_HappyPath(t *testing.T) {
+	t.Parallel()
+
 	srv := newWSServer(t, "")
 	defer srv.Close()
 
-	c := newClient(t, wsURL(srv, "/ws"))
+	wsClient := newClient(t, wsClientURL(srv))
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 
-	err = c.SendText("hello")
+	err = wsClient.SendText("hello")
 	if err != nil {
 		t.Errorf("SendText: %v", err)
 	}
@@ -411,12 +455,14 @@ func TestSendText_HappyPath(t *testing.T) {
 // --- Errors channel ---
 
 func TestErrors_ChannelReturnedNonNil(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	cfg.Host = testHost
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
-	ch := c.Errors()
+	ch := wsClient.Errors()
 	if ch == nil {
 		t.Error("Errors() should return non-nil channel")
 	}
@@ -425,43 +471,47 @@ func TestErrors_ChannelReturnedNonNil(t *testing.T) {
 // --- Subscription ---
 
 func TestNewSubscription_Cancel(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	cfg.Host = testHost
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
-	sub := c.NewSubscription("test.event", func(_ *pkgws.Event) {})
+	sub := wsClient.NewSubscription("test.event", func(_ *pkgws.Event) {})
 	sub.Cancel() // must not panic
 }
 
 // --- Stream ---
 
 func TestNewStream_Events(t *testing.T) {
+	t.Parallel()
+
 	eventJSON := `{"type":"vm.update","id":"s1"}`
 
 	srv := newWSServer(t, eventJSON)
 	defer srv.Close()
 
-	c := newClient(t, wsURL(srv, "/ws"))
+	wsClient := newClient(t, wsClientURL(srv))
 
-	stream := c.NewStream(10)
+	stream := wsClient.NewStream(10)
 	defer stream.Stop()
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 
 	select {
-	case e, ok := <-stream.Events():
+	case wsEvent, ok := <-stream.Events():
 		if !ok {
 			t.Error("stream closed prematurely")
 		}
 
-		if e.Type != "vm.update" {
-			t.Errorf("event type: want vm.update, got %q", e.Type)
+		if wsEvent.Type != "vm.update" {
+			t.Errorf("event type: want vm.update, got %q", wsEvent.Type)
 		}
 	case <-time.After(2 * time.Second):
 		t.Error("timeout waiting for stream event")
@@ -469,12 +519,14 @@ func TestNewStream_Events(t *testing.T) {
 }
 
 func TestNewStream_DefaultBuffer(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "pve1"
+	cfg.Host = testHost
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
-	stream := c.NewStream(0) // 0 → defaults to 100
+	stream := wsClient.NewStream(0) // 0 → defaults to 100
 	defer stream.Stop()
 
 	if stream.Events() == nil {
@@ -485,9 +537,11 @@ func TestNewStream_DefaultBuffer(t *testing.T) {
 // --- raw / malformed message fallback ---
 
 func TestHandleMessage_RawFallback(t *testing.T) {
+	t.Parallel()
+
 	// Send a non-JSON payload; client should fall back to raw event type.
-	rawSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := wsUpgrader.Upgrade(w, r, nil)
+	rawSrv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		conn, err := wsUpgrader.Upgrade(respWriter, req, nil)
 		if err != nil {
 			return
 		}
@@ -498,32 +552,33 @@ func TestHandleMessage_RawFallback(t *testing.T) {
 
 		_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
+			_, _, readErr := conn.ReadMessage()
+			if readErr != nil {
 				break
 			}
 		}
 	}))
 	defer rawSrv.Close()
 
-	c := newClient(t, wsURL(rawSrv, "/ws"))
+	wsClient := newClient(t, "ws://"+rawSrv.Listener.Addr().String()+"/ws")
 
 	rawReceived := make(chan *pkgws.Event, 1)
 
-	c.On("raw", func(e *pkgws.Event) {
-		rawReceived <- e
+	wsClient.On("raw", func(wsEvent *pkgws.Event) {
+		rawReceived <- wsEvent
 	})
 
-	err := c.Connect(context.Background())
+	err := wsClient.Connect(context.Background())
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	defer c.Disconnect() //nolint:errcheck
+	defer wsClient.Disconnect() //nolint:errcheck
 
 	select {
-	case e := <-rawReceived:
-		if e.Type != "raw" {
-			t.Errorf("expected raw event, got %q", e.Type)
+	case wsEvent := <-rawReceived:
+		if wsEvent.Type != "raw" {
+			t.Errorf("expected raw event, got %q", wsEvent.Type)
 		}
 	case <-time.After(2 * time.Second):
 		t.Error("timeout waiting for raw event")
@@ -533,11 +588,13 @@ func TestHandleMessage_RawFallback(t *testing.T) {
 // --- Ping/pong keepalive ---
 
 func TestConnect_WithPingEnabled(t *testing.T) {
+	t.Parallel()
+
 	srv := newWSServer(t, "")
 	defer srv.Close()
 
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "127.0.0.1"
+	cfg.Host = testLocalhost
 
 	host, port := hostPort(srv)
 	cfg.Host = host
@@ -551,39 +608,43 @@ func TestConnect_WithPingEnabled(t *testing.T) {
 	cfg.MaxReconnectAttempts = 1
 	cfg.ReconnectInterval = 10 * time.Millisecond
 
-	c, err := pkgws.New(cfg)
+	wsClient, err := pkgws.New(cfg)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
 
-	if err := c.Connect(context.Background()); err != nil {
-		t.Fatalf("Connect: %v", err)
+	connectErr := wsClient.Connect(context.Background())
+	if connectErr != nil {
+		t.Fatalf("Connect: %v", connectErr)
 	}
 
 	time.Sleep(150 * time.Millisecond) // let at least two pings fire
 
-	if err := c.Disconnect(); err != nil {
-		t.Errorf("Disconnect: %v", err)
+	disconnectErr := wsClient.Disconnect()
+	if disconnectErr != nil {
+		t.Errorf("Disconnect: %v", disconnectErr)
 	}
 }
 
 // --- Reconnect on server close ---
 
 func TestConnectWithRetry_ContextCancelled(t *testing.T) {
+	t.Parallel()
+
 	cfg := pkgws.DefaultConfig()
-	cfg.Host = "127.0.0.1"
+	cfg.Host = testLocalhost
 	cfg.Port = 1 // always refused
 	cfg.Secure = false
 	cfg.MaxReconnectAttempts = 10
 	cfg.ReconnectInterval = 200 * time.Millisecond
 	cfg.HandshakeTimeout = 50 * time.Millisecond
 
-	c, _ := pkgws.New(cfg)
+	wsClient, _ := pkgws.New(cfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
 	defer cancel()
 
-	err := c.ConnectWithRetry(ctx)
+	err := wsClient.ConnectWithRetry(ctx)
 	if err == nil {
 		t.Error("expected error when context cancelled during retry")
 	}

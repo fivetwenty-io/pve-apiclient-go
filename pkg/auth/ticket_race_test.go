@@ -29,24 +29,24 @@ type loginResponse struct {
 func newMockPVEServer(t *testing.T) *httptest.Server {
 	t.Helper()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/api2/json/access/ticket" {
-			http.NotFound(w, r)
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodPost || req.URL.Path != pathAccessTicket {
+			http.NotFound(respWriter, req)
 
 			return
 		}
 
-		_ = r.ParseForm()
+		_ = req.ParseForm()
 
 		resp := loginResponse{}
 		resp.Data.Ticket = "PVE:root@pam:" + time.Now().Format("15:04:05.000000000")
 		resp.Data.CSRFPreventionToken = "csrf-token"
-		resp.Data.Username = r.FormValue("username")
+		resp.Data.Username = req.FormValue("username")
 		resp.Success = 1
 
-		w.Header().Set("Content-Type", "application/json")
+		respWriter.Header().Set("Content-Type", "application/json")
 
-		_ = json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(respWriter).Encode(resp)
 	}))
 
 	return srv
@@ -65,38 +65,38 @@ func TestTicketAuthenticator_ConcurrentRefreshAndRead(t *testing.T) {
 	baseURL := u.Scheme + "://" + u.Host + "/api2/json"
 
 	httpClient := srv.Client()
-	creds := &auth.Credentials{Username: "root", Password: "secret", Realm: "pam"}
-	ta := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
+	creds := &auth.Credentials{Username: testUserRoot, Password: testSecretPass, Realm: testRealm}
+	ticketAuth := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
 
 	// Seed with an initial ticket so readers see non-nil immediately.
-	err := ta.Authenticate()
+	err := ticketAuth.Authenticate()
 	if err != nil {
 		t.Fatalf("initial Authenticate() failed: %v", err)
 	}
 
 	const goroutines = 100
 
-	var wg sync.WaitGroup
+	var waitGroup sync.WaitGroup
 
-	wg.Add(goroutines)
+	waitGroup.Add(goroutines)
 
-	for i := range goroutines {
+	for goroutineID := range goroutines {
 		go func(id int) {
-			defer wg.Done()
+			defer waitGroup.Done()
 
 			if id%3 == 0 {
 				// Writer: force a ticket refresh.
-				_ = ta.RefreshForce()
+				_ = ticketAuth.RefreshForce()
 			} else {
 				// Reader: obtain ticket and headers concurrently.
-				_ = ta.GetTicket()
-				_ = ta.GetHeaders()
-				_ = ta.IsAuthenticated()
+				_ = ticketAuth.GetTicket()
+				_ = ticketAuth.GetHeaders()
+				_ = ticketAuth.IsAuthenticated()
 			}
-		}(i)
+		}(goroutineID)
 	}
 
-	wg.Wait()
+	waitGroup.Wait()
 }
 
 // TestTicketAuthenticator_SetGetTicketConcurrent verifies that SetTicket and
@@ -111,35 +111,35 @@ func TestTicketAuthenticator_SetGetTicketConcurrent(t *testing.T) {
 	baseURL := u.Scheme + "://" + u.Host + "/api2/json"
 
 	httpClient := srv.Client()
-	creds := &auth.Credentials{Username: "root", Password: "secret", Realm: "pam"}
-	ta := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
+	creds := &auth.Credentials{Username: testUserRoot, Password: testSecretPass, Realm: testRealm}
+	ticketAuth := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
 
 	validUntil := time.Now().Add(2 * time.Hour)
 
 	const goroutines = 100
 
-	var wg sync.WaitGroup
+	var waitGroup sync.WaitGroup
 
-	wg.Add(goroutines)
+	waitGroup.Add(goroutines)
 
-	for i := range goroutines {
+	for goroutineID := range goroutines {
 		go func(id int) {
-			defer wg.Done()
+			defer waitGroup.Done()
 
 			if id%2 == 0 {
-				ta.SetTicket(&auth.Ticket{
+				ticketAuth.SetTicket(&auth.Ticket{
 					Value:      "ticket-value",
 					CSRFToken:  "csrf",
 					Username:   "root@pam",
 					ValidUntil: validUntil,
 				})
 			} else {
-				_ = ta.GetTicket()
+				_ = ticketAuth.GetTicket()
 			}
-		}(i)
+		}(goroutineID)
 	}
 
-	wg.Wait()
+	waitGroup.Wait()
 }
 
 // TestTicketAuthenticator_RefreshNoRace verifies the non-forced Refresh path
@@ -154,27 +154,27 @@ func TestTicketAuthenticator_RefreshNoRace(t *testing.T) {
 	baseURL := u.Scheme + "://" + u.Host + "/api2/json"
 
 	httpClient := srv.Client()
-	creds := &auth.Credentials{Username: "root", Password: "secret", Realm: "pam"}
-	ta := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
+	creds := &auth.Credentials{Username: testUserRoot, Password: testSecretPass, Realm: testRealm}
+	ticketAuth := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
 
 	const goroutines = 50
 
-	var wg sync.WaitGroup
+	var waitGroup sync.WaitGroup
 
-	wg.Add(goroutines)
+	waitGroup.Add(goroutines)
 
 	for range goroutines {
 		go func() {
-			defer wg.Done()
+			defer waitGroup.Done()
 
-			_ = ta.Refresh()
+			_ = ticketAuth.Refresh()
 		}()
 	}
 
-	wg.Wait()
+	waitGroup.Wait()
 
 	// Verify we actually authenticated.
-	if !ta.IsAuthenticated() {
+	if !ticketAuth.IsAuthenticated() {
 		t.Error("expected IsAuthenticated() == true after concurrent Refresh calls")
 	}
 }
@@ -185,23 +185,23 @@ func TestTicketAuthenticator_LogoutConcurrent(t *testing.T) {
 	t.Parallel()
 
 	// Logout hits DELETE /access/ticket; extend the server handler to accept it.
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/api2/json/access/ticket":
+		case req.Method == http.MethodPost && req.URL.Path == "/api2/json/access/ticket":
 			resp := loginResponse{}
 			resp.Data.Ticket = "TICKET"
 			resp.Data.CSRFPreventionToken = "CSRF"
 			resp.Data.Username = "root@pam"
 			resp.Success = 1
 
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(resp)
+			respWriter.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(respWriter).Encode(resp)
 
-		case r.Method == http.MethodDelete && r.URL.Path == "/api2/json/access/ticket":
-			_, _ = io.WriteString(w, `{"data":null,"success":1}`)
+		case req.Method == http.MethodDelete && req.URL.Path == "/api2/json/access/ticket":
+			_, _ = io.WriteString(respWriter, `{"data":null,"success":1}`)
 
 		default:
-			http.NotFound(w, r)
+			http.NotFound(respWriter, req)
 		}
 	}))
 	defer srv.Close()
@@ -210,34 +210,34 @@ func TestTicketAuthenticator_LogoutConcurrent(t *testing.T) {
 	baseURL := u.Scheme + "://" + u.Host + "/api2/json"
 
 	httpClient := srv.Client()
-	creds := &auth.Credentials{Username: "root", Password: "secret", Realm: "pam"}
-	ta := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
+	creds := &auth.Credentials{Username: testUserRoot, Password: testSecretPass, Realm: testRealm}
+	ticketAuth := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "", false)
 
-	err := ta.Authenticate()
+	err := ticketAuth.Authenticate()
 	if err != nil {
 		t.Fatalf("Authenticate() failed: %v", err)
 	}
 
-	var wg sync.WaitGroup
+	var waitGroup sync.WaitGroup
 
 	const readers = 50
 
-	wg.Add(readers + 1)
+	waitGroup.Add(readers + 1)
 
 	go func() {
-		defer wg.Done()
+		defer waitGroup.Done()
 
-		_ = ta.Logout()
+		_ = ticketAuth.Logout()
 	}()
 
 	for range readers {
 		go func() {
-			defer wg.Done()
+			defer waitGroup.Done()
 
-			_ = ta.GetHeaders()
-			_ = ta.IsAuthenticated()
+			_ = ticketAuth.GetHeaders()
+			_ = ticketAuth.IsAuthenticated()
 		}()
 	}
 
-	wg.Wait()
+	waitGroup.Wait()
 }

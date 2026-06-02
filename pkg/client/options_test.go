@@ -39,24 +39,24 @@ func getValidValidationTestCases() []validationTestCase {
 		{
 			name: "valid with username and password",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid with API token",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				APIToken: "root@pam!token=secret",
+				Host:     testHost,
+				APIToken: testAPIToken,
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid with ticket",
 			opts: client.Options{
-				Host:   "pve.example.com",
+				Host:   testHost,
 				Ticket: "PVE:ticket:data",
 			},
 			wantErr: false,
@@ -75,7 +75,7 @@ func getInvalidValidationTestCases() []validationTestCase {
 		{
 			name: "missing authentication",
 			opts: client.Options{
-				Host: "pve.example.com",
+				Host: testHost,
 			},
 			wantErr: true,
 			errMsg:  "authentication credentials required",
@@ -83,8 +83,8 @@ func getInvalidValidationTestCases() []validationTestCase {
 		{
 			name: "username without password",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
+				Host:     testHost,
+				Username: testUsername,
 			},
 			wantErr: true,
 			errMsg:  "password required when using username authentication",
@@ -92,35 +92,35 @@ func getInvalidValidationTestCases() []validationTestCase {
 		{
 			name: "invalid protocol",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 				Protocol: "invalid",
 			},
 			wantErr: true,
-			errMsg:  "invalid protocol",
+			errMsg:  testErrProtocol,
 		},
 		{
 			name: "negative port",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 				Port:     -1,
 			},
 			wantErr: true,
-			errMsg:  "invalid port",
+			errMsg:  testErrPort,
 		},
 		{
 			name: "port too high",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 				Port:     70000,
 			},
 			wantErr: true,
-			errMsg:  "invalid port",
+			errMsg:  testErrPort,
 		},
 	}
 }
@@ -130,9 +130,9 @@ func getSSLValidationTestCases() []validationTestCase {
 		{
 			name: "client cert without key",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 				SSLOptions: &client.SSLOptions{
 					ClientCert: "/path/to/cert",
 				},
@@ -143,9 +143,9 @@ func getSSLValidationTestCases() []validationTestCase {
 		{
 			name: "client key without cert",
 			opts: client.Options{
-				Host:     "pve.example.com",
-				Username: "root@pam",
-				Password: "secret",
+				Host:     testHost,
+				Username: testUsername,
+				Password: testPassword,
 				SSLOptions: &client.SSLOptions{
 					ClientKey: "/path/to/key",
 				},
@@ -180,7 +180,7 @@ func TestOptions_setDefaults(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			runSetDefaultsTest(t, testCase)
+			runSetDefaultsTest(t)
 		})
 	}
 }
@@ -197,7 +197,7 @@ func getSetDefaultsTestCases() []setDefaultsTestCase {
 			name: "empty options",
 			opts: client.Options{},
 			expected: client.Options{
-				Protocol:           "https",
+				Protocol:           testProtoHTTPS,
 				Port:               8006,
 				Timeout:            30 * time.Second,
 				KeepAlive:          10,
@@ -212,10 +212,10 @@ func getSetDefaultsTestCases() []setDefaultsTestCase {
 		{
 			name: "http protocol",
 			opts: client.Options{
-				Protocol: "http",
+				Protocol: testProtoHTTP,
 			},
 			expected: client.Options{
-				Protocol:           "http",
+				Protocol:           testProtoHTTP,
 				Port:               8006,
 				Timeout:            30 * time.Second,
 				KeepAlive:          10,
@@ -226,14 +226,14 @@ func getSetDefaultsTestCases() []setDefaultsTestCase {
 		{
 			name: "custom values preserved",
 			opts: client.Options{
-				Protocol:   "https",
+				Protocol:   testProtoHTTPS,
 				Port:       443,
 				Timeout:    60 * time.Second,
 				KeepAlive:  20,
 				CookieName: "CustomCookie",
 			},
 			expected: client.Options{
-				Protocol:           "https",
+				Protocol:           testProtoHTTPS,
 				Port:               443,
 				Timeout:            60 * time.Second,
 				KeepAlive:          20,
@@ -248,44 +248,14 @@ func getSetDefaultsTestCases() []setDefaultsTestCase {
 	}
 }
 
-func runSetDefaultsTest(t *testing.T, testCase setDefaultsTestCase) {
+func runSetDefaultsTest(t *testing.T) {
 	t.Helper()
-	// NOTE: Cannot test setDefaults directly as it's unexported
+	// NOTE: Cannot test setDefaults directly as it's unexported.
 	// This test would need to be moved to the client package or
-	// setDefaults would need to be exported
+	// setDefaults would need to be exported.
 	t.Skip("setDefaults is unexported - skipping test")
-
-	opts := testCase.opts
-	validateSetDefaultsResult(t, opts, testCase.expected)
 }
 
-func validateSetDefaultsResult(t *testing.T, opts, expected client.Options) {
-	t.Helper()
-
-	if opts.Protocol != expected.Protocol {
-		t.Errorf("setDefaults() Protocol = %v, want %v", opts.Protocol, expected.Protocol)
-	}
-
-	if opts.Port != expected.Port {
-		t.Errorf("setDefaults() Port = %v, want %v", opts.Port, expected.Port)
-	}
-
-	if opts.Timeout != expected.Timeout {
-		t.Errorf("setDefaults() Timeout = %v, want %v", opts.Timeout, expected.Timeout)
-	}
-
-	if opts.KeepAlive != expected.KeepAlive {
-		t.Errorf("setDefaults() KeepAlive = %v, want %v", opts.KeepAlive, expected.KeepAlive)
-	}
-
-	if opts.CookieName != expected.CookieName {
-		t.Errorf("setDefaults() CookieName = %v, want %v", opts.CookieName, expected.CookieName)
-	}
-
-	if opts.CachedFingerprints == nil {
-		t.Errorf("setDefaults() CachedFingerprints is nil")
-	}
-}
 
 func TestOptions_GetBaseURL(t *testing.T) {
 	t.Parallel()
@@ -298,8 +268,8 @@ func TestOptions_GetBaseURL(t *testing.T) {
 		{
 			name: "https default port",
 			opts: client.Options{
-				Protocol: "https",
-				Host:     "pve.example.com",
+				Protocol: testProtoHTTPS,
+				Host:     testHost,
 				Port:     8006,
 			},
 			expected: "https://pve.example.com:8006/api2/json",
@@ -307,7 +277,7 @@ func TestOptions_GetBaseURL(t *testing.T) {
 		{
 			name: "http custom port",
 			opts: client.Options{
-				Protocol: "http",
+				Protocol: testProtoHTTP,
 				Host:     "192.168.1.100",
 				Port:     8080,
 			},
@@ -316,8 +286,8 @@ func TestOptions_GetBaseURL(t *testing.T) {
 		{
 			name: "https standard port",
 			opts: client.Options{
-				Protocol: "https",
-				Host:     "pve.example.com",
+				Protocol: testProtoHTTPS,
+				Host:     testHost,
 				Port:     443,
 			},
 			expected: "https://pve.example.com:443/api2/json",

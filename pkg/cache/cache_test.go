@@ -422,41 +422,47 @@ func TestCache_CleanupLoop(t *testing.T) {
 
 func TestGenerateKey(t *testing.T) {
 	t.Parallel()
+
+	const (
+		paramNode  = "node"
+		nodeNameV1 = "pve1"
+	)
+
 	// Test consistent key generation
-	key1 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{"node": "pve1"})
-	key2 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{"node": "pve1"})
+	key1 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{paramNode: nodeNameV1})
+	key2 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{paramNode: nodeNameV1})
 
 	if key1 != key2 {
 		t.Error("Expected identical keys for identical inputs")
 	}
 
 	// Different method should produce different key
-	key3 := cache.GenerateKey("POST", "/nodes", map[string]interface{}{"node": "pve1"})
+	key3 := cache.GenerateKey("POST", "/nodes", map[string]interface{}{paramNode: nodeNameV1})
 	if key1 == key3 {
 		t.Error("Expected different keys for different methods")
 	}
 
 	// Different path should produce different key
-	key4 := cache.GenerateKey("GET", "/storage", map[string]interface{}{"node": "pve1"})
+	key4 := cache.GenerateKey("GET", "/storage", map[string]interface{}{paramNode: nodeNameV1})
 	if key1 == key4 {
 		t.Error("Expected different keys for different paths")
 	}
 
 	// Different params should produce different key
-	key5 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{"node": "pve2"})
+	key5 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{paramNode: "pve2"})
 	if key1 == key5 {
 		t.Error("Expected different keys for different params")
 	}
 
 	// Param order shouldn't matter (sorted internally)
 	key6 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{
-		"node": "pve1",
-		"type": "qemu",
+		paramNode: nodeNameV1,
+		"type":    "qemu",
 	})
 
 	key7 := cache.GenerateKey("GET", "/nodes", map[string]interface{}{
-		"type": "qemu",
-		"node": "pve1",
+		"type":    "qemu",
+		paramNode: nodeNameV1,
 	})
 	if key6 != key7 {
 		t.Error("Expected identical keys regardless of param order")

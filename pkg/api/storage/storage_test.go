@@ -291,48 +291,58 @@ func TestDeleteVolumeIfExistsAsyncNotFound(t *testing.T) {
 	}
 }
 
+type uploadCapture struct {
+	path    string
+	content string
+	file    string
+}
+
+func newUploadCaptureServer(t *testing.T, wantUPID string) (*httptest.Server, *uploadCapture) {
+	t.Helper()
+
+	captured := &uploadCapture{}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		captured.path = req.URL.Path
+
+		err := req.ParseMultipartForm(10 << 20)
+		if err != nil {
+			http.Error(respWriter, "bad multipart", http.StatusBadRequest)
+
+			return
+		}
+
+		captured.content = req.FormValue("content")
+		// PVE rejects with 400 when "filename" appears both as a form field
+		// AND as the multipart file part name. Assert that "filename" is
+		// transmitted ONLY as the file part filename attribute (not as a
+		// duplicate form field) by reading req.MultipartForm.File directly.
+		if files, ok := req.MultipartForm.File["filename"]; ok && len(files) > 0 {
+			captured.file = files[0].Filename
+		}
+
+		if req.MultipartForm.Value["filename"] != nil {
+			http.Error(respWriter, "duplicate filename field rejected by PVE", http.StatusBadRequest)
+
+			return
+		}
+
+		respWriter.Header().Set("Content-Type", "application/json")
+		respWriter.WriteHeader(http.StatusOK)
+
+		resp := map[string]interface{}{"data": wantUPID}
+		_ = json.NewEncoder(respWriter).Encode(resp)
+	}))
+
+	return srv, captured
+}
+
 func TestUploadHappyPath(t *testing.T) {
 	t.Parallel()
 
 	const wantUPID = "UPID:node1:00001234:DEADBEEF:67890ABC:upload::root@pam:"
 
-	var (
-		capturedPath    string
-		capturedContent string
-		capturedFile    string
-	)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		capturedPath = r.URL.Path
-
-		err := r.ParseMultipartForm(10 << 20)
-		if err != nil {
-			http.Error(w, "bad multipart", http.StatusBadRequest)
-
-			return
-		}
-
-		capturedContent = r.FormValue("content")
-		// PVE rejects with 400 when "filename" appears both as a form field
-		// AND as the multipart file part name. Assert that "filename" is
-		// transmitted ONLY as the file part filename attribute (not as a
-		// duplicate form field) by reading r.MultipartForm.File directly.
-		if files, ok := r.MultipartForm.File["filename"]; ok && len(files) > 0 {
-			capturedFile = files[0].Filename
-		}
-
-		if r.MultipartForm.Value["filename"] != nil {
-			http.Error(w, "duplicate filename field rejected by PVE", http.StatusBadRequest)
-
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
-		resp := map[string]interface{}{"data": wantUPID}
-		_ = json.NewEncoder(w).Encode(resp)
-	}))
+	srv, captured := newUploadCaptureServer(t, wantUPID)
 	defer srv.Close()
 
 	cli, err := pveclient.NewClient(optsFromServerURL(srv.URL))
@@ -347,21 +357,27 @@ func TestUploadHappyPath(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	assertUploadResult(t, upid, wantUPID, captured)
+}
+
+func assertUploadResult(t *testing.T, upid, wantUPID string, captured *uploadCapture) {
+	t.Helper()
+
 	if upid != wantUPID {
 		t.Fatalf("upid: want %q, got %q", wantUPID, upid)
 	}
 
 	wantPath := "/api2/json/nodes/node1/storage/local/upload"
-	if capturedPath != wantPath {
-		t.Fatalf("path: want %q, got %q", wantPath, capturedPath)
+	if captured.path != wantPath {
+		t.Fatalf("path: want %q, got %q", wantPath, captured.path)
 	}
 
-	if capturedContent != "iso" {
-		t.Fatalf("content field: want %q, got %q", "iso", capturedContent)
+	if captured.content != "iso" {
+		t.Fatalf("content field: want %q, got %q", "iso", captured.content)
 	}
 
-	if capturedFile != "debian-12.iso" {
-		t.Fatalf("filename field: want %q, got %q", "debian-12.iso", capturedFile)
+	if captured.file != "debian-12.iso" {
+		t.Fatalf("filename field: want %q, got %q", "debian-12.iso", captured.file)
 	}
 }
 
@@ -370,19 +386,19 @@ func TestUploadUPIDFromMap(t *testing.T) {
 
 	const wantUPID = "UPID:node1:00001234:DEADBEEF:67890ABC:upload::root@pam:"
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseMultipartForm(10 << 20)
+	srv := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		err := req.ParseMultipartForm(10 << 20)
 		if err != nil {
-			http.Error(w, "bad multipart", http.StatusBadRequest)
+			http.Error(respWriter, "bad multipart", http.StatusBadRequest)
 
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		respWriter.Header().Set("Content-Type", "application/json")
+		respWriter.WriteHeader(http.StatusOK)
 
 		resp := map[string]interface{}{"data": map[string]interface{}{"upid": wantUPID}}
-		_ = json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(respWriter).Encode(resp)
 	}))
 	defer srv.Close()
 

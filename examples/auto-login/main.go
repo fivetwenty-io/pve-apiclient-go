@@ -7,6 +7,8 @@ import (
 	pve "github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/client"
 )
 
+const exampleHost = "pve.example.com"
+
 func main() {
 	fmt.Println("=== Auto-Login Example ===")
 	fmt.Println()
@@ -23,7 +25,7 @@ func demonstrateAutoLogin() {
 	fmt.Println("Example 1: With Auto-Login (convenient)")
 
 	clientWithAutoLogin, err := pve.NewClient(pve.Options{
-		Host:      "pve.example.com",
+		Host:      exampleHost,
 		Username:  "root@pam",
 		Password:  "your-password",
 		AutoLogin: true, // Enable auto-login
@@ -49,7 +51,7 @@ func demonstrateManualLogin() {
 	fmt.Println("Example 2: Manual Login (traditional)")
 
 	clientManual, err := pve.NewClient(pve.Options{
-		Host:     "pve.example.com",
+		Host:     exampleHost,
 		Username: "root@pam",
 		Password: "your-password",
 		// AutoLogin: false (default)
@@ -82,7 +84,7 @@ func demonstrateTokenAuth() {
 	fmt.Println("Example 3: API Token Authentication")
 
 	clientToken, err := pve.NewClient(pve.Options{
-		Host:      "pve.example.com",
+		Host:      exampleHost,
 		APIToken:  "user@pam!tokenid=secret-value",
 		AutoLogin: true, // This is ignored for API tokens
 	})

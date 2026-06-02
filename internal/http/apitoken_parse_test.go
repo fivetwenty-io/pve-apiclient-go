@@ -7,6 +7,7 @@ import (
 	"github.com/fivetwenty-io/pve-apiclient-go/v3/pkg/auth"
 )
 
+
 // TestCreateAuthenticator_APIToken_MalformedReturnsInvalidAuthenticator verifies
 // that a malformed APIToken string causes createAuthenticator to return an
 // InvalidAuthenticator that fails on Authenticate(), rather than silently
@@ -27,25 +28,25 @@ func TestCreateAuthenticator_APIToken_MalformedReturnsInvalidAuthenticator(t *te
 		// tested separately.
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
 			opts := &Options{
-				Host:     "pve.example.com",
+				Host:     testHostPVE,
 				Port:     8006,
-				Protocol: "https",
-				APIToken: tc.token,
+				Protocol: testProtoHTTPS,
+				APIToken: testCase.token,
 			}
 
-			a := createAuthenticator(opts, nil)
-			if a == nil {
+			authn := createAuthenticator(opts, nil)
+			if authn == nil {
 				t.Fatal("createAuthenticator returned nil for malformed token")
 			}
 
-			err := a.Authenticate()
+			err := authn.Authenticate()
 			if err == nil {
-				t.Errorf("Authenticate() expected error for malformed token %q, got nil", tc.token)
+				t.Errorf("Authenticate() expected error for malformed token %q, got nil", testCase.token)
 			}
 		})
 	}
@@ -61,18 +62,18 @@ func TestCreateAuthenticator_APIToken_ValidParsedCorrectly(t *testing.T) {
 		Host:     "pve.example.com",
 		Port:     8006,
 		Protocol: "https",
-		APIToken: "root@pam!mytoken=s3cr3t",
+		APIToken: testAPITokenFull,
 	}
 
-	a := createAuthenticator(opts, nil)
-	if a == nil {
+	authn := createAuthenticator(opts, nil)
+	if authn == nil {
 		t.Fatal("createAuthenticator returned nil")
 	}
 
 	// Must be an APITokenAuthenticator, not InvalidAuthenticator.
-	ata, ok := a.(*auth.APITokenAuthenticator)
+	ata, ok := authn.(*auth.APITokenAuthenticator)
 	if !ok {
-		t.Fatalf("expected *auth.APITokenAuthenticator, got %T", a)
+		t.Fatalf("expected *auth.APITokenAuthenticator, got %T", authn)
 	}
 
 	tok := ata.GetToken()
@@ -88,9 +89,9 @@ func TestCreateAuthenticator_APIToken_ValidParsedCorrectly(t *testing.T) {
 		t.Errorf("Token.Secret = %q, want %q", tok.Secret, "s3cr3t")
 	}
 
-	headers := a.GetHeaders()
+	headers := authn.GetHeaders()
 	authHeader := headers["Authorization"]
-	want := "PVEAPIToken=root@pam!mytoken=s3cr3t"
+	want := "PVEAPIToken=" + testAPITokenFull
 
 	if authHeader != want {
 		t.Errorf("Authorization = %q, want %q", authHeader, want)
@@ -98,7 +99,7 @@ func TestCreateAuthenticator_APIToken_ValidParsedCorrectly(t *testing.T) {
 
 	// Old bug: both fields were the full raw string, so the header would
 	// contain the token string duplicated.
-	if strings.Count(authHeader, "root@pam!mytoken=s3cr3t") > 1 {
+	if strings.Count(authHeader, testAPITokenFull) > 1 {
 		t.Errorf("Authorization header contains duplicated token string (old bug): %q", authHeader)
 	}
 }

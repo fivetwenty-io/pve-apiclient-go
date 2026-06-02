@@ -25,7 +25,7 @@ func TestTicketAuthenticator_NewFormatAndCookieName(t *testing.T) {
 		}
 
 		switch request.URL.Path {
-		case "/api2/json/access/ticket":
+		case pathAccessTicket:
 			err := request.ParseForm()
 			if err == nil {
 				if request.Form.Get("new-format") == "1" {
@@ -45,7 +45,7 @@ func TestTicketAuthenticator_NewFormatAndCookieName(t *testing.T) {
 	baseURL := u.Scheme + "://" + u.Host + "/api2/json"
 
 	httpClient := srv.Client()
-	creds := &auth.Credentials{Username: "root", Password: "secret", Realm: "pam"}
+	creds := &auth.Credentials{Username: testUserRoot, Password: testSecretPass, Realm: testRealm}
 	ticketAuth := auth.NewTicketAuthenticator(baseURL, creds, httpClient, "CustomCookie", true)
 
 	err := ticketAuth.Authenticate()

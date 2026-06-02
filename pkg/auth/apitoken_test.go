@@ -10,8 +10,8 @@ func TestNewAPITokenAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	token := &auth.Token{
-		ID:     "root@pam!mytoken",
-		Secret: "secret-value",
+		ID:     testTokenID,
+		Secret: testTokenSecret,
 	}
 
 	authenticator := auth.NewAPITokenAuthenticator(token, "")
@@ -35,11 +35,11 @@ type tokenFromStringTest struct {
 func getTokenFromStringTestCases() []tokenFromStringTest {
 	return []tokenFromStringTest{
 		{
-			name:        "valid token",
-			tokenString: "root@pam!mytoken=secret-value",
+			name:        testCaseValidToken,
+			tokenString: testTokenIDSecret,
 			wantErr:     false,
-			wantID:      "root@pam!mytoken",
-			wantSecret:  "secret-value",
+			wantID:      testTokenID,
+			wantSecret:  testTokenSecret,
 		},
 		{
 			name:        "empty string",
@@ -48,7 +48,7 @@ func getTokenFromStringTestCases() []tokenFromStringTest {
 		},
 		{
 			name:        "missing secret",
-			tokenString: "root@pam!mytoken",
+			tokenString: testTokenID,
 			wantErr:     true,
 		},
 		{
@@ -114,30 +114,30 @@ func TestAPITokenAuthenticator_Authenticate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "valid token",
+			name: testCaseValidToken,
 			token: &auth.Token{
-				ID:     "root@pam!mytoken",
-				Secret: "secret",
+				ID:     testTokenID,
+				Secret: testSecretPass,
 			},
 			wantErr: false,
 		},
 		{
-			name:    "nil token",
+			name:    testCaseNilToken,
 			token:   nil,
 			wantErr: true,
 		},
 		{
-			name: "empty ID",
+			name: testCaseEmptyID,
 			token: &auth.Token{
 				ID:     "",
-				Secret: "secret",
+				Secret: testSecretPass,
 			},
 			wantErr: true,
 		},
 		{
-			name: "empty secret",
+			name: testCaseEmptySecret,
 			token: &auth.Token{
-				ID:     "root@pam!mytoken",
+				ID:     testTokenID,
 				Secret: "",
 			},
 			wantErr: true,
@@ -173,30 +173,30 @@ func TestAPITokenAuthenticator_IsAuthenticated(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "valid token",
+			name: testCaseValidToken,
 			token: &auth.Token{
-				ID:     "root@pam!mytoken",
-				Secret: "secret",
+				ID:     testTokenID,
+				Secret: testSecretPass,
 			},
 			expected: true,
 		},
 		{
-			name:     "nil token",
+			name:     testCaseNilToken,
 			token:    nil,
 			expected: false,
 		},
 		{
-			name: "empty ID",
+			name: testCaseEmptyID,
 			token: &auth.Token{
 				ID:     "",
-				Secret: "secret",
+				Secret: testSecretPass,
 			},
 			expected: false,
 		},
 		{
-			name: "empty secret",
+			name: testCaseEmptySecret,
 			token: &auth.Token{
-				ID:     "root@pam!mytoken",
+				ID:     testTokenID,
 				Secret: "",
 			},
 			expected: false,
@@ -221,14 +221,14 @@ func TestAPITokenAuthenticator_GetHeaders(t *testing.T) {
 	t.Parallel()
 
 	token := &auth.Token{
-		ID:     "root@pam!mytoken",
-		Secret: "secret-value",
+		ID:     testTokenID,
+		Secret: testTokenSecret,
 	}
 
 	authenticator := auth.NewAPITokenAuthenticator(token, "")
 	headers := authenticator.GetHeaders()
 
-	expected := "PVEAPIToken=root@pam!mytoken=secret-value"
+	expected := "PVEAPIToken=" + testTokenIDSecret
 	if headers["Authorization"] != expected {
 		t.Errorf("GetHeaders()[Authorization] = %v, want %v", headers["Authorization"], expected)
 	}
@@ -253,11 +253,11 @@ type parseAPITokenTest struct {
 func getParseAPITokenTestCases() []parseAPITokenTest {
 	return []parseAPITokenTest{
 		{
-			name:       "valid token",
-			tokenStr:   "root@pam!mytoken=secret-value",
+			name:       testCaseValidToken,
+			tokenStr:   testTokenIDSecret,
 			wantErr:    false,
-			wantID:     "root@pam!mytoken",
-			wantSecret: "secret-value",
+			wantID:     testTokenID,
+			wantSecret: testTokenSecret,
 		},
 		{
 			name:     "empty string",
@@ -266,7 +266,7 @@ func getParseAPITokenTestCases() []parseAPITokenTest {
 		},
 		{
 			name:     "missing equals",
-			tokenStr: "root@pam!mytoken",
+			tokenStr: testTokenID,
 			wantErr:  true,
 		},
 		{
@@ -280,7 +280,7 @@ func getParseAPITokenTestCases() []parseAPITokenTest {
 			wantErr:  true,
 		},
 		{
-			name:     "empty secret",
+			name:     testCaseEmptySecret,
 			tokenStr: "root@pam!mytoken=",
 			wantErr:  true,
 		},
@@ -337,15 +337,15 @@ func TestFormatAPIToken(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "valid token",
+			name: testCaseValidToken,
 			token: &auth.Token{
-				ID:     "root@pam!mytoken",
-				Secret: "secret-value",
+				ID:     testTokenID,
+				Secret: testTokenSecret,
 			},
-			expected: "root@pam!mytoken=secret-value",
+			expected: testTokenIDSecret,
 		},
 		{
-			name:     "nil token",
+			name:     testCaseNilToken,
 			token:    nil,
 			expected: "",
 		},
@@ -373,11 +373,11 @@ func TestValidateTokenID(t *testing.T) {
 	}{
 		{
 			name:    "valid ID",
-			id:      "root@pam!mytoken",
+			id:      testTokenID,
 			wantErr: false,
 		},
 		{
-			name:    "empty ID",
+			name:    testCaseEmptyID,
 			id:      "",
 			wantErr: true,
 		},
@@ -467,24 +467,24 @@ func buildFormatDetectionTestCases() []struct {
 	}{
 		{
 			name:               "default token name with raw token",
-			tokenID:            "root@pam!mytoken",
-			tokenSecret:        "secret-value",
+			tokenID:            testTokenID,
+			tokenSecret:        testTokenSecret,
 			customTokenName:    "",
 			expectedAuthHeader: "PVEAPIToken=root@pam!mytoken=secret-value",
 			description:        "Should add PVEAPIToken= prefix to raw token",
 		},
 		{
 			name:               "custom token name",
-			tokenID:            "root@pam!mytoken",
-			tokenSecret:        "secret-value",
+			tokenID:            testTokenID,
+			tokenSecret:        testTokenSecret,
 			customTokenName:    "CustomAuth",
 			expectedAuthHeader: "CustomAuth=root@pam!mytoken=secret-value",
 			description:        "Should use custom token name prefix",
 		},
 		{
 			name:               "bearer token format",
-			tokenID:            "root@pam!mytoken",
-			tokenSecret:        "secret-value",
+			tokenID:            testTokenID,
+			tokenSecret:        testTokenSecret,
 			customTokenName:    "Bearer",
 			expectedAuthHeader: "Bearer=root@pam!mytoken=secret-value",
 			description:        "Should support Bearer token format",
@@ -492,7 +492,7 @@ func buildFormatDetectionTestCases() []struct {
 		{
 			name:               "pre-formatted token should not double-prefix",
 			tokenID:            "PVEAPIToken=user@pam!token",
-			tokenSecret:        "secret",
+			tokenSecret:        testSecretPass,
 			customTokenName:    "PVEAPIToken",
 			expectedAuthHeader: "PVEAPIToken=user@pam!token=secret",
 			description:        "Already formatted tokens should not be double-prefixed",
@@ -522,8 +522,8 @@ func TestAPITokenAuthenticator_CustomTokenName(t *testing.T) {
 	t.Parallel()
 
 	token := &auth.Token{
-		ID:     "root@pam!mytoken",
-		Secret: "secret-value",
+		ID:     testTokenID,
+		Secret: testTokenSecret,
 	}
 
 	tests := []struct {

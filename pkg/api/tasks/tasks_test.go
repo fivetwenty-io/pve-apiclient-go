@@ -157,7 +157,6 @@ func TestWaitTaskTimeout(t *testing.T) {
 		portNum, _ = strconv.Atoi(parts[1])
 	}
 
-	//nolint:gosec // Test credential — not a real secret.
 	cli, err := pveclient.NewClient(pveclient.Options{Host: host, Port: portNum, Protocol: "http", APIToken: "u@pam!tok=sec"})
 	if err != nil {
 		t.Fatalf("client: %v", err)
