@@ -8,11 +8,13 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +26,8 @@ const (
 	covFP2 = "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00"
 
 	covExtKeyUsageStr = "Usage"
+
+	covTestHost = "pve.example.com"
 )
 
 // covMintCert mints a minimal self-signed ECDSA certificate.
@@ -194,7 +198,7 @@ func TestCovFingerprintCache_SaveAndLoad(t *testing.T) {
 
 	entry := ssl.FingerprintEntry{
 		Fingerprint: covFP1,
-		Host:        "pve.example.com",
+		Host:        covTestHost,
 		Port:        8006,
 		Trusted:     true,
 	}
@@ -727,6 +731,300 @@ func TestCovVerifyCertificate_ManualMode(t *testing.T) {
 	}
 }
 
+func TestCovVerifyCertificate_ManualCallbackAccept(t *testing.T) {
+	t.Parallel()
+
+	cert, _ := covMintCert(t, nil)
+	expectedFP := ssl.CalculateFingerprint(cert)
+
+	verifier := ssl.NewFingerprintVerifier()
+	verifier.SetManualVerification(true)
+
+	var gotReq ssl.ManualVerificationRequest
+
+	verifier.SetManualVerifyCallback(func(req ssl.ManualVerificationRequest) bool {
+		gotReq = req
+
+		return true
+	})
+
+	err := verifier.VerifyCertificate(cert)
+	if err != nil {
+		t.Fatalf("manual callback accept should pass: %v", err)
+	}
+
+	if gotReq.Fingerprint != expectedFP {
+		t.Fatalf("callback fingerprint = %q, want %q", gotReq.Fingerprint, expectedFP)
+	}
+
+	if gotReq.Certificate != cert {
+		t.Fatal("callback certificate did not match presented certificate")
+	}
+
+	// Accepted fingerprint must now be cached as trusted so a second
+	// verification does not re-invoke the callback.
+	invoked := false
+
+	verifier.SetManualVerifyCallback(func(_ ssl.ManualVerificationRequest) bool {
+		invoked = true
+
+		return true
+	})
+
+	err = verifier.VerifyCertificate(cert)
+	if err != nil {
+		t.Fatalf("cached-trusted cert should verify: %v", err)
+	}
+
+	if invoked {
+		t.Fatal("manual verify callback should not be invoked again for an already-trusted fingerprint")
+	}
+}
+
+func TestCovVerifyCertificate_ManualCallbackReject(t *testing.T) {
+	t.Parallel()
+
+	cert, _ := covMintCert(t, nil)
+
+	verifier := ssl.NewFingerprintVerifier()
+	verifier.SetManualVerification(true)
+	verifier.SetManualVerifyCallback(func(_ ssl.ManualVerificationRequest) bool { return false })
+
+	err := verifier.VerifyCertificate(cert)
+	if err == nil {
+		t.Fatal("manual callback reject should return error")
+	}
+
+	if !errors.Is(err, ssl.ErrUnknownCertificateFingerprint) {
+		t.Fatalf("expected ErrUnknownCertificateFingerprint, got %v", err)
+	}
+
+	expectedFP := ssl.CalculateFingerprint(cert)
+	if got := verifier.GetLastUnknownFingerprint(); got != expectedFP {
+		t.Fatalf("GetLastUnknownFingerprint = %q, want %q", got, expectedFP)
+	}
+
+	// Second verify: fingerprint is cached as untrusted, callback must not fire again.
+	invoked := false
+
+	verifier.SetManualVerifyCallback(func(_ ssl.ManualVerificationRequest) bool {
+		invoked = true
+
+		return true
+	})
+
+	err = verifier.VerifyCertificate(cert)
+	if err == nil {
+		t.Fatal("expected error for cached-untrusted cert")
+	}
+
+	if invoked {
+		t.Fatal("manual verify callback should not be invoked for a cached-untrusted fingerprint")
+	}
+}
+
+func TestCovVerifyCertificate_ManualNoCallbackRecordsLastUnknown(t *testing.T) {
+	t.Parallel()
+
+	cert, _ := covMintCert(t, nil)
+	expectedFP := ssl.CalculateFingerprint(cert)
+
+	verifier := ssl.NewFingerprintVerifier()
+	verifier.SetManualVerification(true)
+
+	err := verifier.VerifyCertificate(cert)
+	if err == nil {
+		t.Fatal("manual mode with no callback and unknown cert should return error")
+	}
+
+	if !errors.Is(err, ssl.ErrUnknownCertificateFingerprint) {
+		t.Fatalf("expected ErrUnknownCertificateFingerprint, got %v", err)
+	}
+
+	if !strings.Contains(err.Error(), expectedFP) {
+		t.Fatalf("error %q does not carry fingerprint %q", err.Error(), expectedFP)
+	}
+
+	if got := verifier.GetLastUnknownFingerprint(); got != expectedFP {
+		t.Fatalf("GetLastUnknownFingerprint = %q, want %q", got, expectedFP)
+	}
+}
+
+func TestCovVerifyCertificateForHost_ThreadsHostToCallback(t *testing.T) {
+	t.Parallel()
+
+	cert, _ := covMintCert(t, nil)
+
+	verifier := ssl.NewFingerprintVerifier()
+	verifier.SetManualVerification(true)
+
+	var gotHost string
+
+	verifier.SetManualVerifyCallback(func(req ssl.ManualVerificationRequest) bool {
+		gotHost = req.Host
+
+		return true
+	})
+
+	err := verifier.VerifyCertificateForHost(cert, covTestHost)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if gotHost != covTestHost {
+		t.Fatalf("callback host = %q, want pve.example.com", gotHost)
+	}
+}
+
+func TestCovVerifyCertificate_ManualCallback_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
+	const workers = 16
+
+	verifier := ssl.NewFingerprintVerifier()
+	verifier.SetManualVerification(true)
+	verifier.SetManualVerifyCallback(func(_ ssl.ManualVerificationRequest) bool { return true })
+
+	var waitGroup sync.WaitGroup
+
+	for i := range workers {
+		waitGroup.Add(1)
+
+		go func(idx int) {
+			defer waitGroup.Done()
+
+			cert, _ := covMintCert(t, &x509.Certificate{
+				SerialNumber: big.NewInt(int64(idx) + 1000),
+				Subject:      pkix.Name{CommonName: "concurrent-test"},
+			})
+
+			err := verifier.VerifyCertificate(cert)
+			if err != nil {
+				t.Errorf("worker %d: unexpected error: %v", idx, err)
+			}
+
+			_ = verifier.GetLastUnknownFingerprint()
+			_ = verifier.GetTrustedFingerprints()
+		}(i)
+	}
+
+	waitGroup.Wait()
+}
+
+// ---------------------------------------------------------------------------
+// FingerprintCache.NewVerifierWithCache — TOFU bridging helper
+// ---------------------------------------------------------------------------
+
+func TestCovNewVerifierWithCache_SeedsFromTrustedEntries(t *testing.T) {
+	t.Parallel()
+
+	cert, _ := covMintCert(t, nil)
+	fingerprint := ssl.CalculateFingerprint(cert)
+
+	cache := ssl.NewFingerprintCache("")
+	cache.SetAutoSave(false)
+
+	err := cache.Add(ssl.FingerprintEntry{
+		Fingerprint: fingerprint,
+		Host:        covTestHost,
+		Port:        8006,
+		Trusted:     true,
+	})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	verifier := cache.NewVerifierWithCache(covTestHost, 8006, nil)
+
+	err = verifier.VerifyCertificate(cert)
+	if err != nil {
+		t.Fatalf("cert pre-trusted via cache should verify: %v", err)
+	}
+}
+
+func TestCovNewVerifierWithCache_AcceptPersistsToCache(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cache.json")
+
+	cert, _ := covMintCert(t, nil)
+	expectedFP := ssl.CalculateFingerprint(cert)
+
+	cache := ssl.NewFingerprintCache(path)
+	cache.SetAutoSave(false)
+
+	verifier := cache.NewVerifierWithCache(covTestHost, 8006, func(_ ssl.ManualVerificationRequest) bool {
+		return true
+	})
+
+	err := verifier.VerifyCertificate(cert)
+	if err != nil {
+		t.Fatalf("accepted cert should verify: %v", err)
+	}
+
+	entry, ok := cache.Get(expectedFP)
+	if !ok {
+		t.Fatal("accepted fingerprint was not persisted to cache")
+	}
+
+	if !entry.Trusted {
+		t.Fatal("persisted entry should be marked trusted")
+	}
+
+	if entry.Host != covTestHost || entry.Port != 8006 {
+		t.Fatalf("persisted entry host/port = %s/%d, want pve.example.com/8006", entry.Host, entry.Port)
+	}
+
+	if entry.Subject == "" {
+		t.Fatal("persisted entry should capture certificate subject")
+	}
+}
+
+func TestCovNewVerifierWithCache_RejectDoesNotPersist(t *testing.T) {
+	t.Parallel()
+
+	cert, _ := covMintCert(t, nil)
+	expectedFP := ssl.CalculateFingerprint(cert)
+
+	cache := ssl.NewFingerprintCache("")
+	cache.SetAutoSave(false)
+
+	verifier := cache.NewVerifierWithCache(covTestHost, 8006, func(_ ssl.ManualVerificationRequest) bool {
+		return false
+	})
+
+	err := verifier.VerifyCertificate(cert)
+	if err == nil {
+		t.Fatal("rejected cert should return error")
+	}
+
+	if _, ok := cache.Get(expectedFP); ok {
+		t.Fatal("rejected fingerprint should not be persisted to cache")
+	}
+}
+
+func TestCovNewVerifierWithCache_NilDecideRejectsAndRecords(t *testing.T) {
+	t.Parallel()
+
+	cert, _ := covMintCert(t, nil)
+	expectedFP := ssl.CalculateFingerprint(cert)
+
+	cache := ssl.NewFingerprintCache("")
+	cache.SetAutoSave(false)
+
+	verifier := cache.NewVerifierWithCache(covTestHost, 8006, nil)
+
+	err := verifier.VerifyCertificate(cert)
+	if err == nil {
+		t.Fatal("unknown cert with nil decide should return error")
+	}
+
+	if got := verifier.GetLastUnknownFingerprint(); got != expectedFP {
+		t.Fatalf("GetLastUnknownFingerprint = %q, want %q", got, expectedFP)
+	}
+}
+
 func TestCovVerifyCertificate_NoMethod(t *testing.T) {
 	t.Parallel()
 
@@ -763,7 +1061,7 @@ func TestCovGetLastUnknownFingerprint(t *testing.T) {
 func TestCovCreateTLSConfig_NilOptions(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := ssl.CreateTLSConfig("pve.example.com:8006", nil)
+	cfg, err := ssl.CreateTLSConfig(covTestHost+":8006", nil)
 	if err != nil {
 		t.Fatalf("nil options: %v", err)
 	}
@@ -772,7 +1070,7 @@ func TestCovCreateTLSConfig_NilOptions(t *testing.T) {
 		t.Fatal("expected non-nil config")
 	}
 
-	if cfg.ServerName != "pve.example.com" {
+	if cfg.ServerName != covTestHost {
 		t.Fatalf("ServerName = %q, want pve.example.com", cfg.ServerName)
 	}
 }
