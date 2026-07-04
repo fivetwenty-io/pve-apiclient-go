@@ -30,7 +30,7 @@ func TestClient_TFAHandler_AutoComplete(t *testing.T) {
 		writer.Header().Set("Content-Type", "application/json")
 
 		switch request.URL.Path {
-		case "/api2/json/access/ticket":
+		case testAccessTicketEndpoint:
 			// Return TFA required challenge
 			_, _ = io.WriteString(writer, `{"data":{"NeedTFA":true, "Ticket2":"PARTIAL","challenge":"CHALLENGE","tfa-types":["totp"]}}`)
 		case "/api2/json/access/tfa":

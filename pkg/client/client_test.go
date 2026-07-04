@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -213,6 +214,57 @@ func TestClient_SetTimeout(t *testing.T) {
 	// See comment in TestClient_UpdateTicket about testing private state
 }
 
+// TestClient_SetTimeout_TakesEffect verifies SetTimeout is not a no-op: it
+// must reach the live HTTP client so a request against a slow server times
+// out according to the newly configured timeout rather than the (longer)
+// timeout set at construction.
+func TestClient_SetTimeout_TakesEffect(t *testing.T) {
+	t.Parallel()
+
+	release := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		<-release
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":"ok","success":1}`))
+	}))
+
+	defer func() {
+		close(release)
+		srv.Close()
+	}()
+
+	host, port := parseServerURL(srv.URL)
+
+	cli, err := client.NewClient(client.Options{
+		Host:     host,
+		Port:     port,
+		Protocol: testProtoHTTP,
+		APIToken: testAPIToken,
+		Timeout:  10 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	cli.SetTimeout(20 * time.Millisecond)
+
+	start := time.Now()
+
+	// Force zero retries so the default 1s inter-attempt retry delay does not
+	// mask whether the per-request timeout itself actually shortened.
+	ctx := client.WithRetries(context.Background(), 0)
+
+	_, err = cli.GetCtx(ctx, "/test", nil)
+	if err == nil {
+		t.Fatal("GetCtx() = nil error, want a timeout error after SetTimeout shortened the deadline")
+	}
+
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("GetCtx() took %v, want it to fail quickly per the shortened timeout", elapsed)
+	}
+}
+
 func TestClient_SetKeepAlive(t *testing.T) {
 	t.Parallel()
 
@@ -231,6 +283,38 @@ func TestClient_SetKeepAlive(t *testing.T) {
 	cli.SetKeepAlive(newKeepAlive)
 
 	// See comment in TestClient_UpdateTicket about testing private state
+}
+
+// TestClient_SetKeepAlive_TakesEffect verifies SetKeepAlive is not a no-op: a
+// request must still succeed after the live transport's idle-connection pool
+// size is changed, proving the call reached the real transport rather than
+// only mutating unread Options state.
+func TestClient_SetKeepAlive_TakesEffect(t *testing.T) {
+	t.Parallel()
+
+	srv := createTestServer()
+	defer srv.Close()
+
+	host, port := parseServerURL(srv.URL)
+
+	cli, err := client.NewClient(client.Options{
+		Host:     host,
+		Port:     port,
+		Protocol: testProtoHTTP,
+		APIToken: testAPIToken,
+	})
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	cli.SetKeepAlive(1)
+
+	for i := range 3 {
+		_, getErr := cli.Get("/test", nil)
+		if getErr != nil {
+			t.Fatalf("Get() call %d after SetKeepAlive: %v", i, getErr)
+		}
+	}
 }
 
 func createTestServer() *httptest.Server {

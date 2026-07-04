@@ -26,6 +26,7 @@ import (
 
 const (
 	testHostPVE              = "pve.example.com"
+	testProtoHTTP            = "http"
 	testProtoHTTPS           = "https"
 	testAPITokenFull         = "root@pam!mytoken=s3cr3t"
 	testAPITokenShort        = "root@pam!tok=secret"
@@ -39,6 +40,12 @@ const (
 	testHeaderContentType    = "Content-Type"
 	testRedacted             = "REDACTED"
 	testHello                = "hello"
+
+	// TFA test constants shared across TFA-related test files.
+	testTFATypeTOTP      = "totp"
+	testTFAChallenge     = "chal"
+	testTFAPartialTicket = "partial"
+	testInitialTicket    = "PVE:root@pam:000000::initial"
 
 	// Encoder test constants.
 	testEncAlpha  = "alpha"
@@ -76,7 +83,7 @@ func minimalHTTPOptions() *Options {
 	return &Options{
 		Host:      "127.0.0.1",
 		Port:      9999,
-		Protocol:  "http",
+		Protocol:  testProtoHTTP,
 		Timeout:   5 * time.Second,
 		KeepAlive: 5,
 	}
@@ -175,7 +182,7 @@ func TestOptions_BaseURL(t *testing.T) {
 		want  string
 	}{
 		{testProtoHTTPS, testHostPVE, 8006, "https://pve.example.com:8006/api2/json"},
-		{"http", "192.168.1.1", 80, "http://192.168.1.1:80/api2/json"},
+		{testProtoHTTP, "192.168.1.1", 80, "http://192.168.1.1:80/api2/json"},
 	}
 
 	for _, testCase := range cases {

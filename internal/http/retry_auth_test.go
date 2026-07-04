@@ -192,7 +192,7 @@ func TestSetTicket_PropagatesToAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	opts := minimalHTTPOptions()
-	opts.Ticket = "PVE:root@pam:000000::initial"
+	opts.Ticket = testInitialTicket
 
 	client, err := NewClient(opts)
 	if err != nil {

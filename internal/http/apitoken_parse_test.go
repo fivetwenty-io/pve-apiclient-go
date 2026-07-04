@@ -58,7 +58,7 @@ func TestCreateAuthenticator_APIToken_ValidParsedCorrectly(t *testing.T) {
 	t.Parallel()
 
 	opts := &Options{
-		Host:     "pve.example.com",
+		Host:     testHostPVE,
 		Port:     8006,
 		Protocol: "https",
 		APIToken: testAPITokenFull,
