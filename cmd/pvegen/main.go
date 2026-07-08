@@ -108,7 +108,8 @@ var indexedParamRe = regexp.MustCompile(`^([a-z][a-z0-9]*)(?:\[n\]|\[%d\])$`)
 // package from.
 type dialectConfig struct {
 	// pkgImportRoot is the module-relative root the generated smoke
-	// tests import the package under test from ("pkg/api" or "pkg/pbs").
+	// tests import the package under test from ("pkg/api", "pkg/pbs",
+	// or "pkg/pdm").
 	pkgImportRoot string
 
 	// methodNameOverrides pins the emitted Go method name for specific
