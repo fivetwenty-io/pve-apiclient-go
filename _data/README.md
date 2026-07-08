@@ -2,7 +2,8 @@
 
 This directory holds the upstream Proxmox API specifications used as input
 to the typed client codegen pipeline at `cmd/pvegen`: `apidoc.json` for
-Proxmox VE and `pbs-apidoc.json` for Proxmox Backup Server. For PVE, the
+Proxmox VE, `pbs-apidoc.json` for Proxmox Backup Server, and
+`pdm-apidoc.json` for Proxmox Datacenter Manager. For PVE, the
 generator emits typed bindings for all six top-level namespaces:
 
 - `/version`  → `pkg/api/version/`
@@ -114,9 +115,38 @@ The extracted array has three top-level nodes: the `/` API tree plus the
 — the generator skips the protocol trees itself, and dropping them would
 make future spec diffs noisier.
 
+## PDM specification (`pdm-apidoc.json`)
+
+The same tree format published by the Proxmox Datacenter Manager API
+viewer. `cmd/pvegen --dialect pdm` reads it and emits `pkg/pdm/<ns>/`
+bindings for all thirteen namespaces (`access`, `auto-install` → package
+`autoinstall`, `ceph`, `config`, `nodes`, `pbs`, `ping`, `pve`, `remotes`,
+`resources`, `sdn`, `subscriptions`, `version`), skipping only the `GET /`
+directory index. The `/pve` and `/pbs` trees are PDM's proxied per-remote
+operations against managed PVE/PBS instances.
+
+**Current pin: fetched 2026-07-08 from
+`https://pdm.proxmox.com/docs/api-viewer/apidoc.js` — PDM 1.1.6, 327
+method-operations.**
+
+Dialect notes: the PDM spec shares the PBS encoding conventions (boolean
+`additionalProperties`, nested `format` schemas) and adds an `unstable`
+boolean field on endpoint info entries, which the generator ignores. The
+extracted array has a single top-level node (the `/` API tree) — PDM has
+no extra protocol trees.
+
+To refresh against a newer PDM release, follow the PVE steps above with:
+
+- Source: `https://pdm.proxmox.com/docs/api-viewer/apidoc.js`
+- Assignment to look for: `var apiSchema = [ ... ];` (not `const`). The
+  array is followed by a `;` and a license comment blob, so extract with a
+  raw JSON decode starting after the `apiSchema = ` match (see the PVE
+  bracket-matching script — either approach works).
+- Output: `_data/pdm-apidoc.json`
+
 ## Versioning
 
-`apidoc.json` and `pbs-apidoc.json` are treated as vendored inputs. A bump
-to a newer PVE/PBS spec is a deliberate, reviewed change: it produces a
-diff in `pkg/api/**/*_gen.go` or `pkg/pbs/**/*_gen.go` that callers can
+`apidoc.json`, `pbs-apidoc.json`, and `pdm-apidoc.json` are treated as vendored inputs. A bump
+to a newer PVE/PBS/PDM spec is a deliberate, reviewed change: it produces a
+diff in `pkg/api/**/*_gen.go`, `pkg/pbs/**/*_gen.go`, or `pkg/pdm/**/*_gen.go` that callers can
 inspect for breaking changes.
