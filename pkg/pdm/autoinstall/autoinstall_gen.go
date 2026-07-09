@@ -145,6 +145,41 @@ func (s *service) CreateAnswer(ctx context.Context, params *CreateAnswerParams) 
 		if err != nil {
 			return nil, fmt.Errorf("autoinstall.CreateAnswer: decode params: %w", err)
 		}
+		if params.Schema != nil {
+			encoded, err := json.Marshal(params.Schema)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreateAnswer: encode $schema: %w", err)
+			}
+			body["$schema"] = string(encoded)
+		}
+		if params.Dmi != nil {
+			encoded, err := json.Marshal(params.Dmi)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreateAnswer: encode dmi: %w", err)
+			}
+			body["dmi"] = string(encoded)
+		}
+		if params.Iso != nil {
+			encoded, err := json.Marshal(params.Iso)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreateAnswer: encode iso: %w", err)
+			}
+			body["iso"] = string(encoded)
+		}
+		if len(params.NetworkInterfaces) > 0 {
+			encoded, err := json.Marshal(params.NetworkInterfaces)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreateAnswer: encode network_interfaces: %w", err)
+			}
+			body["network_interfaces"] = string(encoded)
+		}
+		if params.Product != nil {
+			encoded, err := json.Marshal(params.Product)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreateAnswer: encode product: %w", err)
+			}
+			body["product"] = string(encoded)
+		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)
 	if err != nil {
@@ -272,6 +307,76 @@ func (s *service) CreateInstallationsPostHook(ctx context.Context, uuid string, 
 		err = dec.Decode(&body)
 		if err != nil {
 			return fmt.Errorf("autoinstall.CreateInstallationsPostHook: decode params: %w", err)
+		}
+		if params.Schema != nil {
+			encoded, err := json.Marshal(params.Schema)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode $schema: %w", err)
+			}
+			body["$schema"] = string(encoded)
+		}
+		if params.BootInfo != nil {
+			encoded, err := json.Marshal(params.BootInfo)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode boot-info: %w", err)
+			}
+			body["boot-info"] = string(encoded)
+		}
+		if params.CpuInfo != nil {
+			encoded, err := json.Marshal(params.CpuInfo)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode cpu-info: %w", err)
+			}
+			body["cpu-info"] = string(encoded)
+		}
+		if len(params.Disks) > 0 {
+			encoded, err := json.Marshal(params.Disks)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode disks: %w", err)
+			}
+			body["disks"] = string(encoded)
+		}
+		if params.Dmi != nil {
+			encoded, err := json.Marshal(params.Dmi)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode dmi: %w", err)
+			}
+			body["dmi"] = string(encoded)
+		}
+		if params.Iso != nil {
+			encoded, err := json.Marshal(params.Iso)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode iso: %w", err)
+			}
+			body["iso"] = string(encoded)
+		}
+		if params.KernelVersion != nil {
+			encoded, err := json.Marshal(params.KernelVersion)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode kernel-version: %w", err)
+			}
+			body["kernel-version"] = string(encoded)
+		}
+		if len(params.NetworkInterfaces) > 0 {
+			encoded, err := json.Marshal(params.NetworkInterfaces)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode network-interfaces: %w", err)
+			}
+			body["network-interfaces"] = string(encoded)
+		}
+		if params.Product != nil {
+			encoded, err := json.Marshal(params.Product)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode product: %w", err)
+			}
+			body["product"] = string(encoded)
+		}
+		if params.SshPublicHostKeys != nil {
+			encoded, err := json.Marshal(params.SshPublicHostKeys)
+			if err != nil {
+				return fmt.Errorf("autoinstall.CreateInstallationsPostHook: encode ssh-public-host-keys: %w", err)
+			}
+			body["ssh-public-host-keys"] = string(encoded)
 		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)
@@ -407,6 +512,41 @@ func (s *service) CreatePrepared(ctx context.Context, params *CreatePreparedPara
 		err = dec.Decode(&body)
 		if err != nil {
 			return nil, fmt.Errorf("autoinstall.CreatePrepared: decode params: %w", err)
+		}
+		if params.DiskFilter != nil {
+			encoded, err := json.Marshal(params.DiskFilter)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreatePrepared: encode disk-filter: %w", err)
+			}
+			body["disk-filter"] = string(encoded)
+		}
+		if params.Filesystem != nil {
+			encoded, err := json.Marshal(params.Filesystem)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreatePrepared: encode filesystem: %w", err)
+			}
+			body["filesystem"] = string(encoded)
+		}
+		if params.NetdevFilter != nil {
+			encoded, err := json.Marshal(params.NetdevFilter)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreatePrepared: encode netdev-filter: %w", err)
+			}
+			body["netdev-filter"] = string(encoded)
+		}
+		if params.TargetFilter != nil {
+			encoded, err := json.Marshal(params.TargetFilter)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreatePrepared: encode target-filter: %w", err)
+			}
+			body["target-filter"] = string(encoded)
+		}
+		if params.TemplateCounters != nil {
+			encoded, err := json.Marshal(params.TemplateCounters)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.CreatePrepared: encode template-counters: %w", err)
+			}
+			body["template-counters"] = string(encoded)
 		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)
@@ -573,6 +713,41 @@ func (s *service) UpdatePrepared(ctx context.Context, id string, params *UpdateP
 		err = dec.Decode(&body)
 		if err != nil {
 			return nil, fmt.Errorf("autoinstall.UpdatePrepared: decode params: %w", err)
+		}
+		if params.DiskFilter != nil {
+			encoded, err := json.Marshal(params.DiskFilter)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.UpdatePrepared: encode disk-filter: %w", err)
+			}
+			body["disk-filter"] = string(encoded)
+		}
+		if params.Filesystem != nil {
+			encoded, err := json.Marshal(params.Filesystem)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.UpdatePrepared: encode filesystem: %w", err)
+			}
+			body["filesystem"] = string(encoded)
+		}
+		if params.NetdevFilter != nil {
+			encoded, err := json.Marshal(params.NetdevFilter)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.UpdatePrepared: encode netdev-filter: %w", err)
+			}
+			body["netdev-filter"] = string(encoded)
+		}
+		if params.TargetFilter != nil {
+			encoded, err := json.Marshal(params.TargetFilter)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.UpdatePrepared: encode target-filter: %w", err)
+			}
+			body["target-filter"] = string(encoded)
+		}
+		if params.TemplateCounters != nil {
+			encoded, err := json.Marshal(params.TemplateCounters)
+			if err != nil {
+				return nil, fmt.Errorf("autoinstall.UpdatePrepared: encode template-counters: %w", err)
+			}
+			body["template-counters"] = string(encoded)
 		}
 	}
 	resp, err := s.c.PutRawCtx(ctx, path, body)

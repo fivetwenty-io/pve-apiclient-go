@@ -9359,6 +9359,13 @@ func (s *service) CreateSdnFabricsFabric(ctx context.Context, params *CreateSdnF
 		if err != nil {
 			return fmt.Errorf("cluster.CreateSdnFabricsFabric: decode params: %w", err)
 		}
+		if len(params.Redistribute) > 0 {
+			encoded, err := json.Marshal(params.Redistribute)
+			if err != nil {
+				return fmt.Errorf("cluster.CreateSdnFabricsFabric: encode redistribute: %w", err)
+			}
+			body["redistribute"] = string(encoded)
+		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)
 	if err != nil {
@@ -9488,6 +9495,20 @@ func (s *service) UpdateSdnFabricsFabric(ctx context.Context, id string, params 
 		err = dec.Decode(&body)
 		if err != nil {
 			return fmt.Errorf("cluster.UpdateSdnFabricsFabric: decode params: %w", err)
+		}
+		if len(params.Delete) > 0 {
+			encoded, err := json.Marshal(params.Delete)
+			if err != nil {
+				return fmt.Errorf("cluster.UpdateSdnFabricsFabric: encode delete: %w", err)
+			}
+			body["delete"] = string(encoded)
+		}
+		if len(params.Redistribute) > 0 {
+			encoded, err := json.Marshal(params.Redistribute)
+			if err != nil {
+				return fmt.Errorf("cluster.UpdateSdnFabricsFabric: encode redistribute: %w", err)
+			}
+			body["redistribute"] = string(encoded)
 		}
 	}
 	resp, err := s.c.PutRawCtx(ctx, path, body)
@@ -9651,6 +9672,13 @@ func (s *service) CreateSdnFabricsNode(ctx context.Context, fabricId string, par
 		if err != nil {
 			return fmt.Errorf("cluster.CreateSdnFabricsNode: decode params: %w", err)
 		}
+		if len(params.Interfaces) > 0 {
+			encoded, err := json.Marshal(params.Interfaces)
+			if err != nil {
+				return fmt.Errorf("cluster.CreateSdnFabricsNode: encode interfaces: %w", err)
+			}
+			body["interfaces"] = string(encoded)
+		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)
 	if err != nil {
@@ -9756,6 +9784,20 @@ func (s *service) UpdateSdnFabricsNode(ctx context.Context, fabricId string, nod
 		err = dec.Decode(&body)
 		if err != nil {
 			return fmt.Errorf("cluster.UpdateSdnFabricsNode: decode params: %w", err)
+		}
+		if len(params.Delete) > 0 {
+			encoded, err := json.Marshal(params.Delete)
+			if err != nil {
+				return fmt.Errorf("cluster.UpdateSdnFabricsNode: encode delete: %w", err)
+			}
+			body["delete"] = string(encoded)
+		}
+		if len(params.Interfaces) > 0 {
+			encoded, err := json.Marshal(params.Interfaces)
+			if err != nil {
+				return fmt.Errorf("cluster.UpdateSdnFabricsNode: encode interfaces: %w", err)
+			}
+			body["interfaces"] = string(encoded)
 		}
 	}
 	resp, err := s.c.PutRawCtx(ctx, path, body)

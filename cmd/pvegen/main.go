@@ -1592,9 +1592,78 @@ func renderMethodBodyParams(builder *strings.Builder, pkgName string, endpt endp
 		fmt.Fprintf(builder, "\t\t\treturn %s fmt.Errorf(\"%s.%s: decode params: %%w\", err)\n",
 			zeroReturnExpr(respGo), pkgName, endpt.GoMethod)
 		builder.WriteString("\t\t}\n")
+		renderRawMessageParamOverrides(builder, pkgName, endpt, respGo)
 		builder.WriteString("\t}\n")
 	} else {
 		builder.WriteString("\tvar body map[string]interface{}\n")
+	}
+}
+
+// renderRawMessageParamOverrides emits, for every json.RawMessage- or
+// []json.RawMessage-typed request field, an override that replaces the
+// entry the marshal/decode round-trip above just placed in body with the
+// field's own compact JSON text. That round-trip decodes a RawMessage
+// object into map[string]interface{} and a RawMessage array into
+// []interface{}, destroying the type; the form encoder then serializes
+// the object as a Proxmox comma-joined option-string (encodeNestedMap)
+// or the array as Go's default %v syntax — neither is the JSON the API
+// expects for that field. Re-deriving the value from the original typed
+// param via json.Marshal (which compacts a Marshaler's output) restores
+// it as a single valid JSON-text form value. Scalars, []string, and
+// map-valued Raw API params are untouched — this only fires for fields
+// whose declared Go type is exactly json.RawMessage or []json.RawMessage.
+func renderRawMessageParamOverrides(builder *strings.Builder, pkgName string, endpt endpoint, respGo string) {
+	pathSet := map[string]bool{}
+	for _, pathParam := range endpt.PathParams {
+		pathSet[pathParam] = true
+	}
+
+	names := make([]string, 0, len(endpt.Info.Parameters.Properties))
+
+	for name := range endpt.Info.Parameters.Properties {
+		if pathSet[name] {
+			continue
+		}
+
+		if _, ok := isIndexedParam(name); ok {
+			continue
+		}
+
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	for _, name := range names {
+		prop := endpt.Info.Parameters.Properties[name]
+
+		goType, err := goTypeFor(prop)
+		if err != nil {
+			goType = goTypeRawMessage
+		}
+
+		isSlice := goType == "[]"+goTypeRawMessage
+		isScalar := goType == goTypeRawMessage
+
+		if !isSlice && !isScalar {
+			continue
+		}
+
+		fieldName := sanitizeFieldName(pascalize(name))
+
+		if isSlice {
+			fmt.Fprintf(builder, "\t\tif len(params.%s) > 0 {\n", fieldName)
+		} else {
+			fmt.Fprintf(builder, "\t\tif params.%s != nil {\n", fieldName)
+		}
+
+		fmt.Fprintf(builder, "\t\t\tencoded, err := json.Marshal(params.%s)\n", fieldName)
+		builder.WriteString("\t\t\tif err != nil {\n")
+		fmt.Fprintf(builder, "\t\t\t\treturn %s fmt.Errorf(\"%s.%s: encode %s: %%w\", err)\n",
+			zeroReturnExpr(respGo), pkgName, endpt.GoMethod, name)
+		builder.WriteString("\t\t\t}\n")
+		fmt.Fprintf(builder, "\t\t\tbody[%s] = string(encoded)\n", strconvQuote(name))
+		builder.WriteString("\t\t}\n")
 	}
 }
 

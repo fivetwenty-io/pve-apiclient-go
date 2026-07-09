@@ -218,6 +218,13 @@ func (s *service) CreateVnets(ctx context.Context, params *CreateVnetsParams) (*
 		if err != nil {
 			return nil, fmt.Errorf("sdn.CreateVnets: decode params: %w", err)
 		}
+		if len(params.Remotes) > 0 {
+			encoded, err := json.Marshal(params.Remotes)
+			if err != nil {
+				return nil, fmt.Errorf("sdn.CreateVnets: encode remotes: %w", err)
+			}
+			body["remotes"] = string(encoded)
+		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)
 	if err != nil {
@@ -329,6 +336,13 @@ func (s *service) CreateZones(ctx context.Context, params *CreateZonesParams) (*
 		err = dec.Decode(&body)
 		if err != nil {
 			return nil, fmt.Errorf("sdn.CreateZones: decode params: %w", err)
+		}
+		if len(params.Remotes) > 0 {
+			encoded, err := json.Marshal(params.Remotes)
+			if err != nil {
+				return nil, fmt.Errorf("sdn.CreateZones: encode remotes: %w", err)
+			}
+			body["remotes"] = string(encoded)
 		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)

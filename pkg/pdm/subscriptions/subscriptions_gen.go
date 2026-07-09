@@ -316,6 +316,13 @@ func (s *service) CreateBulkAssign(ctx context.Context, params *CreateBulkAssign
 		if err != nil {
 			return nil, fmt.Errorf("subscriptions.CreateBulkAssign: decode params: %w", err)
 		}
+		if params.Proposal != nil {
+			encoded, err := json.Marshal(params.Proposal)
+			if err != nil {
+				return nil, fmt.Errorf("subscriptions.CreateBulkAssign: encode proposal: %w", err)
+			}
+			body["proposal"] = string(encoded)
+		}
 	}
 	resp, err := s.c.PostRawCtx(ctx, path, body)
 	if err != nil {
