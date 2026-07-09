@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -24,6 +25,15 @@ const (
 	indexedNetParam            = "net[n]"
 	namespaceNodes             = "nodes"
 	namespaceAccess            = "access"
+	fieldDev0                  = "dev0"
+	fieldDev1                  = "dev1"
+	fieldDev255                = "dev255"
+	fieldSha256                = "sha256"
+	fieldSmbios1               = "smbios1"
+	fieldArch                  = "arch"
+	fieldConsole               = "console"
+	fieldServer1               = "server1"
+	fieldServer2               = "server2"
 )
 
 func TestPascalize(t *testing.T) {
@@ -259,6 +269,92 @@ func TestIsOptional(t *testing.T) {
 
 	if isOptional(nil) {
 		t.Error("isOptional(nil) = true, want false")
+	}
+}
+
+func TestSlotFamilyStems(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		props []string
+		want  map[string]bool
+	}{
+		{
+			"numbered family detected",
+			[]string{fieldDev0, fieldDev1, fieldDev255},
+			map[string]bool{"dev": true},
+		},
+		{
+			"single suffix is not a family",
+			[]string{fieldSha256},
+			map[string]bool{},
+		},
+		{
+			"single fixed numbered field is not a family",
+			[]string{fieldSmbios1},
+			map[string]bool{},
+		},
+		{
+			"mixed schema only flags the repeated stem",
+			[]string{fieldDev0, fieldDev1, fieldSha256, fieldConsole, fieldArch},
+			map[string]bool{"dev": true},
+		},
+		{
+			"multiple families in one schema",
+			[]string{"net0", "net31", "mp0", "mp255", "unused0"},
+			map[string]bool{"net": true, "mp": true},
+		},
+		{
+			"no numbered properties",
+			[]string{fieldArch, fieldConsole, fieldHostname},
+			map[string]bool{},
+		},
+		{
+			"fixed one-indexed pair without a zero slot is not a family",
+			[]string{fieldServer1, fieldServer2},
+			map[string]bool{},
+		},
+	}
+
+	for _, tc := range cases {
+		got := slotFamilyStems(tc.props)
+		if len(got) != len(tc.want) {
+			t.Errorf("%s: slotFamilyStems(%v) = %v, want %v", tc.name, tc.props, got, tc.want)
+
+			continue
+		}
+
+		for stem := range tc.want {
+			if !got[stem] {
+				t.Errorf("%s: slotFamilyStems(%v) = %v, want %v", tc.name, tc.props, got, tc.want)
+			}
+		}
+	}
+}
+
+func TestIsSlotFamilyMember(t *testing.T) {
+	t.Parallel()
+
+	families := slotFamilyStems([]string{fieldDev0, fieldDev1, fieldDev255, fieldSha256, fieldSmbios1})
+
+	cases := []struct {
+		name string
+		want bool
+	}{
+		{fieldDev0, true},
+		{fieldDev255, true},
+		{"dev256", true}, // not enumerated above but still a family member
+		{fieldSha256, false},
+		{fieldSmbios1, false},
+		{fieldArch, false},
+		{"", false},
+	}
+
+	for _, tc := range cases {
+		if got := isSlotFamilyMember(tc.name, families); got != tc.want {
+			t.Errorf("isSlotFamilyMember(%q) = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }
 
@@ -539,6 +635,78 @@ func TestIsResponseEmptyOk(t *testing.T) {
 		if got := isResponseEmptyOk(endpt); got != tc.want {
 			t.Errorf("%s: isResponseEmptyOk() = %v, want %v", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestRenderObjectFieldsSlotFamilyOptionality(t *testing.T) {
+	t.Parallel()
+
+	objSchema := &schema{
+		Type: schemaTypeObject,
+		Properties: map[string]*schema{
+			fieldDev0:   {Type: schemaTypeString},
+			fieldDev1:   {Type: schemaTypeString},
+			fieldDev255: {Type: schemaTypeString},
+			fieldArch:   {Type: schemaTypeString, Optional: json.RawMessage("1")},
+			fieldSha256: {Type: schemaTypeString},
+		},
+	}
+
+	body, err := renderObjectFields(objSchema)
+	if err != nil {
+		t.Fatalf("renderObjectFields() error = %v", err)
+	}
+
+	// Slot-family members become pointer fields with an omitempty tag even
+	// though the apidoc never marked them optional.
+	for _, want := range []string{
+		"Dev0 *string `json:\"dev0,omitempty\"`",
+		"Dev1 *string `json:\"dev1,omitempty\"`",
+		"Dev255 *string `json:\"dev255,omitempty\"`",
+		"Arch *string `json:\"arch,omitempty\"`",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("renderObjectFields() missing %q in:\n%s", want, body)
+		}
+	}
+
+	// A single word+digits name with no sibling suffix is not a family and
+	// stays required (non-pointer, no omitempty) since the apidoc did not
+	// mark it optional.
+	if !strings.Contains(body, "Sha256 string `json:\"sha256\"`") {
+		t.Errorf("renderObjectFields() unexpectedly treated sha256 as a slot family in:\n%s", body)
+	}
+}
+
+// TestRenderObjectFieldsFixedPairIsNotASlotFamily guards against the
+// AD/LDAP realm config regression found while wiring in the slot-family
+// heuristic: "server1"/"server2" (primary/fallback server address) share a
+// stem and two distinct suffixes but are a fixed one-indexed pair, not a
+// zero-indexed slot family, and the apidoc already marks "server1" required
+// on creation. Without the "0" suffix guard in slotFamilyStems this would
+// wrongly become a pointer/omitempty field.
+func TestRenderObjectFieldsFixedPairIsNotASlotFamily(t *testing.T) {
+	t.Parallel()
+
+	objSchema := &schema{
+		Type: schemaTypeObject,
+		Properties: map[string]*schema{
+			fieldServer1: {Type: schemaTypeString},
+			fieldServer2: {Type: schemaTypeString, Optional: json.RawMessage("1")},
+		},
+	}
+
+	body, err := renderObjectFields(objSchema)
+	if err != nil {
+		t.Fatalf("renderObjectFields() error = %v", err)
+	}
+
+	if !strings.Contains(body, "Server1 string `json:\"server1\"`") {
+		t.Errorf("renderObjectFields() unexpectedly treated server1 as a slot family in:\n%s", body)
+	}
+
+	if !strings.Contains(body, "Server2 *string `json:\"server2,omitempty\"`") {
+		t.Errorf("renderObjectFields() lost server2's own apidoc-marked optionality in:\n%s", body)
 	}
 }
 

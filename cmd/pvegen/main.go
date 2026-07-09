@@ -1511,6 +1511,11 @@ func renderObjectFields(objSchema *schema) (string, error) {
 
 	sort.Strings(names)
 
+	// Numbered-slot families (dev0/dev1/..., net0/net31/..., ...) are
+	// implicitly optional regardless of the apidoc's own "optional" flag —
+	// see isSlotFamilyMember.
+	slotFamilies := slotFamilyStems(names)
+
 	var builder strings.Builder
 
 	for _, name := range names {
@@ -1531,7 +1536,7 @@ func renderObjectFields(objSchema *schema) (string, error) {
 		// emitRegularFields); only response shapes are retyped.
 		goType = responseIntType(responseFloatType(responseBoolType(goType)))
 
-		opt := isOptional(prop)
+		opt := isOptional(prop) || isSlotFamilyMember(name, slotFamilies)
 		if opt && !isAlreadyNilable(goType) {
 			goType = "*" + goType
 		}
@@ -1948,6 +1953,69 @@ func isOptional(objSchema *schema) bool {
 	}
 
 	return false
+}
+
+// slotFamilyNameRe splits a property name into an alphabetic stem and a
+// trailing numeric suffix (e.g. "dev12" -> "dev", "12"). Used by
+// slotFamilyStems and isSlotFamilyMember to detect numbered-slot families in
+// RETURNS schemas.
+var slotFamilyNameRe = regexp.MustCompile(`^([a-z][a-z]*)([0-9]+)$`)
+
+// slotFamilyStems returns the set of stems that occur with two or more
+// distinct numeric suffixes, including a "0" suffix, among names. The PVE
+// apidoc enumerates numbered-slot response properties (dev0..dev255,
+// mp0..mp255, net0..net31, unused0..unused255, ...) as concrete instances
+// without ever marking them "optional", even though a real guest config
+// only ever populates a handful of a family's slots. Every genuine PVE slot
+// family is zero-indexed, so two guards keep this from misfiring:
+//
+//   - Requiring two or more distinct suffixes for the same stem — rather
+//     than matching any single "word+digits" name — keeps genuinely scalar
+//     fields that happen to end in a digit (e.g. "sha256", "smbios1") out of
+//     the heuristic: those stems appear at most once per RETURNS schema and
+//     so never form a family.
+//   - Requiring a "0" suffix specifically excludes small fixed-cardinality
+//     groups that are not slot families, such as the AD/LDAP realm config's
+//     "server1"/"server2" (primary/fallback server address) properties,
+//     which start at 1 and where the apidoc already marks "server1" required
+//     on creation.
+func slotFamilyStems(names []string) map[string]bool {
+	suffixesByStem := map[string]map[string]bool{}
+
+	for _, name := range names {
+		match := slotFamilyNameRe.FindStringSubmatch(name)
+		if match == nil {
+			continue
+		}
+
+		stem, suffix := match[1], match[2]
+		if suffixesByStem[stem] == nil {
+			suffixesByStem[stem] = map[string]bool{}
+		}
+
+		suffixesByStem[stem][suffix] = true
+	}
+
+	families := map[string]bool{}
+
+	for stem, suffixes := range suffixesByStem {
+		if len(suffixes) >= 2 && suffixes["0"] {
+			families[stem] = true
+		}
+	}
+
+	return families
+}
+
+// isSlotFamilyMember reports whether name is a concrete instance of one of
+// the numbered-slot families in families (as produced by slotFamilyStems).
+func isSlotFamilyMember(name string, families map[string]bool) bool {
+	match := slotFamilyNameRe.FindStringSubmatch(name)
+	if match == nil {
+		return false
+	}
+
+	return families[match[1]]
 }
 
 // escapeDoc strips characters that break Go doc comments (mainly

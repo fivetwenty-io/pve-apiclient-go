@@ -929,517 +929,517 @@ type ListRemotesLxcConfigResponse struct {
 	// Description Description for the Container. Shown in the web-interface CT's summary. This is saved as comment inside the configuration file.
 	Description *string `json:"description,omitempty"`
 	// Dev0 Device to pass through to the container
-	Dev0 string `json:"dev0"`
+	Dev0 *string `json:"dev0,omitempty"`
 	// Dev1 Device to pass through to the container
-	Dev1 string `json:"dev1"`
+	Dev1 *string `json:"dev1,omitempty"`
 	// Dev10 Device to pass through to the container
-	Dev10 string `json:"dev10"`
+	Dev10 *string `json:"dev10,omitempty"`
 	// Dev100 Device to pass through to the container
-	Dev100 string `json:"dev100"`
+	Dev100 *string `json:"dev100,omitempty"`
 	// Dev101 Device to pass through to the container
-	Dev101 string `json:"dev101"`
+	Dev101 *string `json:"dev101,omitempty"`
 	// Dev102 Device to pass through to the container
-	Dev102 string `json:"dev102"`
+	Dev102 *string `json:"dev102,omitempty"`
 	// Dev103 Device to pass through to the container
-	Dev103 string `json:"dev103"`
+	Dev103 *string `json:"dev103,omitempty"`
 	// Dev104 Device to pass through to the container
-	Dev104 string `json:"dev104"`
+	Dev104 *string `json:"dev104,omitempty"`
 	// Dev105 Device to pass through to the container
-	Dev105 string `json:"dev105"`
+	Dev105 *string `json:"dev105,omitempty"`
 	// Dev106 Device to pass through to the container
-	Dev106 string `json:"dev106"`
+	Dev106 *string `json:"dev106,omitempty"`
 	// Dev107 Device to pass through to the container
-	Dev107 string `json:"dev107"`
+	Dev107 *string `json:"dev107,omitempty"`
 	// Dev108 Device to pass through to the container
-	Dev108 string `json:"dev108"`
+	Dev108 *string `json:"dev108,omitempty"`
 	// Dev109 Device to pass through to the container
-	Dev109 string `json:"dev109"`
+	Dev109 *string `json:"dev109,omitempty"`
 	// Dev11 Device to pass through to the container
-	Dev11 string `json:"dev11"`
+	Dev11 *string `json:"dev11,omitempty"`
 	// Dev110 Device to pass through to the container
-	Dev110 string `json:"dev110"`
+	Dev110 *string `json:"dev110,omitempty"`
 	// Dev111 Device to pass through to the container
-	Dev111 string `json:"dev111"`
+	Dev111 *string `json:"dev111,omitempty"`
 	// Dev112 Device to pass through to the container
-	Dev112 string `json:"dev112"`
+	Dev112 *string `json:"dev112,omitempty"`
 	// Dev113 Device to pass through to the container
-	Dev113 string `json:"dev113"`
+	Dev113 *string `json:"dev113,omitempty"`
 	// Dev114 Device to pass through to the container
-	Dev114 string `json:"dev114"`
+	Dev114 *string `json:"dev114,omitempty"`
 	// Dev115 Device to pass through to the container
-	Dev115 string `json:"dev115"`
+	Dev115 *string `json:"dev115,omitempty"`
 	// Dev116 Device to pass through to the container
-	Dev116 string `json:"dev116"`
+	Dev116 *string `json:"dev116,omitempty"`
 	// Dev117 Device to pass through to the container
-	Dev117 string `json:"dev117"`
+	Dev117 *string `json:"dev117,omitempty"`
 	// Dev118 Device to pass through to the container
-	Dev118 string `json:"dev118"`
+	Dev118 *string `json:"dev118,omitempty"`
 	// Dev119 Device to pass through to the container
-	Dev119 string `json:"dev119"`
+	Dev119 *string `json:"dev119,omitempty"`
 	// Dev12 Device to pass through to the container
-	Dev12 string `json:"dev12"`
+	Dev12 *string `json:"dev12,omitempty"`
 	// Dev120 Device to pass through to the container
-	Dev120 string `json:"dev120"`
+	Dev120 *string `json:"dev120,omitempty"`
 	// Dev121 Device to pass through to the container
-	Dev121 string `json:"dev121"`
+	Dev121 *string `json:"dev121,omitempty"`
 	// Dev122 Device to pass through to the container
-	Dev122 string `json:"dev122"`
+	Dev122 *string `json:"dev122,omitempty"`
 	// Dev123 Device to pass through to the container
-	Dev123 string `json:"dev123"`
+	Dev123 *string `json:"dev123,omitempty"`
 	// Dev124 Device to pass through to the container
-	Dev124 string `json:"dev124"`
+	Dev124 *string `json:"dev124,omitempty"`
 	// Dev125 Device to pass through to the container
-	Dev125 string `json:"dev125"`
+	Dev125 *string `json:"dev125,omitempty"`
 	// Dev126 Device to pass through to the container
-	Dev126 string `json:"dev126"`
+	Dev126 *string `json:"dev126,omitempty"`
 	// Dev127 Device to pass through to the container
-	Dev127 string `json:"dev127"`
+	Dev127 *string `json:"dev127,omitempty"`
 	// Dev128 Device to pass through to the container
-	Dev128 string `json:"dev128"`
+	Dev128 *string `json:"dev128,omitempty"`
 	// Dev129 Device to pass through to the container
-	Dev129 string `json:"dev129"`
+	Dev129 *string `json:"dev129,omitempty"`
 	// Dev13 Device to pass through to the container
-	Dev13 string `json:"dev13"`
+	Dev13 *string `json:"dev13,omitempty"`
 	// Dev130 Device to pass through to the container
-	Dev130 string `json:"dev130"`
+	Dev130 *string `json:"dev130,omitempty"`
 	// Dev131 Device to pass through to the container
-	Dev131 string `json:"dev131"`
+	Dev131 *string `json:"dev131,omitempty"`
 	// Dev132 Device to pass through to the container
-	Dev132 string `json:"dev132"`
+	Dev132 *string `json:"dev132,omitempty"`
 	// Dev133 Device to pass through to the container
-	Dev133 string `json:"dev133"`
+	Dev133 *string `json:"dev133,omitempty"`
 	// Dev134 Device to pass through to the container
-	Dev134 string `json:"dev134"`
+	Dev134 *string `json:"dev134,omitempty"`
 	// Dev135 Device to pass through to the container
-	Dev135 string `json:"dev135"`
+	Dev135 *string `json:"dev135,omitempty"`
 	// Dev136 Device to pass through to the container
-	Dev136 string `json:"dev136"`
+	Dev136 *string `json:"dev136,omitempty"`
 	// Dev137 Device to pass through to the container
-	Dev137 string `json:"dev137"`
+	Dev137 *string `json:"dev137,omitempty"`
 	// Dev138 Device to pass through to the container
-	Dev138 string `json:"dev138"`
+	Dev138 *string `json:"dev138,omitempty"`
 	// Dev139 Device to pass through to the container
-	Dev139 string `json:"dev139"`
+	Dev139 *string `json:"dev139,omitempty"`
 	// Dev14 Device to pass through to the container
-	Dev14 string `json:"dev14"`
+	Dev14 *string `json:"dev14,omitempty"`
 	// Dev140 Device to pass through to the container
-	Dev140 string `json:"dev140"`
+	Dev140 *string `json:"dev140,omitempty"`
 	// Dev141 Device to pass through to the container
-	Dev141 string `json:"dev141"`
+	Dev141 *string `json:"dev141,omitempty"`
 	// Dev142 Device to pass through to the container
-	Dev142 string `json:"dev142"`
+	Dev142 *string `json:"dev142,omitempty"`
 	// Dev143 Device to pass through to the container
-	Dev143 string `json:"dev143"`
+	Dev143 *string `json:"dev143,omitempty"`
 	// Dev144 Device to pass through to the container
-	Dev144 string `json:"dev144"`
+	Dev144 *string `json:"dev144,omitempty"`
 	// Dev145 Device to pass through to the container
-	Dev145 string `json:"dev145"`
+	Dev145 *string `json:"dev145,omitempty"`
 	// Dev146 Device to pass through to the container
-	Dev146 string `json:"dev146"`
+	Dev146 *string `json:"dev146,omitempty"`
 	// Dev147 Device to pass through to the container
-	Dev147 string `json:"dev147"`
+	Dev147 *string `json:"dev147,omitempty"`
 	// Dev148 Device to pass through to the container
-	Dev148 string `json:"dev148"`
+	Dev148 *string `json:"dev148,omitempty"`
 	// Dev149 Device to pass through to the container
-	Dev149 string `json:"dev149"`
+	Dev149 *string `json:"dev149,omitempty"`
 	// Dev15 Device to pass through to the container
-	Dev15 string `json:"dev15"`
+	Dev15 *string `json:"dev15,omitempty"`
 	// Dev150 Device to pass through to the container
-	Dev150 string `json:"dev150"`
+	Dev150 *string `json:"dev150,omitempty"`
 	// Dev151 Device to pass through to the container
-	Dev151 string `json:"dev151"`
+	Dev151 *string `json:"dev151,omitempty"`
 	// Dev152 Device to pass through to the container
-	Dev152 string `json:"dev152"`
+	Dev152 *string `json:"dev152,omitempty"`
 	// Dev153 Device to pass through to the container
-	Dev153 string `json:"dev153"`
+	Dev153 *string `json:"dev153,omitempty"`
 	// Dev154 Device to pass through to the container
-	Dev154 string `json:"dev154"`
+	Dev154 *string `json:"dev154,omitempty"`
 	// Dev155 Device to pass through to the container
-	Dev155 string `json:"dev155"`
+	Dev155 *string `json:"dev155,omitempty"`
 	// Dev156 Device to pass through to the container
-	Dev156 string `json:"dev156"`
+	Dev156 *string `json:"dev156,omitempty"`
 	// Dev157 Device to pass through to the container
-	Dev157 string `json:"dev157"`
+	Dev157 *string `json:"dev157,omitempty"`
 	// Dev158 Device to pass through to the container
-	Dev158 string `json:"dev158"`
+	Dev158 *string `json:"dev158,omitempty"`
 	// Dev159 Device to pass through to the container
-	Dev159 string `json:"dev159"`
+	Dev159 *string `json:"dev159,omitempty"`
 	// Dev16 Device to pass through to the container
-	Dev16 string `json:"dev16"`
+	Dev16 *string `json:"dev16,omitempty"`
 	// Dev160 Device to pass through to the container
-	Dev160 string `json:"dev160"`
+	Dev160 *string `json:"dev160,omitempty"`
 	// Dev161 Device to pass through to the container
-	Dev161 string `json:"dev161"`
+	Dev161 *string `json:"dev161,omitempty"`
 	// Dev162 Device to pass through to the container
-	Dev162 string `json:"dev162"`
+	Dev162 *string `json:"dev162,omitempty"`
 	// Dev163 Device to pass through to the container
-	Dev163 string `json:"dev163"`
+	Dev163 *string `json:"dev163,omitempty"`
 	// Dev164 Device to pass through to the container
-	Dev164 string `json:"dev164"`
+	Dev164 *string `json:"dev164,omitempty"`
 	// Dev165 Device to pass through to the container
-	Dev165 string `json:"dev165"`
+	Dev165 *string `json:"dev165,omitempty"`
 	// Dev166 Device to pass through to the container
-	Dev166 string `json:"dev166"`
+	Dev166 *string `json:"dev166,omitempty"`
 	// Dev167 Device to pass through to the container
-	Dev167 string `json:"dev167"`
+	Dev167 *string `json:"dev167,omitempty"`
 	// Dev168 Device to pass through to the container
-	Dev168 string `json:"dev168"`
+	Dev168 *string `json:"dev168,omitempty"`
 	// Dev169 Device to pass through to the container
-	Dev169 string `json:"dev169"`
+	Dev169 *string `json:"dev169,omitempty"`
 	// Dev17 Device to pass through to the container
-	Dev17 string `json:"dev17"`
+	Dev17 *string `json:"dev17,omitempty"`
 	// Dev170 Device to pass through to the container
-	Dev170 string `json:"dev170"`
+	Dev170 *string `json:"dev170,omitempty"`
 	// Dev171 Device to pass through to the container
-	Dev171 string `json:"dev171"`
+	Dev171 *string `json:"dev171,omitempty"`
 	// Dev172 Device to pass through to the container
-	Dev172 string `json:"dev172"`
+	Dev172 *string `json:"dev172,omitempty"`
 	// Dev173 Device to pass through to the container
-	Dev173 string `json:"dev173"`
+	Dev173 *string `json:"dev173,omitempty"`
 	// Dev174 Device to pass through to the container
-	Dev174 string `json:"dev174"`
+	Dev174 *string `json:"dev174,omitempty"`
 	// Dev175 Device to pass through to the container
-	Dev175 string `json:"dev175"`
+	Dev175 *string `json:"dev175,omitempty"`
 	// Dev176 Device to pass through to the container
-	Dev176 string `json:"dev176"`
+	Dev176 *string `json:"dev176,omitempty"`
 	// Dev177 Device to pass through to the container
-	Dev177 string `json:"dev177"`
+	Dev177 *string `json:"dev177,omitempty"`
 	// Dev178 Device to pass through to the container
-	Dev178 string `json:"dev178"`
+	Dev178 *string `json:"dev178,omitempty"`
 	// Dev179 Device to pass through to the container
-	Dev179 string `json:"dev179"`
+	Dev179 *string `json:"dev179,omitempty"`
 	// Dev18 Device to pass through to the container
-	Dev18 string `json:"dev18"`
+	Dev18 *string `json:"dev18,omitempty"`
 	// Dev180 Device to pass through to the container
-	Dev180 string `json:"dev180"`
+	Dev180 *string `json:"dev180,omitempty"`
 	// Dev181 Device to pass through to the container
-	Dev181 string `json:"dev181"`
+	Dev181 *string `json:"dev181,omitempty"`
 	// Dev182 Device to pass through to the container
-	Dev182 string `json:"dev182"`
+	Dev182 *string `json:"dev182,omitempty"`
 	// Dev183 Device to pass through to the container
-	Dev183 string `json:"dev183"`
+	Dev183 *string `json:"dev183,omitempty"`
 	// Dev184 Device to pass through to the container
-	Dev184 string `json:"dev184"`
+	Dev184 *string `json:"dev184,omitempty"`
 	// Dev185 Device to pass through to the container
-	Dev185 string `json:"dev185"`
+	Dev185 *string `json:"dev185,omitempty"`
 	// Dev186 Device to pass through to the container
-	Dev186 string `json:"dev186"`
+	Dev186 *string `json:"dev186,omitempty"`
 	// Dev187 Device to pass through to the container
-	Dev187 string `json:"dev187"`
+	Dev187 *string `json:"dev187,omitempty"`
 	// Dev188 Device to pass through to the container
-	Dev188 string `json:"dev188"`
+	Dev188 *string `json:"dev188,omitempty"`
 	// Dev189 Device to pass through to the container
-	Dev189 string `json:"dev189"`
+	Dev189 *string `json:"dev189,omitempty"`
 	// Dev19 Device to pass through to the container
-	Dev19 string `json:"dev19"`
+	Dev19 *string `json:"dev19,omitempty"`
 	// Dev190 Device to pass through to the container
-	Dev190 string `json:"dev190"`
+	Dev190 *string `json:"dev190,omitempty"`
 	// Dev191 Device to pass through to the container
-	Dev191 string `json:"dev191"`
+	Dev191 *string `json:"dev191,omitempty"`
 	// Dev192 Device to pass through to the container
-	Dev192 string `json:"dev192"`
+	Dev192 *string `json:"dev192,omitempty"`
 	// Dev193 Device to pass through to the container
-	Dev193 string `json:"dev193"`
+	Dev193 *string `json:"dev193,omitempty"`
 	// Dev194 Device to pass through to the container
-	Dev194 string `json:"dev194"`
+	Dev194 *string `json:"dev194,omitempty"`
 	// Dev195 Device to pass through to the container
-	Dev195 string `json:"dev195"`
+	Dev195 *string `json:"dev195,omitempty"`
 	// Dev196 Device to pass through to the container
-	Dev196 string `json:"dev196"`
+	Dev196 *string `json:"dev196,omitempty"`
 	// Dev197 Device to pass through to the container
-	Dev197 string `json:"dev197"`
+	Dev197 *string `json:"dev197,omitempty"`
 	// Dev198 Device to pass through to the container
-	Dev198 string `json:"dev198"`
+	Dev198 *string `json:"dev198,omitempty"`
 	// Dev199 Device to pass through to the container
-	Dev199 string `json:"dev199"`
+	Dev199 *string `json:"dev199,omitempty"`
 	// Dev2 Device to pass through to the container
-	Dev2 string `json:"dev2"`
+	Dev2 *string `json:"dev2,omitempty"`
 	// Dev20 Device to pass through to the container
-	Dev20 string `json:"dev20"`
+	Dev20 *string `json:"dev20,omitempty"`
 	// Dev200 Device to pass through to the container
-	Dev200 string `json:"dev200"`
+	Dev200 *string `json:"dev200,omitempty"`
 	// Dev201 Device to pass through to the container
-	Dev201 string `json:"dev201"`
+	Dev201 *string `json:"dev201,omitempty"`
 	// Dev202 Device to pass through to the container
-	Dev202 string `json:"dev202"`
+	Dev202 *string `json:"dev202,omitempty"`
 	// Dev203 Device to pass through to the container
-	Dev203 string `json:"dev203"`
+	Dev203 *string `json:"dev203,omitempty"`
 	// Dev204 Device to pass through to the container
-	Dev204 string `json:"dev204"`
+	Dev204 *string `json:"dev204,omitempty"`
 	// Dev205 Device to pass through to the container
-	Dev205 string `json:"dev205"`
+	Dev205 *string `json:"dev205,omitempty"`
 	// Dev206 Device to pass through to the container
-	Dev206 string `json:"dev206"`
+	Dev206 *string `json:"dev206,omitempty"`
 	// Dev207 Device to pass through to the container
-	Dev207 string `json:"dev207"`
+	Dev207 *string `json:"dev207,omitempty"`
 	// Dev208 Device to pass through to the container
-	Dev208 string `json:"dev208"`
+	Dev208 *string `json:"dev208,omitempty"`
 	// Dev209 Device to pass through to the container
-	Dev209 string `json:"dev209"`
+	Dev209 *string `json:"dev209,omitempty"`
 	// Dev21 Device to pass through to the container
-	Dev21 string `json:"dev21"`
+	Dev21 *string `json:"dev21,omitempty"`
 	// Dev210 Device to pass through to the container
-	Dev210 string `json:"dev210"`
+	Dev210 *string `json:"dev210,omitempty"`
 	// Dev211 Device to pass through to the container
-	Dev211 string `json:"dev211"`
+	Dev211 *string `json:"dev211,omitempty"`
 	// Dev212 Device to pass through to the container
-	Dev212 string `json:"dev212"`
+	Dev212 *string `json:"dev212,omitempty"`
 	// Dev213 Device to pass through to the container
-	Dev213 string `json:"dev213"`
+	Dev213 *string `json:"dev213,omitempty"`
 	// Dev214 Device to pass through to the container
-	Dev214 string `json:"dev214"`
+	Dev214 *string `json:"dev214,omitempty"`
 	// Dev215 Device to pass through to the container
-	Dev215 string `json:"dev215"`
+	Dev215 *string `json:"dev215,omitempty"`
 	// Dev216 Device to pass through to the container
-	Dev216 string `json:"dev216"`
+	Dev216 *string `json:"dev216,omitempty"`
 	// Dev217 Device to pass through to the container
-	Dev217 string `json:"dev217"`
+	Dev217 *string `json:"dev217,omitempty"`
 	// Dev218 Device to pass through to the container
-	Dev218 string `json:"dev218"`
+	Dev218 *string `json:"dev218,omitempty"`
 	// Dev219 Device to pass through to the container
-	Dev219 string `json:"dev219"`
+	Dev219 *string `json:"dev219,omitempty"`
 	// Dev22 Device to pass through to the container
-	Dev22 string `json:"dev22"`
+	Dev22 *string `json:"dev22,omitempty"`
 	// Dev220 Device to pass through to the container
-	Dev220 string `json:"dev220"`
+	Dev220 *string `json:"dev220,omitempty"`
 	// Dev221 Device to pass through to the container
-	Dev221 string `json:"dev221"`
+	Dev221 *string `json:"dev221,omitempty"`
 	// Dev222 Device to pass through to the container
-	Dev222 string `json:"dev222"`
+	Dev222 *string `json:"dev222,omitempty"`
 	// Dev223 Device to pass through to the container
-	Dev223 string `json:"dev223"`
+	Dev223 *string `json:"dev223,omitempty"`
 	// Dev224 Device to pass through to the container
-	Dev224 string `json:"dev224"`
+	Dev224 *string `json:"dev224,omitempty"`
 	// Dev225 Device to pass through to the container
-	Dev225 string `json:"dev225"`
+	Dev225 *string `json:"dev225,omitempty"`
 	// Dev226 Device to pass through to the container
-	Dev226 string `json:"dev226"`
+	Dev226 *string `json:"dev226,omitempty"`
 	// Dev227 Device to pass through to the container
-	Dev227 string `json:"dev227"`
+	Dev227 *string `json:"dev227,omitempty"`
 	// Dev228 Device to pass through to the container
-	Dev228 string `json:"dev228"`
+	Dev228 *string `json:"dev228,omitempty"`
 	// Dev229 Device to pass through to the container
-	Dev229 string `json:"dev229"`
+	Dev229 *string `json:"dev229,omitempty"`
 	// Dev23 Device to pass through to the container
-	Dev23 string `json:"dev23"`
+	Dev23 *string `json:"dev23,omitempty"`
 	// Dev230 Device to pass through to the container
-	Dev230 string `json:"dev230"`
+	Dev230 *string `json:"dev230,omitempty"`
 	// Dev231 Device to pass through to the container
-	Dev231 string `json:"dev231"`
+	Dev231 *string `json:"dev231,omitempty"`
 	// Dev232 Device to pass through to the container
-	Dev232 string `json:"dev232"`
+	Dev232 *string `json:"dev232,omitempty"`
 	// Dev233 Device to pass through to the container
-	Dev233 string `json:"dev233"`
+	Dev233 *string `json:"dev233,omitempty"`
 	// Dev234 Device to pass through to the container
-	Dev234 string `json:"dev234"`
+	Dev234 *string `json:"dev234,omitempty"`
 	// Dev235 Device to pass through to the container
-	Dev235 string `json:"dev235"`
+	Dev235 *string `json:"dev235,omitempty"`
 	// Dev236 Device to pass through to the container
-	Dev236 string `json:"dev236"`
+	Dev236 *string `json:"dev236,omitempty"`
 	// Dev237 Device to pass through to the container
-	Dev237 string `json:"dev237"`
+	Dev237 *string `json:"dev237,omitempty"`
 	// Dev238 Device to pass through to the container
-	Dev238 string `json:"dev238"`
+	Dev238 *string `json:"dev238,omitempty"`
 	// Dev239 Device to pass through to the container
-	Dev239 string `json:"dev239"`
+	Dev239 *string `json:"dev239,omitempty"`
 	// Dev24 Device to pass through to the container
-	Dev24 string `json:"dev24"`
+	Dev24 *string `json:"dev24,omitempty"`
 	// Dev240 Device to pass through to the container
-	Dev240 string `json:"dev240"`
+	Dev240 *string `json:"dev240,omitempty"`
 	// Dev241 Device to pass through to the container
-	Dev241 string `json:"dev241"`
+	Dev241 *string `json:"dev241,omitempty"`
 	// Dev242 Device to pass through to the container
-	Dev242 string `json:"dev242"`
+	Dev242 *string `json:"dev242,omitempty"`
 	// Dev243 Device to pass through to the container
-	Dev243 string `json:"dev243"`
+	Dev243 *string `json:"dev243,omitempty"`
 	// Dev244 Device to pass through to the container
-	Dev244 string `json:"dev244"`
+	Dev244 *string `json:"dev244,omitempty"`
 	// Dev245 Device to pass through to the container
-	Dev245 string `json:"dev245"`
+	Dev245 *string `json:"dev245,omitempty"`
 	// Dev246 Device to pass through to the container
-	Dev246 string `json:"dev246"`
+	Dev246 *string `json:"dev246,omitempty"`
 	// Dev247 Device to pass through to the container
-	Dev247 string `json:"dev247"`
+	Dev247 *string `json:"dev247,omitempty"`
 	// Dev248 Device to pass through to the container
-	Dev248 string `json:"dev248"`
+	Dev248 *string `json:"dev248,omitempty"`
 	// Dev249 Device to pass through to the container
-	Dev249 string `json:"dev249"`
+	Dev249 *string `json:"dev249,omitempty"`
 	// Dev25 Device to pass through to the container
-	Dev25 string `json:"dev25"`
+	Dev25 *string `json:"dev25,omitempty"`
 	// Dev250 Device to pass through to the container
-	Dev250 string `json:"dev250"`
+	Dev250 *string `json:"dev250,omitempty"`
 	// Dev251 Device to pass through to the container
-	Dev251 string `json:"dev251"`
+	Dev251 *string `json:"dev251,omitempty"`
 	// Dev252 Device to pass through to the container
-	Dev252 string `json:"dev252"`
+	Dev252 *string `json:"dev252,omitempty"`
 	// Dev253 Device to pass through to the container
-	Dev253 string `json:"dev253"`
+	Dev253 *string `json:"dev253,omitempty"`
 	// Dev254 Device to pass through to the container
-	Dev254 string `json:"dev254"`
+	Dev254 *string `json:"dev254,omitempty"`
 	// Dev255 Device to pass through to the container
-	Dev255 string `json:"dev255"`
+	Dev255 *string `json:"dev255,omitempty"`
 	// Dev26 Device to pass through to the container
-	Dev26 string `json:"dev26"`
+	Dev26 *string `json:"dev26,omitempty"`
 	// Dev27 Device to pass through to the container
-	Dev27 string `json:"dev27"`
+	Dev27 *string `json:"dev27,omitempty"`
 	// Dev28 Device to pass through to the container
-	Dev28 string `json:"dev28"`
+	Dev28 *string `json:"dev28,omitempty"`
 	// Dev29 Device to pass through to the container
-	Dev29 string `json:"dev29"`
+	Dev29 *string `json:"dev29,omitempty"`
 	// Dev3 Device to pass through to the container
-	Dev3 string `json:"dev3"`
+	Dev3 *string `json:"dev3,omitempty"`
 	// Dev30 Device to pass through to the container
-	Dev30 string `json:"dev30"`
+	Dev30 *string `json:"dev30,omitempty"`
 	// Dev31 Device to pass through to the container
-	Dev31 string `json:"dev31"`
+	Dev31 *string `json:"dev31,omitempty"`
 	// Dev32 Device to pass through to the container
-	Dev32 string `json:"dev32"`
+	Dev32 *string `json:"dev32,omitempty"`
 	// Dev33 Device to pass through to the container
-	Dev33 string `json:"dev33"`
+	Dev33 *string `json:"dev33,omitempty"`
 	// Dev34 Device to pass through to the container
-	Dev34 string `json:"dev34"`
+	Dev34 *string `json:"dev34,omitempty"`
 	// Dev35 Device to pass through to the container
-	Dev35 string `json:"dev35"`
+	Dev35 *string `json:"dev35,omitempty"`
 	// Dev36 Device to pass through to the container
-	Dev36 string `json:"dev36"`
+	Dev36 *string `json:"dev36,omitempty"`
 	// Dev37 Device to pass through to the container
-	Dev37 string `json:"dev37"`
+	Dev37 *string `json:"dev37,omitempty"`
 	// Dev38 Device to pass through to the container
-	Dev38 string `json:"dev38"`
+	Dev38 *string `json:"dev38,omitempty"`
 	// Dev39 Device to pass through to the container
-	Dev39 string `json:"dev39"`
+	Dev39 *string `json:"dev39,omitempty"`
 	// Dev4 Device to pass through to the container
-	Dev4 string `json:"dev4"`
+	Dev4 *string `json:"dev4,omitempty"`
 	// Dev40 Device to pass through to the container
-	Dev40 string `json:"dev40"`
+	Dev40 *string `json:"dev40,omitempty"`
 	// Dev41 Device to pass through to the container
-	Dev41 string `json:"dev41"`
+	Dev41 *string `json:"dev41,omitempty"`
 	// Dev42 Device to pass through to the container
-	Dev42 string `json:"dev42"`
+	Dev42 *string `json:"dev42,omitempty"`
 	// Dev43 Device to pass through to the container
-	Dev43 string `json:"dev43"`
+	Dev43 *string `json:"dev43,omitempty"`
 	// Dev44 Device to pass through to the container
-	Dev44 string `json:"dev44"`
+	Dev44 *string `json:"dev44,omitempty"`
 	// Dev45 Device to pass through to the container
-	Dev45 string `json:"dev45"`
+	Dev45 *string `json:"dev45,omitempty"`
 	// Dev46 Device to pass through to the container
-	Dev46 string `json:"dev46"`
+	Dev46 *string `json:"dev46,omitempty"`
 	// Dev47 Device to pass through to the container
-	Dev47 string `json:"dev47"`
+	Dev47 *string `json:"dev47,omitempty"`
 	// Dev48 Device to pass through to the container
-	Dev48 string `json:"dev48"`
+	Dev48 *string `json:"dev48,omitempty"`
 	// Dev49 Device to pass through to the container
-	Dev49 string `json:"dev49"`
+	Dev49 *string `json:"dev49,omitempty"`
 	// Dev5 Device to pass through to the container
-	Dev5 string `json:"dev5"`
+	Dev5 *string `json:"dev5,omitempty"`
 	// Dev50 Device to pass through to the container
-	Dev50 string `json:"dev50"`
+	Dev50 *string `json:"dev50,omitempty"`
 	// Dev51 Device to pass through to the container
-	Dev51 string `json:"dev51"`
+	Dev51 *string `json:"dev51,omitempty"`
 	// Dev52 Device to pass through to the container
-	Dev52 string `json:"dev52"`
+	Dev52 *string `json:"dev52,omitempty"`
 	// Dev53 Device to pass through to the container
-	Dev53 string `json:"dev53"`
+	Dev53 *string `json:"dev53,omitempty"`
 	// Dev54 Device to pass through to the container
-	Dev54 string `json:"dev54"`
+	Dev54 *string `json:"dev54,omitempty"`
 	// Dev55 Device to pass through to the container
-	Dev55 string `json:"dev55"`
+	Dev55 *string `json:"dev55,omitempty"`
 	// Dev56 Device to pass through to the container
-	Dev56 string `json:"dev56"`
+	Dev56 *string `json:"dev56,omitempty"`
 	// Dev57 Device to pass through to the container
-	Dev57 string `json:"dev57"`
+	Dev57 *string `json:"dev57,omitempty"`
 	// Dev58 Device to pass through to the container
-	Dev58 string `json:"dev58"`
+	Dev58 *string `json:"dev58,omitempty"`
 	// Dev59 Device to pass through to the container
-	Dev59 string `json:"dev59"`
+	Dev59 *string `json:"dev59,omitempty"`
 	// Dev6 Device to pass through to the container
-	Dev6 string `json:"dev6"`
+	Dev6 *string `json:"dev6,omitempty"`
 	// Dev60 Device to pass through to the container
-	Dev60 string `json:"dev60"`
+	Dev60 *string `json:"dev60,omitempty"`
 	// Dev61 Device to pass through to the container
-	Dev61 string `json:"dev61"`
+	Dev61 *string `json:"dev61,omitempty"`
 	// Dev62 Device to pass through to the container
-	Dev62 string `json:"dev62"`
+	Dev62 *string `json:"dev62,omitempty"`
 	// Dev63 Device to pass through to the container
-	Dev63 string `json:"dev63"`
+	Dev63 *string `json:"dev63,omitempty"`
 	// Dev64 Device to pass through to the container
-	Dev64 string `json:"dev64"`
+	Dev64 *string `json:"dev64,omitempty"`
 	// Dev65 Device to pass through to the container
-	Dev65 string `json:"dev65"`
+	Dev65 *string `json:"dev65,omitempty"`
 	// Dev66 Device to pass through to the container
-	Dev66 string `json:"dev66"`
+	Dev66 *string `json:"dev66,omitempty"`
 	// Dev67 Device to pass through to the container
-	Dev67 string `json:"dev67"`
+	Dev67 *string `json:"dev67,omitempty"`
 	// Dev68 Device to pass through to the container
-	Dev68 string `json:"dev68"`
+	Dev68 *string `json:"dev68,omitempty"`
 	// Dev69 Device to pass through to the container
-	Dev69 string `json:"dev69"`
+	Dev69 *string `json:"dev69,omitempty"`
 	// Dev7 Device to pass through to the container
-	Dev7 string `json:"dev7"`
+	Dev7 *string `json:"dev7,omitempty"`
 	// Dev70 Device to pass through to the container
-	Dev70 string `json:"dev70"`
+	Dev70 *string `json:"dev70,omitempty"`
 	// Dev71 Device to pass through to the container
-	Dev71 string `json:"dev71"`
+	Dev71 *string `json:"dev71,omitempty"`
 	// Dev72 Device to pass through to the container
-	Dev72 string `json:"dev72"`
+	Dev72 *string `json:"dev72,omitempty"`
 	// Dev73 Device to pass through to the container
-	Dev73 string `json:"dev73"`
+	Dev73 *string `json:"dev73,omitempty"`
 	// Dev74 Device to pass through to the container
-	Dev74 string `json:"dev74"`
+	Dev74 *string `json:"dev74,omitempty"`
 	// Dev75 Device to pass through to the container
-	Dev75 string `json:"dev75"`
+	Dev75 *string `json:"dev75,omitempty"`
 	// Dev76 Device to pass through to the container
-	Dev76 string `json:"dev76"`
+	Dev76 *string `json:"dev76,omitempty"`
 	// Dev77 Device to pass through to the container
-	Dev77 string `json:"dev77"`
+	Dev77 *string `json:"dev77,omitempty"`
 	// Dev78 Device to pass through to the container
-	Dev78 string `json:"dev78"`
+	Dev78 *string `json:"dev78,omitempty"`
 	// Dev79 Device to pass through to the container
-	Dev79 string `json:"dev79"`
+	Dev79 *string `json:"dev79,omitempty"`
 	// Dev8 Device to pass through to the container
-	Dev8 string `json:"dev8"`
+	Dev8 *string `json:"dev8,omitempty"`
 	// Dev80 Device to pass through to the container
-	Dev80 string `json:"dev80"`
+	Dev80 *string `json:"dev80,omitempty"`
 	// Dev81 Device to pass through to the container
-	Dev81 string `json:"dev81"`
+	Dev81 *string `json:"dev81,omitempty"`
 	// Dev82 Device to pass through to the container
-	Dev82 string `json:"dev82"`
+	Dev82 *string `json:"dev82,omitempty"`
 	// Dev83 Device to pass through to the container
-	Dev83 string `json:"dev83"`
+	Dev83 *string `json:"dev83,omitempty"`
 	// Dev84 Device to pass through to the container
-	Dev84 string `json:"dev84"`
+	Dev84 *string `json:"dev84,omitempty"`
 	// Dev85 Device to pass through to the container
-	Dev85 string `json:"dev85"`
+	Dev85 *string `json:"dev85,omitempty"`
 	// Dev86 Device to pass through to the container
-	Dev86 string `json:"dev86"`
+	Dev86 *string `json:"dev86,omitempty"`
 	// Dev87 Device to pass through to the container
-	Dev87 string `json:"dev87"`
+	Dev87 *string `json:"dev87,omitempty"`
 	// Dev88 Device to pass through to the container
-	Dev88 string `json:"dev88"`
+	Dev88 *string `json:"dev88,omitempty"`
 	// Dev89 Device to pass through to the container
-	Dev89 string `json:"dev89"`
+	Dev89 *string `json:"dev89,omitempty"`
 	// Dev9 Device to pass through to the container
-	Dev9 string `json:"dev9"`
+	Dev9 *string `json:"dev9,omitempty"`
 	// Dev90 Device to pass through to the container
-	Dev90 string `json:"dev90"`
+	Dev90 *string `json:"dev90,omitempty"`
 	// Dev91 Device to pass through to the container
-	Dev91 string `json:"dev91"`
+	Dev91 *string `json:"dev91,omitempty"`
 	// Dev92 Device to pass through to the container
-	Dev92 string `json:"dev92"`
+	Dev92 *string `json:"dev92,omitempty"`
 	// Dev93 Device to pass through to the container
-	Dev93 string `json:"dev93"`
+	Dev93 *string `json:"dev93,omitempty"`
 	// Dev94 Device to pass through to the container
-	Dev94 string `json:"dev94"`
+	Dev94 *string `json:"dev94,omitempty"`
 	// Dev95 Device to pass through to the container
-	Dev95 string `json:"dev95"`
+	Dev95 *string `json:"dev95,omitempty"`
 	// Dev96 Device to pass through to the container
-	Dev96 string `json:"dev96"`
+	Dev96 *string `json:"dev96,omitempty"`
 	// Dev97 Device to pass through to the container
-	Dev97 string `json:"dev97"`
+	Dev97 *string `json:"dev97,omitempty"`
 	// Dev98 Device to pass through to the container
-	Dev98 string `json:"dev98"`
+	Dev98 *string `json:"dev98,omitempty"`
 	// Dev99 Device to pass through to the container
-	Dev99 string `json:"dev99"`
+	Dev99 *string `json:"dev99,omitempty"`
 	// Digest SHA1 digest of configuration file. This can be used to prevent concurrent modifications.
 	Digest string `json:"digest"`
 	// Entrypoint Command to run as init, optionally with arguments; may start with an absolute path, relative path, or a binary in $PATH.
@@ -1459,583 +1459,583 @@ type ListRemotesLxcConfigResponse struct {
 	// Memory Amount of RAM for the container in MB.
 	Memory *client.PVEInt `json:"memory,omitempty"`
 	// Mp0 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp0 string `json:"mp0"`
+	Mp0 *string `json:"mp0,omitempty"`
 	// Mp1 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp1 string `json:"mp1"`
+	Mp1 *string `json:"mp1,omitempty"`
 	// Mp10 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp10 string `json:"mp10"`
+	Mp10 *string `json:"mp10,omitempty"`
 	// Mp100 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp100 string `json:"mp100"`
+	Mp100 *string `json:"mp100,omitempty"`
 	// Mp101 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp101 string `json:"mp101"`
+	Mp101 *string `json:"mp101,omitempty"`
 	// Mp102 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp102 string `json:"mp102"`
+	Mp102 *string `json:"mp102,omitempty"`
 	// Mp103 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp103 string `json:"mp103"`
+	Mp103 *string `json:"mp103,omitempty"`
 	// Mp104 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp104 string `json:"mp104"`
+	Mp104 *string `json:"mp104,omitempty"`
 	// Mp105 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp105 string `json:"mp105"`
+	Mp105 *string `json:"mp105,omitempty"`
 	// Mp106 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp106 string `json:"mp106"`
+	Mp106 *string `json:"mp106,omitempty"`
 	// Mp107 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp107 string `json:"mp107"`
+	Mp107 *string `json:"mp107,omitempty"`
 	// Mp108 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp108 string `json:"mp108"`
+	Mp108 *string `json:"mp108,omitempty"`
 	// Mp109 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp109 string `json:"mp109"`
+	Mp109 *string `json:"mp109,omitempty"`
 	// Mp11 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp11 string `json:"mp11"`
+	Mp11 *string `json:"mp11,omitempty"`
 	// Mp110 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp110 string `json:"mp110"`
+	Mp110 *string `json:"mp110,omitempty"`
 	// Mp111 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp111 string `json:"mp111"`
+	Mp111 *string `json:"mp111,omitempty"`
 	// Mp112 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp112 string `json:"mp112"`
+	Mp112 *string `json:"mp112,omitempty"`
 	// Mp113 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp113 string `json:"mp113"`
+	Mp113 *string `json:"mp113,omitempty"`
 	// Mp114 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp114 string `json:"mp114"`
+	Mp114 *string `json:"mp114,omitempty"`
 	// Mp115 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp115 string `json:"mp115"`
+	Mp115 *string `json:"mp115,omitempty"`
 	// Mp116 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp116 string `json:"mp116"`
+	Mp116 *string `json:"mp116,omitempty"`
 	// Mp117 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp117 string `json:"mp117"`
+	Mp117 *string `json:"mp117,omitempty"`
 	// Mp118 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp118 string `json:"mp118"`
+	Mp118 *string `json:"mp118,omitempty"`
 	// Mp119 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp119 string `json:"mp119"`
+	Mp119 *string `json:"mp119,omitempty"`
 	// Mp12 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp12 string `json:"mp12"`
+	Mp12 *string `json:"mp12,omitempty"`
 	// Mp120 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp120 string `json:"mp120"`
+	Mp120 *string `json:"mp120,omitempty"`
 	// Mp121 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp121 string `json:"mp121"`
+	Mp121 *string `json:"mp121,omitempty"`
 	// Mp122 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp122 string `json:"mp122"`
+	Mp122 *string `json:"mp122,omitempty"`
 	// Mp123 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp123 string `json:"mp123"`
+	Mp123 *string `json:"mp123,omitempty"`
 	// Mp124 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp124 string `json:"mp124"`
+	Mp124 *string `json:"mp124,omitempty"`
 	// Mp125 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp125 string `json:"mp125"`
+	Mp125 *string `json:"mp125,omitempty"`
 	// Mp126 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp126 string `json:"mp126"`
+	Mp126 *string `json:"mp126,omitempty"`
 	// Mp127 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp127 string `json:"mp127"`
+	Mp127 *string `json:"mp127,omitempty"`
 	// Mp128 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp128 string `json:"mp128"`
+	Mp128 *string `json:"mp128,omitempty"`
 	// Mp129 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp129 string `json:"mp129"`
+	Mp129 *string `json:"mp129,omitempty"`
 	// Mp13 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp13 string `json:"mp13"`
+	Mp13 *string `json:"mp13,omitempty"`
 	// Mp130 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp130 string `json:"mp130"`
+	Mp130 *string `json:"mp130,omitempty"`
 	// Mp131 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp131 string `json:"mp131"`
+	Mp131 *string `json:"mp131,omitempty"`
 	// Mp132 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp132 string `json:"mp132"`
+	Mp132 *string `json:"mp132,omitempty"`
 	// Mp133 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp133 string `json:"mp133"`
+	Mp133 *string `json:"mp133,omitempty"`
 	// Mp134 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp134 string `json:"mp134"`
+	Mp134 *string `json:"mp134,omitempty"`
 	// Mp135 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp135 string `json:"mp135"`
+	Mp135 *string `json:"mp135,omitempty"`
 	// Mp136 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp136 string `json:"mp136"`
+	Mp136 *string `json:"mp136,omitempty"`
 	// Mp137 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp137 string `json:"mp137"`
+	Mp137 *string `json:"mp137,omitempty"`
 	// Mp138 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp138 string `json:"mp138"`
+	Mp138 *string `json:"mp138,omitempty"`
 	// Mp139 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp139 string `json:"mp139"`
+	Mp139 *string `json:"mp139,omitempty"`
 	// Mp14 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp14 string `json:"mp14"`
+	Mp14 *string `json:"mp14,omitempty"`
 	// Mp140 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp140 string `json:"mp140"`
+	Mp140 *string `json:"mp140,omitempty"`
 	// Mp141 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp141 string `json:"mp141"`
+	Mp141 *string `json:"mp141,omitempty"`
 	// Mp142 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp142 string `json:"mp142"`
+	Mp142 *string `json:"mp142,omitempty"`
 	// Mp143 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp143 string `json:"mp143"`
+	Mp143 *string `json:"mp143,omitempty"`
 	// Mp144 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp144 string `json:"mp144"`
+	Mp144 *string `json:"mp144,omitempty"`
 	// Mp145 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp145 string `json:"mp145"`
+	Mp145 *string `json:"mp145,omitempty"`
 	// Mp146 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp146 string `json:"mp146"`
+	Mp146 *string `json:"mp146,omitempty"`
 	// Mp147 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp147 string `json:"mp147"`
+	Mp147 *string `json:"mp147,omitempty"`
 	// Mp148 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp148 string `json:"mp148"`
+	Mp148 *string `json:"mp148,omitempty"`
 	// Mp149 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp149 string `json:"mp149"`
+	Mp149 *string `json:"mp149,omitempty"`
 	// Mp15 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp15 string `json:"mp15"`
+	Mp15 *string `json:"mp15,omitempty"`
 	// Mp150 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp150 string `json:"mp150"`
+	Mp150 *string `json:"mp150,omitempty"`
 	// Mp151 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp151 string `json:"mp151"`
+	Mp151 *string `json:"mp151,omitempty"`
 	// Mp152 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp152 string `json:"mp152"`
+	Mp152 *string `json:"mp152,omitempty"`
 	// Mp153 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp153 string `json:"mp153"`
+	Mp153 *string `json:"mp153,omitempty"`
 	// Mp154 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp154 string `json:"mp154"`
+	Mp154 *string `json:"mp154,omitempty"`
 	// Mp155 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp155 string `json:"mp155"`
+	Mp155 *string `json:"mp155,omitempty"`
 	// Mp156 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp156 string `json:"mp156"`
+	Mp156 *string `json:"mp156,omitempty"`
 	// Mp157 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp157 string `json:"mp157"`
+	Mp157 *string `json:"mp157,omitempty"`
 	// Mp158 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp158 string `json:"mp158"`
+	Mp158 *string `json:"mp158,omitempty"`
 	// Mp159 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp159 string `json:"mp159"`
+	Mp159 *string `json:"mp159,omitempty"`
 	// Mp16 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp16 string `json:"mp16"`
+	Mp16 *string `json:"mp16,omitempty"`
 	// Mp160 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp160 string `json:"mp160"`
+	Mp160 *string `json:"mp160,omitempty"`
 	// Mp161 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp161 string `json:"mp161"`
+	Mp161 *string `json:"mp161,omitempty"`
 	// Mp162 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp162 string `json:"mp162"`
+	Mp162 *string `json:"mp162,omitempty"`
 	// Mp163 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp163 string `json:"mp163"`
+	Mp163 *string `json:"mp163,omitempty"`
 	// Mp164 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp164 string `json:"mp164"`
+	Mp164 *string `json:"mp164,omitempty"`
 	// Mp165 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp165 string `json:"mp165"`
+	Mp165 *string `json:"mp165,omitempty"`
 	// Mp166 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp166 string `json:"mp166"`
+	Mp166 *string `json:"mp166,omitempty"`
 	// Mp167 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp167 string `json:"mp167"`
+	Mp167 *string `json:"mp167,omitempty"`
 	// Mp168 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp168 string `json:"mp168"`
+	Mp168 *string `json:"mp168,omitempty"`
 	// Mp169 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp169 string `json:"mp169"`
+	Mp169 *string `json:"mp169,omitempty"`
 	// Mp17 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp17 string `json:"mp17"`
+	Mp17 *string `json:"mp17,omitempty"`
 	// Mp170 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp170 string `json:"mp170"`
+	Mp170 *string `json:"mp170,omitempty"`
 	// Mp171 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp171 string `json:"mp171"`
+	Mp171 *string `json:"mp171,omitempty"`
 	// Mp172 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp172 string `json:"mp172"`
+	Mp172 *string `json:"mp172,omitempty"`
 	// Mp173 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp173 string `json:"mp173"`
+	Mp173 *string `json:"mp173,omitempty"`
 	// Mp174 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp174 string `json:"mp174"`
+	Mp174 *string `json:"mp174,omitempty"`
 	// Mp175 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp175 string `json:"mp175"`
+	Mp175 *string `json:"mp175,omitempty"`
 	// Mp176 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp176 string `json:"mp176"`
+	Mp176 *string `json:"mp176,omitempty"`
 	// Mp177 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp177 string `json:"mp177"`
+	Mp177 *string `json:"mp177,omitempty"`
 	// Mp178 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp178 string `json:"mp178"`
+	Mp178 *string `json:"mp178,omitempty"`
 	// Mp179 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp179 string `json:"mp179"`
+	Mp179 *string `json:"mp179,omitempty"`
 	// Mp18 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp18 string `json:"mp18"`
+	Mp18 *string `json:"mp18,omitempty"`
 	// Mp180 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp180 string `json:"mp180"`
+	Mp180 *string `json:"mp180,omitempty"`
 	// Mp181 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp181 string `json:"mp181"`
+	Mp181 *string `json:"mp181,omitempty"`
 	// Mp182 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp182 string `json:"mp182"`
+	Mp182 *string `json:"mp182,omitempty"`
 	// Mp183 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp183 string `json:"mp183"`
+	Mp183 *string `json:"mp183,omitempty"`
 	// Mp184 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp184 string `json:"mp184"`
+	Mp184 *string `json:"mp184,omitempty"`
 	// Mp185 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp185 string `json:"mp185"`
+	Mp185 *string `json:"mp185,omitempty"`
 	// Mp186 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp186 string `json:"mp186"`
+	Mp186 *string `json:"mp186,omitempty"`
 	// Mp187 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp187 string `json:"mp187"`
+	Mp187 *string `json:"mp187,omitempty"`
 	// Mp188 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp188 string `json:"mp188"`
+	Mp188 *string `json:"mp188,omitempty"`
 	// Mp189 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp189 string `json:"mp189"`
+	Mp189 *string `json:"mp189,omitempty"`
 	// Mp19 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp19 string `json:"mp19"`
+	Mp19 *string `json:"mp19,omitempty"`
 	// Mp190 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp190 string `json:"mp190"`
+	Mp190 *string `json:"mp190,omitempty"`
 	// Mp191 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp191 string `json:"mp191"`
+	Mp191 *string `json:"mp191,omitempty"`
 	// Mp192 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp192 string `json:"mp192"`
+	Mp192 *string `json:"mp192,omitempty"`
 	// Mp193 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp193 string `json:"mp193"`
+	Mp193 *string `json:"mp193,omitempty"`
 	// Mp194 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp194 string `json:"mp194"`
+	Mp194 *string `json:"mp194,omitempty"`
 	// Mp195 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp195 string `json:"mp195"`
+	Mp195 *string `json:"mp195,omitempty"`
 	// Mp196 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp196 string `json:"mp196"`
+	Mp196 *string `json:"mp196,omitempty"`
 	// Mp197 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp197 string `json:"mp197"`
+	Mp197 *string `json:"mp197,omitempty"`
 	// Mp198 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp198 string `json:"mp198"`
+	Mp198 *string `json:"mp198,omitempty"`
 	// Mp199 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp199 string `json:"mp199"`
+	Mp199 *string `json:"mp199,omitempty"`
 	// Mp2 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp2 string `json:"mp2"`
+	Mp2 *string `json:"mp2,omitempty"`
 	// Mp20 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp20 string `json:"mp20"`
+	Mp20 *string `json:"mp20,omitempty"`
 	// Mp200 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp200 string `json:"mp200"`
+	Mp200 *string `json:"mp200,omitempty"`
 	// Mp201 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp201 string `json:"mp201"`
+	Mp201 *string `json:"mp201,omitempty"`
 	// Mp202 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp202 string `json:"mp202"`
+	Mp202 *string `json:"mp202,omitempty"`
 	// Mp203 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp203 string `json:"mp203"`
+	Mp203 *string `json:"mp203,omitempty"`
 	// Mp204 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp204 string `json:"mp204"`
+	Mp204 *string `json:"mp204,omitempty"`
 	// Mp205 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp205 string `json:"mp205"`
+	Mp205 *string `json:"mp205,omitempty"`
 	// Mp206 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp206 string `json:"mp206"`
+	Mp206 *string `json:"mp206,omitempty"`
 	// Mp207 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp207 string `json:"mp207"`
+	Mp207 *string `json:"mp207,omitempty"`
 	// Mp208 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp208 string `json:"mp208"`
+	Mp208 *string `json:"mp208,omitempty"`
 	// Mp209 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp209 string `json:"mp209"`
+	Mp209 *string `json:"mp209,omitempty"`
 	// Mp21 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp21 string `json:"mp21"`
+	Mp21 *string `json:"mp21,omitempty"`
 	// Mp210 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp210 string `json:"mp210"`
+	Mp210 *string `json:"mp210,omitempty"`
 	// Mp211 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp211 string `json:"mp211"`
+	Mp211 *string `json:"mp211,omitempty"`
 	// Mp212 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp212 string `json:"mp212"`
+	Mp212 *string `json:"mp212,omitempty"`
 	// Mp213 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp213 string `json:"mp213"`
+	Mp213 *string `json:"mp213,omitempty"`
 	// Mp214 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp214 string `json:"mp214"`
+	Mp214 *string `json:"mp214,omitempty"`
 	// Mp215 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp215 string `json:"mp215"`
+	Mp215 *string `json:"mp215,omitempty"`
 	// Mp216 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp216 string `json:"mp216"`
+	Mp216 *string `json:"mp216,omitempty"`
 	// Mp217 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp217 string `json:"mp217"`
+	Mp217 *string `json:"mp217,omitempty"`
 	// Mp218 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp218 string `json:"mp218"`
+	Mp218 *string `json:"mp218,omitempty"`
 	// Mp219 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp219 string `json:"mp219"`
+	Mp219 *string `json:"mp219,omitempty"`
 	// Mp22 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp22 string `json:"mp22"`
+	Mp22 *string `json:"mp22,omitempty"`
 	// Mp220 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp220 string `json:"mp220"`
+	Mp220 *string `json:"mp220,omitempty"`
 	// Mp221 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp221 string `json:"mp221"`
+	Mp221 *string `json:"mp221,omitempty"`
 	// Mp222 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp222 string `json:"mp222"`
+	Mp222 *string `json:"mp222,omitempty"`
 	// Mp223 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp223 string `json:"mp223"`
+	Mp223 *string `json:"mp223,omitempty"`
 	// Mp224 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp224 string `json:"mp224"`
+	Mp224 *string `json:"mp224,omitempty"`
 	// Mp225 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp225 string `json:"mp225"`
+	Mp225 *string `json:"mp225,omitempty"`
 	// Mp226 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp226 string `json:"mp226"`
+	Mp226 *string `json:"mp226,omitempty"`
 	// Mp227 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp227 string `json:"mp227"`
+	Mp227 *string `json:"mp227,omitempty"`
 	// Mp228 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp228 string `json:"mp228"`
+	Mp228 *string `json:"mp228,omitempty"`
 	// Mp229 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp229 string `json:"mp229"`
+	Mp229 *string `json:"mp229,omitempty"`
 	// Mp23 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp23 string `json:"mp23"`
+	Mp23 *string `json:"mp23,omitempty"`
 	// Mp230 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp230 string `json:"mp230"`
+	Mp230 *string `json:"mp230,omitempty"`
 	// Mp231 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp231 string `json:"mp231"`
+	Mp231 *string `json:"mp231,omitempty"`
 	// Mp232 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp232 string `json:"mp232"`
+	Mp232 *string `json:"mp232,omitempty"`
 	// Mp233 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp233 string `json:"mp233"`
+	Mp233 *string `json:"mp233,omitempty"`
 	// Mp234 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp234 string `json:"mp234"`
+	Mp234 *string `json:"mp234,omitempty"`
 	// Mp235 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp235 string `json:"mp235"`
+	Mp235 *string `json:"mp235,omitempty"`
 	// Mp236 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp236 string `json:"mp236"`
+	Mp236 *string `json:"mp236,omitempty"`
 	// Mp237 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp237 string `json:"mp237"`
+	Mp237 *string `json:"mp237,omitempty"`
 	// Mp238 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp238 string `json:"mp238"`
+	Mp238 *string `json:"mp238,omitempty"`
 	// Mp239 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp239 string `json:"mp239"`
+	Mp239 *string `json:"mp239,omitempty"`
 	// Mp24 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp24 string `json:"mp24"`
+	Mp24 *string `json:"mp24,omitempty"`
 	// Mp240 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp240 string `json:"mp240"`
+	Mp240 *string `json:"mp240,omitempty"`
 	// Mp241 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp241 string `json:"mp241"`
+	Mp241 *string `json:"mp241,omitempty"`
 	// Mp242 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp242 string `json:"mp242"`
+	Mp242 *string `json:"mp242,omitempty"`
 	// Mp243 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp243 string `json:"mp243"`
+	Mp243 *string `json:"mp243,omitempty"`
 	// Mp244 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp244 string `json:"mp244"`
+	Mp244 *string `json:"mp244,omitempty"`
 	// Mp245 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp245 string `json:"mp245"`
+	Mp245 *string `json:"mp245,omitempty"`
 	// Mp246 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp246 string `json:"mp246"`
+	Mp246 *string `json:"mp246,omitempty"`
 	// Mp247 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp247 string `json:"mp247"`
+	Mp247 *string `json:"mp247,omitempty"`
 	// Mp248 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp248 string `json:"mp248"`
+	Mp248 *string `json:"mp248,omitempty"`
 	// Mp249 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp249 string `json:"mp249"`
+	Mp249 *string `json:"mp249,omitempty"`
 	// Mp25 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp25 string `json:"mp25"`
+	Mp25 *string `json:"mp25,omitempty"`
 	// Mp250 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp250 string `json:"mp250"`
+	Mp250 *string `json:"mp250,omitempty"`
 	// Mp251 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp251 string `json:"mp251"`
+	Mp251 *string `json:"mp251,omitempty"`
 	// Mp252 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp252 string `json:"mp252"`
+	Mp252 *string `json:"mp252,omitempty"`
 	// Mp253 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp253 string `json:"mp253"`
+	Mp253 *string `json:"mp253,omitempty"`
 	// Mp254 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp254 string `json:"mp254"`
+	Mp254 *string `json:"mp254,omitempty"`
 	// Mp255 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp255 string `json:"mp255"`
+	Mp255 *string `json:"mp255,omitempty"`
 	// Mp26 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp26 string `json:"mp26"`
+	Mp26 *string `json:"mp26,omitempty"`
 	// Mp27 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp27 string `json:"mp27"`
+	Mp27 *string `json:"mp27,omitempty"`
 	// Mp28 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp28 string `json:"mp28"`
+	Mp28 *string `json:"mp28,omitempty"`
 	// Mp29 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp29 string `json:"mp29"`
+	Mp29 *string `json:"mp29,omitempty"`
 	// Mp3 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp3 string `json:"mp3"`
+	Mp3 *string `json:"mp3,omitempty"`
 	// Mp30 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp30 string `json:"mp30"`
+	Mp30 *string `json:"mp30,omitempty"`
 	// Mp31 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp31 string `json:"mp31"`
+	Mp31 *string `json:"mp31,omitempty"`
 	// Mp32 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp32 string `json:"mp32"`
+	Mp32 *string `json:"mp32,omitempty"`
 	// Mp33 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp33 string `json:"mp33"`
+	Mp33 *string `json:"mp33,omitempty"`
 	// Mp34 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp34 string `json:"mp34"`
+	Mp34 *string `json:"mp34,omitempty"`
 	// Mp35 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp35 string `json:"mp35"`
+	Mp35 *string `json:"mp35,omitempty"`
 	// Mp36 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp36 string `json:"mp36"`
+	Mp36 *string `json:"mp36,omitempty"`
 	// Mp37 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp37 string `json:"mp37"`
+	Mp37 *string `json:"mp37,omitempty"`
 	// Mp38 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp38 string `json:"mp38"`
+	Mp38 *string `json:"mp38,omitempty"`
 	// Mp39 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp39 string `json:"mp39"`
+	Mp39 *string `json:"mp39,omitempty"`
 	// Mp4 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp4 string `json:"mp4"`
+	Mp4 *string `json:"mp4,omitempty"`
 	// Mp40 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp40 string `json:"mp40"`
+	Mp40 *string `json:"mp40,omitempty"`
 	// Mp41 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp41 string `json:"mp41"`
+	Mp41 *string `json:"mp41,omitempty"`
 	// Mp42 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp42 string `json:"mp42"`
+	Mp42 *string `json:"mp42,omitempty"`
 	// Mp43 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp43 string `json:"mp43"`
+	Mp43 *string `json:"mp43,omitempty"`
 	// Mp44 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp44 string `json:"mp44"`
+	Mp44 *string `json:"mp44,omitempty"`
 	// Mp45 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp45 string `json:"mp45"`
+	Mp45 *string `json:"mp45,omitempty"`
 	// Mp46 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp46 string `json:"mp46"`
+	Mp46 *string `json:"mp46,omitempty"`
 	// Mp47 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp47 string `json:"mp47"`
+	Mp47 *string `json:"mp47,omitempty"`
 	// Mp48 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp48 string `json:"mp48"`
+	Mp48 *string `json:"mp48,omitempty"`
 	// Mp49 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp49 string `json:"mp49"`
+	Mp49 *string `json:"mp49,omitempty"`
 	// Mp5 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp5 string `json:"mp5"`
+	Mp5 *string `json:"mp5,omitempty"`
 	// Mp50 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp50 string `json:"mp50"`
+	Mp50 *string `json:"mp50,omitempty"`
 	// Mp51 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp51 string `json:"mp51"`
+	Mp51 *string `json:"mp51,omitempty"`
 	// Mp52 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp52 string `json:"mp52"`
+	Mp52 *string `json:"mp52,omitempty"`
 	// Mp53 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp53 string `json:"mp53"`
+	Mp53 *string `json:"mp53,omitempty"`
 	// Mp54 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp54 string `json:"mp54"`
+	Mp54 *string `json:"mp54,omitempty"`
 	// Mp55 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp55 string `json:"mp55"`
+	Mp55 *string `json:"mp55,omitempty"`
 	// Mp56 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp56 string `json:"mp56"`
+	Mp56 *string `json:"mp56,omitempty"`
 	// Mp57 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp57 string `json:"mp57"`
+	Mp57 *string `json:"mp57,omitempty"`
 	// Mp58 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp58 string `json:"mp58"`
+	Mp58 *string `json:"mp58,omitempty"`
 	// Mp59 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp59 string `json:"mp59"`
+	Mp59 *string `json:"mp59,omitempty"`
 	// Mp6 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp6 string `json:"mp6"`
+	Mp6 *string `json:"mp6,omitempty"`
 	// Mp60 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp60 string `json:"mp60"`
+	Mp60 *string `json:"mp60,omitempty"`
 	// Mp61 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp61 string `json:"mp61"`
+	Mp61 *string `json:"mp61,omitempty"`
 	// Mp62 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp62 string `json:"mp62"`
+	Mp62 *string `json:"mp62,omitempty"`
 	// Mp63 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp63 string `json:"mp63"`
+	Mp63 *string `json:"mp63,omitempty"`
 	// Mp64 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp64 string `json:"mp64"`
+	Mp64 *string `json:"mp64,omitempty"`
 	// Mp65 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp65 string `json:"mp65"`
+	Mp65 *string `json:"mp65,omitempty"`
 	// Mp66 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp66 string `json:"mp66"`
+	Mp66 *string `json:"mp66,omitempty"`
 	// Mp67 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp67 string `json:"mp67"`
+	Mp67 *string `json:"mp67,omitempty"`
 	// Mp68 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp68 string `json:"mp68"`
+	Mp68 *string `json:"mp68,omitempty"`
 	// Mp69 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp69 string `json:"mp69"`
+	Mp69 *string `json:"mp69,omitempty"`
 	// Mp7 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp7 string `json:"mp7"`
+	Mp7 *string `json:"mp7,omitempty"`
 	// Mp70 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp70 string `json:"mp70"`
+	Mp70 *string `json:"mp70,omitempty"`
 	// Mp71 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp71 string `json:"mp71"`
+	Mp71 *string `json:"mp71,omitempty"`
 	// Mp72 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp72 string `json:"mp72"`
+	Mp72 *string `json:"mp72,omitempty"`
 	// Mp73 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp73 string `json:"mp73"`
+	Mp73 *string `json:"mp73,omitempty"`
 	// Mp74 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp74 string `json:"mp74"`
+	Mp74 *string `json:"mp74,omitempty"`
 	// Mp75 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp75 string `json:"mp75"`
+	Mp75 *string `json:"mp75,omitempty"`
 	// Mp76 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp76 string `json:"mp76"`
+	Mp76 *string `json:"mp76,omitempty"`
 	// Mp77 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp77 string `json:"mp77"`
+	Mp77 *string `json:"mp77,omitempty"`
 	// Mp78 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp78 string `json:"mp78"`
+	Mp78 *string `json:"mp78,omitempty"`
 	// Mp79 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp79 string `json:"mp79"`
+	Mp79 *string `json:"mp79,omitempty"`
 	// Mp8 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp8 string `json:"mp8"`
+	Mp8 *string `json:"mp8,omitempty"`
 	// Mp80 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp80 string `json:"mp80"`
+	Mp80 *string `json:"mp80,omitempty"`
 	// Mp81 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp81 string `json:"mp81"`
+	Mp81 *string `json:"mp81,omitempty"`
 	// Mp82 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp82 string `json:"mp82"`
+	Mp82 *string `json:"mp82,omitempty"`
 	// Mp83 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp83 string `json:"mp83"`
+	Mp83 *string `json:"mp83,omitempty"`
 	// Mp84 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp84 string `json:"mp84"`
+	Mp84 *string `json:"mp84,omitempty"`
 	// Mp85 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp85 string `json:"mp85"`
+	Mp85 *string `json:"mp85,omitempty"`
 	// Mp86 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp86 string `json:"mp86"`
+	Mp86 *string `json:"mp86,omitempty"`
 	// Mp87 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp87 string `json:"mp87"`
+	Mp87 *string `json:"mp87,omitempty"`
 	// Mp88 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp88 string `json:"mp88"`
+	Mp88 *string `json:"mp88,omitempty"`
 	// Mp89 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp89 string `json:"mp89"`
+	Mp89 *string `json:"mp89,omitempty"`
 	// Mp9 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp9 string `json:"mp9"`
+	Mp9 *string `json:"mp9,omitempty"`
 	// Mp90 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp90 string `json:"mp90"`
+	Mp90 *string `json:"mp90,omitempty"`
 	// Mp91 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp91 string `json:"mp91"`
+	Mp91 *string `json:"mp91,omitempty"`
 	// Mp92 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp92 string `json:"mp92"`
+	Mp92 *string `json:"mp92,omitempty"`
 	// Mp93 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp93 string `json:"mp93"`
+	Mp93 *string `json:"mp93,omitempty"`
 	// Mp94 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp94 string `json:"mp94"`
+	Mp94 *string `json:"mp94,omitempty"`
 	// Mp95 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp95 string `json:"mp95"`
+	Mp95 *string `json:"mp95,omitempty"`
 	// Mp96 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp96 string `json:"mp96"`
+	Mp96 *string `json:"mp96,omitempty"`
 	// Mp97 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp97 string `json:"mp97"`
+	Mp97 *string `json:"mp97,omitempty"`
 	// Mp98 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp98 string `json:"mp98"`
+	Mp98 *string `json:"mp98,omitempty"`
 	// Mp99 Use volume as container mount point. Use the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new volume.
-	Mp99 string `json:"mp99"`
+	Mp99 *string `json:"mp99,omitempty"`
 	// Nameserver Sets DNS server IP address for a container. Create will automatically use the setting from the host if you neither set searchdomain nor nameserver.
 	Nameserver *string `json:"nameserver,omitempty"`
 	// Net0 Specifies network interfaces for the container.
-	Net0 string `json:"net0"`
+	Net0 *string `json:"net0,omitempty"`
 	// Net1 Specifies network interfaces for the container.
-	Net1 string `json:"net1"`
+	Net1 *string `json:"net1,omitempty"`
 	// Net10 Specifies network interfaces for the container.
-	Net10 string `json:"net10"`
+	Net10 *string `json:"net10,omitempty"`
 	// Net11 Specifies network interfaces for the container.
-	Net11 string `json:"net11"`
+	Net11 *string `json:"net11,omitempty"`
 	// Net12 Specifies network interfaces for the container.
-	Net12 string `json:"net12"`
+	Net12 *string `json:"net12,omitempty"`
 	// Net13 Specifies network interfaces for the container.
-	Net13 string `json:"net13"`
+	Net13 *string `json:"net13,omitempty"`
 	// Net14 Specifies network interfaces for the container.
-	Net14 string `json:"net14"`
+	Net14 *string `json:"net14,omitempty"`
 	// Net15 Specifies network interfaces for the container.
-	Net15 string `json:"net15"`
+	Net15 *string `json:"net15,omitempty"`
 	// Net16 Specifies network interfaces for the container.
-	Net16 string `json:"net16"`
+	Net16 *string `json:"net16,omitempty"`
 	// Net17 Specifies network interfaces for the container.
-	Net17 string `json:"net17"`
+	Net17 *string `json:"net17,omitempty"`
 	// Net18 Specifies network interfaces for the container.
-	Net18 string `json:"net18"`
+	Net18 *string `json:"net18,omitempty"`
 	// Net19 Specifies network interfaces for the container.
-	Net19 string `json:"net19"`
+	Net19 *string `json:"net19,omitempty"`
 	// Net2 Specifies network interfaces for the container.
-	Net2 string `json:"net2"`
+	Net2 *string `json:"net2,omitempty"`
 	// Net20 Specifies network interfaces for the container.
-	Net20 string `json:"net20"`
+	Net20 *string `json:"net20,omitempty"`
 	// Net21 Specifies network interfaces for the container.
-	Net21 string `json:"net21"`
+	Net21 *string `json:"net21,omitempty"`
 	// Net22 Specifies network interfaces for the container.
-	Net22 string `json:"net22"`
+	Net22 *string `json:"net22,omitempty"`
 	// Net23 Specifies network interfaces for the container.
-	Net23 string `json:"net23"`
+	Net23 *string `json:"net23,omitempty"`
 	// Net24 Specifies network interfaces for the container.
-	Net24 string `json:"net24"`
+	Net24 *string `json:"net24,omitempty"`
 	// Net25 Specifies network interfaces for the container.
-	Net25 string `json:"net25"`
+	Net25 *string `json:"net25,omitempty"`
 	// Net26 Specifies network interfaces for the container.
-	Net26 string `json:"net26"`
+	Net26 *string `json:"net26,omitempty"`
 	// Net27 Specifies network interfaces for the container.
-	Net27 string `json:"net27"`
+	Net27 *string `json:"net27,omitempty"`
 	// Net28 Specifies network interfaces for the container.
-	Net28 string `json:"net28"`
+	Net28 *string `json:"net28,omitempty"`
 	// Net29 Specifies network interfaces for the container.
-	Net29 string `json:"net29"`
+	Net29 *string `json:"net29,omitempty"`
 	// Net3 Specifies network interfaces for the container.
-	Net3 string `json:"net3"`
+	Net3 *string `json:"net3,omitempty"`
 	// Net30 Specifies network interfaces for the container.
-	Net30 string `json:"net30"`
+	Net30 *string `json:"net30,omitempty"`
 	// Net31 Specifies network interfaces for the container.
-	Net31 string `json:"net31"`
+	Net31 *string `json:"net31,omitempty"`
 	// Net4 Specifies network interfaces for the container.
-	Net4 string `json:"net4"`
+	Net4 *string `json:"net4,omitempty"`
 	// Net5 Specifies network interfaces for the container.
-	Net5 string `json:"net5"`
+	Net5 *string `json:"net5,omitempty"`
 	// Net6 Specifies network interfaces for the container.
-	Net6 string `json:"net6"`
+	Net6 *string `json:"net6,omitempty"`
 	// Net7 Specifies network interfaces for the container.
-	Net7 string `json:"net7"`
+	Net7 *string `json:"net7,omitempty"`
 	// Net8 Specifies network interfaces for the container.
-	Net8 string `json:"net8"`
+	Net8 *string `json:"net8,omitempty"`
 	// Net9 Specifies network interfaces for the container.
-	Net9 string `json:"net9"`
+	Net9 *string `json:"net9,omitempty"`
 	// Onboot Specifies whether a container will be started during system bootup.
 	Onboot *client.PVEBool `json:"onboot,omitempty"`
 	// Ostype OS type. This is used to setup configuration inside the container, and corresponds to lxc setup scripts in /usr/share/lxc/config/<ostype>.common.conf. Value 'unmanaged' can be used to skip and OS specific setup.
@@ -2061,517 +2061,517 @@ type ListRemotesLxcConfigResponse struct {
 	// Unprivileged Makes the container run as unprivileged user. For creation, the default is 1. For restore, the default is the value from the backup. (Should not be modified manually.)
 	Unprivileged *client.PVEBool `json:"unprivileged,omitempty"`
 	// Unused0 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused0 string `json:"unused0"`
+	Unused0 *string `json:"unused0,omitempty"`
 	// Unused1 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused1 string `json:"unused1"`
+	Unused1 *string `json:"unused1,omitempty"`
 	// Unused10 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused10 string `json:"unused10"`
+	Unused10 *string `json:"unused10,omitempty"`
 	// Unused100 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused100 string `json:"unused100"`
+	Unused100 *string `json:"unused100,omitempty"`
 	// Unused101 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused101 string `json:"unused101"`
+	Unused101 *string `json:"unused101,omitempty"`
 	// Unused102 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused102 string `json:"unused102"`
+	Unused102 *string `json:"unused102,omitempty"`
 	// Unused103 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused103 string `json:"unused103"`
+	Unused103 *string `json:"unused103,omitempty"`
 	// Unused104 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused104 string `json:"unused104"`
+	Unused104 *string `json:"unused104,omitempty"`
 	// Unused105 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused105 string `json:"unused105"`
+	Unused105 *string `json:"unused105,omitempty"`
 	// Unused106 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused106 string `json:"unused106"`
+	Unused106 *string `json:"unused106,omitempty"`
 	// Unused107 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused107 string `json:"unused107"`
+	Unused107 *string `json:"unused107,omitempty"`
 	// Unused108 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused108 string `json:"unused108"`
+	Unused108 *string `json:"unused108,omitempty"`
 	// Unused109 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused109 string `json:"unused109"`
+	Unused109 *string `json:"unused109,omitempty"`
 	// Unused11 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused11 string `json:"unused11"`
+	Unused11 *string `json:"unused11,omitempty"`
 	// Unused110 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused110 string `json:"unused110"`
+	Unused110 *string `json:"unused110,omitempty"`
 	// Unused111 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused111 string `json:"unused111"`
+	Unused111 *string `json:"unused111,omitempty"`
 	// Unused112 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused112 string `json:"unused112"`
+	Unused112 *string `json:"unused112,omitempty"`
 	// Unused113 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused113 string `json:"unused113"`
+	Unused113 *string `json:"unused113,omitempty"`
 	// Unused114 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused114 string `json:"unused114"`
+	Unused114 *string `json:"unused114,omitempty"`
 	// Unused115 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused115 string `json:"unused115"`
+	Unused115 *string `json:"unused115,omitempty"`
 	// Unused116 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused116 string `json:"unused116"`
+	Unused116 *string `json:"unused116,omitempty"`
 	// Unused117 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused117 string `json:"unused117"`
+	Unused117 *string `json:"unused117,omitempty"`
 	// Unused118 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused118 string `json:"unused118"`
+	Unused118 *string `json:"unused118,omitempty"`
 	// Unused119 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused119 string `json:"unused119"`
+	Unused119 *string `json:"unused119,omitempty"`
 	// Unused12 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused12 string `json:"unused12"`
+	Unused12 *string `json:"unused12,omitempty"`
 	// Unused120 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused120 string `json:"unused120"`
+	Unused120 *string `json:"unused120,omitempty"`
 	// Unused121 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused121 string `json:"unused121"`
+	Unused121 *string `json:"unused121,omitempty"`
 	// Unused122 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused122 string `json:"unused122"`
+	Unused122 *string `json:"unused122,omitempty"`
 	// Unused123 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused123 string `json:"unused123"`
+	Unused123 *string `json:"unused123,omitempty"`
 	// Unused124 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused124 string `json:"unused124"`
+	Unused124 *string `json:"unused124,omitempty"`
 	// Unused125 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused125 string `json:"unused125"`
+	Unused125 *string `json:"unused125,omitempty"`
 	// Unused126 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused126 string `json:"unused126"`
+	Unused126 *string `json:"unused126,omitempty"`
 	// Unused127 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused127 string `json:"unused127"`
+	Unused127 *string `json:"unused127,omitempty"`
 	// Unused128 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused128 string `json:"unused128"`
+	Unused128 *string `json:"unused128,omitempty"`
 	// Unused129 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused129 string `json:"unused129"`
+	Unused129 *string `json:"unused129,omitempty"`
 	// Unused13 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused13 string `json:"unused13"`
+	Unused13 *string `json:"unused13,omitempty"`
 	// Unused130 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused130 string `json:"unused130"`
+	Unused130 *string `json:"unused130,omitempty"`
 	// Unused131 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused131 string `json:"unused131"`
+	Unused131 *string `json:"unused131,omitempty"`
 	// Unused132 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused132 string `json:"unused132"`
+	Unused132 *string `json:"unused132,omitempty"`
 	// Unused133 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused133 string `json:"unused133"`
+	Unused133 *string `json:"unused133,omitempty"`
 	// Unused134 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused134 string `json:"unused134"`
+	Unused134 *string `json:"unused134,omitempty"`
 	// Unused135 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused135 string `json:"unused135"`
+	Unused135 *string `json:"unused135,omitempty"`
 	// Unused136 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused136 string `json:"unused136"`
+	Unused136 *string `json:"unused136,omitempty"`
 	// Unused137 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused137 string `json:"unused137"`
+	Unused137 *string `json:"unused137,omitempty"`
 	// Unused138 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused138 string `json:"unused138"`
+	Unused138 *string `json:"unused138,omitempty"`
 	// Unused139 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused139 string `json:"unused139"`
+	Unused139 *string `json:"unused139,omitempty"`
 	// Unused14 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused14 string `json:"unused14"`
+	Unused14 *string `json:"unused14,omitempty"`
 	// Unused140 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused140 string `json:"unused140"`
+	Unused140 *string `json:"unused140,omitempty"`
 	// Unused141 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused141 string `json:"unused141"`
+	Unused141 *string `json:"unused141,omitempty"`
 	// Unused142 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused142 string `json:"unused142"`
+	Unused142 *string `json:"unused142,omitempty"`
 	// Unused143 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused143 string `json:"unused143"`
+	Unused143 *string `json:"unused143,omitempty"`
 	// Unused144 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused144 string `json:"unused144"`
+	Unused144 *string `json:"unused144,omitempty"`
 	// Unused145 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused145 string `json:"unused145"`
+	Unused145 *string `json:"unused145,omitempty"`
 	// Unused146 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused146 string `json:"unused146"`
+	Unused146 *string `json:"unused146,omitempty"`
 	// Unused147 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused147 string `json:"unused147"`
+	Unused147 *string `json:"unused147,omitempty"`
 	// Unused148 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused148 string `json:"unused148"`
+	Unused148 *string `json:"unused148,omitempty"`
 	// Unused149 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused149 string `json:"unused149"`
+	Unused149 *string `json:"unused149,omitempty"`
 	// Unused15 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused15 string `json:"unused15"`
+	Unused15 *string `json:"unused15,omitempty"`
 	// Unused150 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused150 string `json:"unused150"`
+	Unused150 *string `json:"unused150,omitempty"`
 	// Unused151 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused151 string `json:"unused151"`
+	Unused151 *string `json:"unused151,omitempty"`
 	// Unused152 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused152 string `json:"unused152"`
+	Unused152 *string `json:"unused152,omitempty"`
 	// Unused153 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused153 string `json:"unused153"`
+	Unused153 *string `json:"unused153,omitempty"`
 	// Unused154 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused154 string `json:"unused154"`
+	Unused154 *string `json:"unused154,omitempty"`
 	// Unused155 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused155 string `json:"unused155"`
+	Unused155 *string `json:"unused155,omitempty"`
 	// Unused156 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused156 string `json:"unused156"`
+	Unused156 *string `json:"unused156,omitempty"`
 	// Unused157 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused157 string `json:"unused157"`
+	Unused157 *string `json:"unused157,omitempty"`
 	// Unused158 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused158 string `json:"unused158"`
+	Unused158 *string `json:"unused158,omitempty"`
 	// Unused159 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused159 string `json:"unused159"`
+	Unused159 *string `json:"unused159,omitempty"`
 	// Unused16 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused16 string `json:"unused16"`
+	Unused16 *string `json:"unused16,omitempty"`
 	// Unused160 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused160 string `json:"unused160"`
+	Unused160 *string `json:"unused160,omitempty"`
 	// Unused161 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused161 string `json:"unused161"`
+	Unused161 *string `json:"unused161,omitempty"`
 	// Unused162 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused162 string `json:"unused162"`
+	Unused162 *string `json:"unused162,omitempty"`
 	// Unused163 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused163 string `json:"unused163"`
+	Unused163 *string `json:"unused163,omitempty"`
 	// Unused164 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused164 string `json:"unused164"`
+	Unused164 *string `json:"unused164,omitempty"`
 	// Unused165 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused165 string `json:"unused165"`
+	Unused165 *string `json:"unused165,omitempty"`
 	// Unused166 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused166 string `json:"unused166"`
+	Unused166 *string `json:"unused166,omitempty"`
 	// Unused167 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused167 string `json:"unused167"`
+	Unused167 *string `json:"unused167,omitempty"`
 	// Unused168 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused168 string `json:"unused168"`
+	Unused168 *string `json:"unused168,omitempty"`
 	// Unused169 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused169 string `json:"unused169"`
+	Unused169 *string `json:"unused169,omitempty"`
 	// Unused17 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused17 string `json:"unused17"`
+	Unused17 *string `json:"unused17,omitempty"`
 	// Unused170 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused170 string `json:"unused170"`
+	Unused170 *string `json:"unused170,omitempty"`
 	// Unused171 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused171 string `json:"unused171"`
+	Unused171 *string `json:"unused171,omitempty"`
 	// Unused172 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused172 string `json:"unused172"`
+	Unused172 *string `json:"unused172,omitempty"`
 	// Unused173 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused173 string `json:"unused173"`
+	Unused173 *string `json:"unused173,omitempty"`
 	// Unused174 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused174 string `json:"unused174"`
+	Unused174 *string `json:"unused174,omitempty"`
 	// Unused175 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused175 string `json:"unused175"`
+	Unused175 *string `json:"unused175,omitempty"`
 	// Unused176 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused176 string `json:"unused176"`
+	Unused176 *string `json:"unused176,omitempty"`
 	// Unused177 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused177 string `json:"unused177"`
+	Unused177 *string `json:"unused177,omitempty"`
 	// Unused178 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused178 string `json:"unused178"`
+	Unused178 *string `json:"unused178,omitempty"`
 	// Unused179 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused179 string `json:"unused179"`
+	Unused179 *string `json:"unused179,omitempty"`
 	// Unused18 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused18 string `json:"unused18"`
+	Unused18 *string `json:"unused18,omitempty"`
 	// Unused180 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused180 string `json:"unused180"`
+	Unused180 *string `json:"unused180,omitempty"`
 	// Unused181 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused181 string `json:"unused181"`
+	Unused181 *string `json:"unused181,omitempty"`
 	// Unused182 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused182 string `json:"unused182"`
+	Unused182 *string `json:"unused182,omitempty"`
 	// Unused183 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused183 string `json:"unused183"`
+	Unused183 *string `json:"unused183,omitempty"`
 	// Unused184 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused184 string `json:"unused184"`
+	Unused184 *string `json:"unused184,omitempty"`
 	// Unused185 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused185 string `json:"unused185"`
+	Unused185 *string `json:"unused185,omitempty"`
 	// Unused186 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused186 string `json:"unused186"`
+	Unused186 *string `json:"unused186,omitempty"`
 	// Unused187 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused187 string `json:"unused187"`
+	Unused187 *string `json:"unused187,omitempty"`
 	// Unused188 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused188 string `json:"unused188"`
+	Unused188 *string `json:"unused188,omitempty"`
 	// Unused189 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused189 string `json:"unused189"`
+	Unused189 *string `json:"unused189,omitempty"`
 	// Unused19 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused19 string `json:"unused19"`
+	Unused19 *string `json:"unused19,omitempty"`
 	// Unused190 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused190 string `json:"unused190"`
+	Unused190 *string `json:"unused190,omitempty"`
 	// Unused191 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused191 string `json:"unused191"`
+	Unused191 *string `json:"unused191,omitempty"`
 	// Unused192 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused192 string `json:"unused192"`
+	Unused192 *string `json:"unused192,omitempty"`
 	// Unused193 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused193 string `json:"unused193"`
+	Unused193 *string `json:"unused193,omitempty"`
 	// Unused194 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused194 string `json:"unused194"`
+	Unused194 *string `json:"unused194,omitempty"`
 	// Unused195 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused195 string `json:"unused195"`
+	Unused195 *string `json:"unused195,omitempty"`
 	// Unused196 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused196 string `json:"unused196"`
+	Unused196 *string `json:"unused196,omitempty"`
 	// Unused197 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused197 string `json:"unused197"`
+	Unused197 *string `json:"unused197,omitempty"`
 	// Unused198 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused198 string `json:"unused198"`
+	Unused198 *string `json:"unused198,omitempty"`
 	// Unused199 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused199 string `json:"unused199"`
+	Unused199 *string `json:"unused199,omitempty"`
 	// Unused2 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused2 string `json:"unused2"`
+	Unused2 *string `json:"unused2,omitempty"`
 	// Unused20 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused20 string `json:"unused20"`
+	Unused20 *string `json:"unused20,omitempty"`
 	// Unused200 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused200 string `json:"unused200"`
+	Unused200 *string `json:"unused200,omitempty"`
 	// Unused201 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused201 string `json:"unused201"`
+	Unused201 *string `json:"unused201,omitempty"`
 	// Unused202 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused202 string `json:"unused202"`
+	Unused202 *string `json:"unused202,omitempty"`
 	// Unused203 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused203 string `json:"unused203"`
+	Unused203 *string `json:"unused203,omitempty"`
 	// Unused204 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused204 string `json:"unused204"`
+	Unused204 *string `json:"unused204,omitempty"`
 	// Unused205 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused205 string `json:"unused205"`
+	Unused205 *string `json:"unused205,omitempty"`
 	// Unused206 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused206 string `json:"unused206"`
+	Unused206 *string `json:"unused206,omitempty"`
 	// Unused207 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused207 string `json:"unused207"`
+	Unused207 *string `json:"unused207,omitempty"`
 	// Unused208 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused208 string `json:"unused208"`
+	Unused208 *string `json:"unused208,omitempty"`
 	// Unused209 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused209 string `json:"unused209"`
+	Unused209 *string `json:"unused209,omitempty"`
 	// Unused21 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused21 string `json:"unused21"`
+	Unused21 *string `json:"unused21,omitempty"`
 	// Unused210 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused210 string `json:"unused210"`
+	Unused210 *string `json:"unused210,omitempty"`
 	// Unused211 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused211 string `json:"unused211"`
+	Unused211 *string `json:"unused211,omitempty"`
 	// Unused212 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused212 string `json:"unused212"`
+	Unused212 *string `json:"unused212,omitempty"`
 	// Unused213 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused213 string `json:"unused213"`
+	Unused213 *string `json:"unused213,omitempty"`
 	// Unused214 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused214 string `json:"unused214"`
+	Unused214 *string `json:"unused214,omitempty"`
 	// Unused215 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused215 string `json:"unused215"`
+	Unused215 *string `json:"unused215,omitempty"`
 	// Unused216 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused216 string `json:"unused216"`
+	Unused216 *string `json:"unused216,omitempty"`
 	// Unused217 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused217 string `json:"unused217"`
+	Unused217 *string `json:"unused217,omitempty"`
 	// Unused218 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused218 string `json:"unused218"`
+	Unused218 *string `json:"unused218,omitempty"`
 	// Unused219 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused219 string `json:"unused219"`
+	Unused219 *string `json:"unused219,omitempty"`
 	// Unused22 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused22 string `json:"unused22"`
+	Unused22 *string `json:"unused22,omitempty"`
 	// Unused220 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused220 string `json:"unused220"`
+	Unused220 *string `json:"unused220,omitempty"`
 	// Unused221 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused221 string `json:"unused221"`
+	Unused221 *string `json:"unused221,omitempty"`
 	// Unused222 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused222 string `json:"unused222"`
+	Unused222 *string `json:"unused222,omitempty"`
 	// Unused223 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused223 string `json:"unused223"`
+	Unused223 *string `json:"unused223,omitempty"`
 	// Unused224 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused224 string `json:"unused224"`
+	Unused224 *string `json:"unused224,omitempty"`
 	// Unused225 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused225 string `json:"unused225"`
+	Unused225 *string `json:"unused225,omitempty"`
 	// Unused226 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused226 string `json:"unused226"`
+	Unused226 *string `json:"unused226,omitempty"`
 	// Unused227 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused227 string `json:"unused227"`
+	Unused227 *string `json:"unused227,omitempty"`
 	// Unused228 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused228 string `json:"unused228"`
+	Unused228 *string `json:"unused228,omitempty"`
 	// Unused229 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused229 string `json:"unused229"`
+	Unused229 *string `json:"unused229,omitempty"`
 	// Unused23 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused23 string `json:"unused23"`
+	Unused23 *string `json:"unused23,omitempty"`
 	// Unused230 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused230 string `json:"unused230"`
+	Unused230 *string `json:"unused230,omitempty"`
 	// Unused231 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused231 string `json:"unused231"`
+	Unused231 *string `json:"unused231,omitempty"`
 	// Unused232 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused232 string `json:"unused232"`
+	Unused232 *string `json:"unused232,omitempty"`
 	// Unused233 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused233 string `json:"unused233"`
+	Unused233 *string `json:"unused233,omitempty"`
 	// Unused234 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused234 string `json:"unused234"`
+	Unused234 *string `json:"unused234,omitempty"`
 	// Unused235 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused235 string `json:"unused235"`
+	Unused235 *string `json:"unused235,omitempty"`
 	// Unused236 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused236 string `json:"unused236"`
+	Unused236 *string `json:"unused236,omitempty"`
 	// Unused237 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused237 string `json:"unused237"`
+	Unused237 *string `json:"unused237,omitempty"`
 	// Unused238 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused238 string `json:"unused238"`
+	Unused238 *string `json:"unused238,omitempty"`
 	// Unused239 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused239 string `json:"unused239"`
+	Unused239 *string `json:"unused239,omitempty"`
 	// Unused24 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused24 string `json:"unused24"`
+	Unused24 *string `json:"unused24,omitempty"`
 	// Unused240 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused240 string `json:"unused240"`
+	Unused240 *string `json:"unused240,omitempty"`
 	// Unused241 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused241 string `json:"unused241"`
+	Unused241 *string `json:"unused241,omitempty"`
 	// Unused242 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused242 string `json:"unused242"`
+	Unused242 *string `json:"unused242,omitempty"`
 	// Unused243 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused243 string `json:"unused243"`
+	Unused243 *string `json:"unused243,omitempty"`
 	// Unused244 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused244 string `json:"unused244"`
+	Unused244 *string `json:"unused244,omitempty"`
 	// Unused245 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused245 string `json:"unused245"`
+	Unused245 *string `json:"unused245,omitempty"`
 	// Unused246 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused246 string `json:"unused246"`
+	Unused246 *string `json:"unused246,omitempty"`
 	// Unused247 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused247 string `json:"unused247"`
+	Unused247 *string `json:"unused247,omitempty"`
 	// Unused248 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused248 string `json:"unused248"`
+	Unused248 *string `json:"unused248,omitempty"`
 	// Unused249 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused249 string `json:"unused249"`
+	Unused249 *string `json:"unused249,omitempty"`
 	// Unused25 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused25 string `json:"unused25"`
+	Unused25 *string `json:"unused25,omitempty"`
 	// Unused250 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused250 string `json:"unused250"`
+	Unused250 *string `json:"unused250,omitempty"`
 	// Unused251 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused251 string `json:"unused251"`
+	Unused251 *string `json:"unused251,omitempty"`
 	// Unused252 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused252 string `json:"unused252"`
+	Unused252 *string `json:"unused252,omitempty"`
 	// Unused253 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused253 string `json:"unused253"`
+	Unused253 *string `json:"unused253,omitempty"`
 	// Unused254 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused254 string `json:"unused254"`
+	Unused254 *string `json:"unused254,omitempty"`
 	// Unused255 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused255 string `json:"unused255"`
+	Unused255 *string `json:"unused255,omitempty"`
 	// Unused26 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused26 string `json:"unused26"`
+	Unused26 *string `json:"unused26,omitempty"`
 	// Unused27 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused27 string `json:"unused27"`
+	Unused27 *string `json:"unused27,omitempty"`
 	// Unused28 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused28 string `json:"unused28"`
+	Unused28 *string `json:"unused28,omitempty"`
 	// Unused29 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused29 string `json:"unused29"`
+	Unused29 *string `json:"unused29,omitempty"`
 	// Unused3 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused3 string `json:"unused3"`
+	Unused3 *string `json:"unused3,omitempty"`
 	// Unused30 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused30 string `json:"unused30"`
+	Unused30 *string `json:"unused30,omitempty"`
 	// Unused31 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused31 string `json:"unused31"`
+	Unused31 *string `json:"unused31,omitempty"`
 	// Unused32 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused32 string `json:"unused32"`
+	Unused32 *string `json:"unused32,omitempty"`
 	// Unused33 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused33 string `json:"unused33"`
+	Unused33 *string `json:"unused33,omitempty"`
 	// Unused34 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused34 string `json:"unused34"`
+	Unused34 *string `json:"unused34,omitempty"`
 	// Unused35 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused35 string `json:"unused35"`
+	Unused35 *string `json:"unused35,omitempty"`
 	// Unused36 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused36 string `json:"unused36"`
+	Unused36 *string `json:"unused36,omitempty"`
 	// Unused37 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused37 string `json:"unused37"`
+	Unused37 *string `json:"unused37,omitempty"`
 	// Unused38 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused38 string `json:"unused38"`
+	Unused38 *string `json:"unused38,omitempty"`
 	// Unused39 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused39 string `json:"unused39"`
+	Unused39 *string `json:"unused39,omitempty"`
 	// Unused4 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused4 string `json:"unused4"`
+	Unused4 *string `json:"unused4,omitempty"`
 	// Unused40 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused40 string `json:"unused40"`
+	Unused40 *string `json:"unused40,omitempty"`
 	// Unused41 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused41 string `json:"unused41"`
+	Unused41 *string `json:"unused41,omitempty"`
 	// Unused42 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused42 string `json:"unused42"`
+	Unused42 *string `json:"unused42,omitempty"`
 	// Unused43 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused43 string `json:"unused43"`
+	Unused43 *string `json:"unused43,omitempty"`
 	// Unused44 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused44 string `json:"unused44"`
+	Unused44 *string `json:"unused44,omitempty"`
 	// Unused45 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused45 string `json:"unused45"`
+	Unused45 *string `json:"unused45,omitempty"`
 	// Unused46 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused46 string `json:"unused46"`
+	Unused46 *string `json:"unused46,omitempty"`
 	// Unused47 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused47 string `json:"unused47"`
+	Unused47 *string `json:"unused47,omitempty"`
 	// Unused48 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused48 string `json:"unused48"`
+	Unused48 *string `json:"unused48,omitempty"`
 	// Unused49 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused49 string `json:"unused49"`
+	Unused49 *string `json:"unused49,omitempty"`
 	// Unused5 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused5 string `json:"unused5"`
+	Unused5 *string `json:"unused5,omitempty"`
 	// Unused50 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused50 string `json:"unused50"`
+	Unused50 *string `json:"unused50,omitempty"`
 	// Unused51 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused51 string `json:"unused51"`
+	Unused51 *string `json:"unused51,omitempty"`
 	// Unused52 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused52 string `json:"unused52"`
+	Unused52 *string `json:"unused52,omitempty"`
 	// Unused53 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused53 string `json:"unused53"`
+	Unused53 *string `json:"unused53,omitempty"`
 	// Unused54 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused54 string `json:"unused54"`
+	Unused54 *string `json:"unused54,omitempty"`
 	// Unused55 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused55 string `json:"unused55"`
+	Unused55 *string `json:"unused55,omitempty"`
 	// Unused56 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused56 string `json:"unused56"`
+	Unused56 *string `json:"unused56,omitempty"`
 	// Unused57 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused57 string `json:"unused57"`
+	Unused57 *string `json:"unused57,omitempty"`
 	// Unused58 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused58 string `json:"unused58"`
+	Unused58 *string `json:"unused58,omitempty"`
 	// Unused59 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused59 string `json:"unused59"`
+	Unused59 *string `json:"unused59,omitempty"`
 	// Unused6 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused6 string `json:"unused6"`
+	Unused6 *string `json:"unused6,omitempty"`
 	// Unused60 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused60 string `json:"unused60"`
+	Unused60 *string `json:"unused60,omitempty"`
 	// Unused61 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused61 string `json:"unused61"`
+	Unused61 *string `json:"unused61,omitempty"`
 	// Unused62 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused62 string `json:"unused62"`
+	Unused62 *string `json:"unused62,omitempty"`
 	// Unused63 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused63 string `json:"unused63"`
+	Unused63 *string `json:"unused63,omitempty"`
 	// Unused64 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused64 string `json:"unused64"`
+	Unused64 *string `json:"unused64,omitempty"`
 	// Unused65 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused65 string `json:"unused65"`
+	Unused65 *string `json:"unused65,omitempty"`
 	// Unused66 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused66 string `json:"unused66"`
+	Unused66 *string `json:"unused66,omitempty"`
 	// Unused67 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused67 string `json:"unused67"`
+	Unused67 *string `json:"unused67,omitempty"`
 	// Unused68 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused68 string `json:"unused68"`
+	Unused68 *string `json:"unused68,omitempty"`
 	// Unused69 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused69 string `json:"unused69"`
+	Unused69 *string `json:"unused69,omitempty"`
 	// Unused7 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused7 string `json:"unused7"`
+	Unused7 *string `json:"unused7,omitempty"`
 	// Unused70 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused70 string `json:"unused70"`
+	Unused70 *string `json:"unused70,omitempty"`
 	// Unused71 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused71 string `json:"unused71"`
+	Unused71 *string `json:"unused71,omitempty"`
 	// Unused72 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused72 string `json:"unused72"`
+	Unused72 *string `json:"unused72,omitempty"`
 	// Unused73 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused73 string `json:"unused73"`
+	Unused73 *string `json:"unused73,omitempty"`
 	// Unused74 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused74 string `json:"unused74"`
+	Unused74 *string `json:"unused74,omitempty"`
 	// Unused75 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused75 string `json:"unused75"`
+	Unused75 *string `json:"unused75,omitempty"`
 	// Unused76 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused76 string `json:"unused76"`
+	Unused76 *string `json:"unused76,omitempty"`
 	// Unused77 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused77 string `json:"unused77"`
+	Unused77 *string `json:"unused77,omitempty"`
 	// Unused78 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused78 string `json:"unused78"`
+	Unused78 *string `json:"unused78,omitempty"`
 	// Unused79 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused79 string `json:"unused79"`
+	Unused79 *string `json:"unused79,omitempty"`
 	// Unused8 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused8 string `json:"unused8"`
+	Unused8 *string `json:"unused8,omitempty"`
 	// Unused80 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused80 string `json:"unused80"`
+	Unused80 *string `json:"unused80,omitempty"`
 	// Unused81 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused81 string `json:"unused81"`
+	Unused81 *string `json:"unused81,omitempty"`
 	// Unused82 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused82 string `json:"unused82"`
+	Unused82 *string `json:"unused82,omitempty"`
 	// Unused83 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused83 string `json:"unused83"`
+	Unused83 *string `json:"unused83,omitempty"`
 	// Unused84 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused84 string `json:"unused84"`
+	Unused84 *string `json:"unused84,omitempty"`
 	// Unused85 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused85 string `json:"unused85"`
+	Unused85 *string `json:"unused85,omitempty"`
 	// Unused86 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused86 string `json:"unused86"`
+	Unused86 *string `json:"unused86,omitempty"`
 	// Unused87 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused87 string `json:"unused87"`
+	Unused87 *string `json:"unused87,omitempty"`
 	// Unused88 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused88 string `json:"unused88"`
+	Unused88 *string `json:"unused88,omitempty"`
 	// Unused89 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused89 string `json:"unused89"`
+	Unused89 *string `json:"unused89,omitempty"`
 	// Unused9 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused9 string `json:"unused9"`
+	Unused9 *string `json:"unused9,omitempty"`
 	// Unused90 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused90 string `json:"unused90"`
+	Unused90 *string `json:"unused90,omitempty"`
 	// Unused91 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused91 string `json:"unused91"`
+	Unused91 *string `json:"unused91,omitempty"`
 	// Unused92 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused92 string `json:"unused92"`
+	Unused92 *string `json:"unused92,omitempty"`
 	// Unused93 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused93 string `json:"unused93"`
+	Unused93 *string `json:"unused93,omitempty"`
 	// Unused94 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused94 string `json:"unused94"`
+	Unused94 *string `json:"unused94,omitempty"`
 	// Unused95 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused95 string `json:"unused95"`
+	Unused95 *string `json:"unused95,omitempty"`
 	// Unused96 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused96 string `json:"unused96"`
+	Unused96 *string `json:"unused96,omitempty"`
 	// Unused97 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused97 string `json:"unused97"`
+	Unused97 *string `json:"unused97,omitempty"`
 	// Unused98 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused98 string `json:"unused98"`
+	Unused98 *string `json:"unused98,omitempty"`
 	// Unused99 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused99 string `json:"unused99"`
+	Unused99 *string `json:"unused99,omitempty"`
 }
 
 // ListRemotesLxcConfig implements Service.ListRemotesLxcConfig. GET /pve/remotes/{remote}/lxc/{vmid}/config.
@@ -4883,115 +4883,115 @@ type ListRemotesQemuConfigResponse struct {
 	// Hookscript Script that will be executed during various steps in the vms lifetime.
 	Hookscript *string `json:"hookscript,omitempty"`
 	// Hostpci0 Map host PCI devices into guest.
-	Hostpci0 string `json:"hostpci0"`
+	Hostpci0 *string `json:"hostpci0,omitempty"`
 	// Hostpci1 Map host PCI devices into guest.
-	Hostpci1 string `json:"hostpci1"`
+	Hostpci1 *string `json:"hostpci1,omitempty"`
 	// Hostpci10 Map host PCI devices into guest.
-	Hostpci10 string `json:"hostpci10"`
+	Hostpci10 *string `json:"hostpci10,omitempty"`
 	// Hostpci11 Map host PCI devices into guest.
-	Hostpci11 string `json:"hostpci11"`
+	Hostpci11 *string `json:"hostpci11,omitempty"`
 	// Hostpci12 Map host PCI devices into guest.
-	Hostpci12 string `json:"hostpci12"`
+	Hostpci12 *string `json:"hostpci12,omitempty"`
 	// Hostpci13 Map host PCI devices into guest.
-	Hostpci13 string `json:"hostpci13"`
+	Hostpci13 *string `json:"hostpci13,omitempty"`
 	// Hostpci14 Map host PCI devices into guest.
-	Hostpci14 string `json:"hostpci14"`
+	Hostpci14 *string `json:"hostpci14,omitempty"`
 	// Hostpci15 Map host PCI devices into guest.
-	Hostpci15 string `json:"hostpci15"`
+	Hostpci15 *string `json:"hostpci15,omitempty"`
 	// Hostpci2 Map host PCI devices into guest.
-	Hostpci2 string `json:"hostpci2"`
+	Hostpci2 *string `json:"hostpci2,omitempty"`
 	// Hostpci3 Map host PCI devices into guest.
-	Hostpci3 string `json:"hostpci3"`
+	Hostpci3 *string `json:"hostpci3,omitempty"`
 	// Hostpci4 Map host PCI devices into guest.
-	Hostpci4 string `json:"hostpci4"`
+	Hostpci4 *string `json:"hostpci4,omitempty"`
 	// Hostpci5 Map host PCI devices into guest.
-	Hostpci5 string `json:"hostpci5"`
+	Hostpci5 *string `json:"hostpci5,omitempty"`
 	// Hostpci6 Map host PCI devices into guest.
-	Hostpci6 string `json:"hostpci6"`
+	Hostpci6 *string `json:"hostpci6,omitempty"`
 	// Hostpci7 Map host PCI devices into guest.
-	Hostpci7 string `json:"hostpci7"`
+	Hostpci7 *string `json:"hostpci7,omitempty"`
 	// Hostpci8 Map host PCI devices into guest.
-	Hostpci8 string `json:"hostpci8"`
+	Hostpci8 *string `json:"hostpci8,omitempty"`
 	// Hostpci9 Map host PCI devices into guest.
-	Hostpci9 string `json:"hostpci9"`
+	Hostpci9 *string `json:"hostpci9,omitempty"`
 	// Hotplug Selectively enable hotplug features. This is a comma separated list of hotplug features: 'network', 'disk', 'cpu', 'memory', 'usb' and 'cloudinit'. Use '0' to disable hotplug completely. Using '1' as value is an alias for the default `network,disk,usb`. USB hotplugging is possible for guests with machine version >= 7.1 and ostype l26 or windows > 7.
 	Hotplug *string `json:"hotplug,omitempty"`
 	// Hugepages Enables hugepages memory.  Sets the size of hugepages in MiB. If the value is set to 'any' then 1 GiB hugepages will be used if possible, otherwise the size will fall back to 2 MiB.
 	Hugepages *string `json:"hugepages,omitempty"`
 	// Ide0 Use volume as IDE hard disk or CD-ROM (n is 0 to 3).
-	Ide0 string `json:"ide0"`
+	Ide0 *string `json:"ide0,omitempty"`
 	// Ide1 Use volume as IDE hard disk or CD-ROM (n is 0 to 3).
-	Ide1 string `json:"ide1"`
+	Ide1 *string `json:"ide1,omitempty"`
 	// Ide2 Use volume as IDE hard disk or CD-ROM (n is 0 to 3).
-	Ide2 string `json:"ide2"`
+	Ide2 *string `json:"ide2,omitempty"`
 	// Ide3 Use volume as IDE hard disk or CD-ROM (n is 0 to 3).
-	Ide3 string `json:"ide3"`
+	Ide3 *string `json:"ide3,omitempty"`
 	// IntelTdx Trusted Domain Extension (TDX) features by Intel CPUs
 	IntelTdx *string `json:"intel-tdx,omitempty"`
 	// Ipconfig0 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig0 string `json:"ipconfig0"`
+	Ipconfig0 *string `json:"ipconfig0,omitempty"`
 	// Ipconfig1 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig1 string `json:"ipconfig1"`
+	Ipconfig1 *string `json:"ipconfig1,omitempty"`
 	// Ipconfig10 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig10 string `json:"ipconfig10"`
+	Ipconfig10 *string `json:"ipconfig10,omitempty"`
 	// Ipconfig11 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig11 string `json:"ipconfig11"`
+	Ipconfig11 *string `json:"ipconfig11,omitempty"`
 	// Ipconfig12 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig12 string `json:"ipconfig12"`
+	Ipconfig12 *string `json:"ipconfig12,omitempty"`
 	// Ipconfig13 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig13 string `json:"ipconfig13"`
+	Ipconfig13 *string `json:"ipconfig13,omitempty"`
 	// Ipconfig14 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig14 string `json:"ipconfig14"`
+	Ipconfig14 *string `json:"ipconfig14,omitempty"`
 	// Ipconfig15 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig15 string `json:"ipconfig15"`
+	Ipconfig15 *string `json:"ipconfig15,omitempty"`
 	// Ipconfig16 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig16 string `json:"ipconfig16"`
+	Ipconfig16 *string `json:"ipconfig16,omitempty"`
 	// Ipconfig17 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig17 string `json:"ipconfig17"`
+	Ipconfig17 *string `json:"ipconfig17,omitempty"`
 	// Ipconfig18 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig18 string `json:"ipconfig18"`
+	Ipconfig18 *string `json:"ipconfig18,omitempty"`
 	// Ipconfig19 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig19 string `json:"ipconfig19"`
+	Ipconfig19 *string `json:"ipconfig19,omitempty"`
 	// Ipconfig2 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig2 string `json:"ipconfig2"`
+	Ipconfig2 *string `json:"ipconfig2,omitempty"`
 	// Ipconfig20 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig20 string `json:"ipconfig20"`
+	Ipconfig20 *string `json:"ipconfig20,omitempty"`
 	// Ipconfig21 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig21 string `json:"ipconfig21"`
+	Ipconfig21 *string `json:"ipconfig21,omitempty"`
 	// Ipconfig22 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig22 string `json:"ipconfig22"`
+	Ipconfig22 *string `json:"ipconfig22,omitempty"`
 	// Ipconfig23 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig23 string `json:"ipconfig23"`
+	Ipconfig23 *string `json:"ipconfig23,omitempty"`
 	// Ipconfig24 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig24 string `json:"ipconfig24"`
+	Ipconfig24 *string `json:"ipconfig24,omitempty"`
 	// Ipconfig25 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig25 string `json:"ipconfig25"`
+	Ipconfig25 *string `json:"ipconfig25,omitempty"`
 	// Ipconfig26 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig26 string `json:"ipconfig26"`
+	Ipconfig26 *string `json:"ipconfig26,omitempty"`
 	// Ipconfig27 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig27 string `json:"ipconfig27"`
+	Ipconfig27 *string `json:"ipconfig27,omitempty"`
 	// Ipconfig28 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig28 string `json:"ipconfig28"`
+	Ipconfig28 *string `json:"ipconfig28,omitempty"`
 	// Ipconfig29 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig29 string `json:"ipconfig29"`
+	Ipconfig29 *string `json:"ipconfig29,omitempty"`
 	// Ipconfig3 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig3 string `json:"ipconfig3"`
+	Ipconfig3 *string `json:"ipconfig3,omitempty"`
 	// Ipconfig30 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig30 string `json:"ipconfig30"`
+	Ipconfig30 *string `json:"ipconfig30,omitempty"`
 	// Ipconfig31 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig31 string `json:"ipconfig31"`
+	Ipconfig31 *string `json:"ipconfig31,omitempty"`
 	// Ipconfig4 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig4 string `json:"ipconfig4"`
+	Ipconfig4 *string `json:"ipconfig4,omitempty"`
 	// Ipconfig5 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig5 string `json:"ipconfig5"`
+	Ipconfig5 *string `json:"ipconfig5,omitempty"`
 	// Ipconfig6 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig6 string `json:"ipconfig6"`
+	Ipconfig6 *string `json:"ipconfig6,omitempty"`
 	// Ipconfig7 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig7 string `json:"ipconfig7"`
+	Ipconfig7 *string `json:"ipconfig7,omitempty"`
 	// Ipconfig8 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig8 string `json:"ipconfig8"`
+	Ipconfig8 *string `json:"ipconfig8,omitempty"`
 	// Ipconfig9 cloud-init: Specify IP addresses and gateways for the corresponding interface.  IP addresses use CIDR notation, gateways are optional but need an IP of the same type specified.  The special string 'dhcp' can be used for IP addresses to use DHCP, in which case no explicit gateway should be provided. For IPv6 the special string 'auto' can be used to use stateless autoconfiguration. This requires cloud-init 19.4 or newer.  If cloud-init is enabled and neither an IPv4 nor an IPv6 address is specified, it defaults to using dhcp on IPv4.
-	Ipconfig9 string `json:"ipconfig9"`
+	Ipconfig9 *string `json:"ipconfig9,omitempty"`
 	// Ivshmem Inter-VM shared memory. Useful for direct communication between VMs, or to the host.
 	Ivshmem *string `json:"ivshmem,omitempty"`
 	// Keephugepages Use together with hugepages. If enabled, hugepages will not not be deleted after VM shutdown and can be used for subsequent starts.
@@ -5019,69 +5019,69 @@ type ListRemotesQemuConfigResponse struct {
 	// Nameserver cloud-init: Sets DNS server IP address for a container. Create will automatically use the setting from the host if neither searchdomain nor nameserver are set.
 	Nameserver *string `json:"nameserver,omitempty"`
 	// Net0 Specify network devices.
-	Net0 string `json:"net0"`
+	Net0 *string `json:"net0,omitempty"`
 	// Net1 Specify network devices.
-	Net1 string `json:"net1"`
+	Net1 *string `json:"net1,omitempty"`
 	// Net10 Specify network devices.
-	Net10 string `json:"net10"`
+	Net10 *string `json:"net10,omitempty"`
 	// Net11 Specify network devices.
-	Net11 string `json:"net11"`
+	Net11 *string `json:"net11,omitempty"`
 	// Net12 Specify network devices.
-	Net12 string `json:"net12"`
+	Net12 *string `json:"net12,omitempty"`
 	// Net13 Specify network devices.
-	Net13 string `json:"net13"`
+	Net13 *string `json:"net13,omitempty"`
 	// Net14 Specify network devices.
-	Net14 string `json:"net14"`
+	Net14 *string `json:"net14,omitempty"`
 	// Net15 Specify network devices.
-	Net15 string `json:"net15"`
+	Net15 *string `json:"net15,omitempty"`
 	// Net16 Specify network devices.
-	Net16 string `json:"net16"`
+	Net16 *string `json:"net16,omitempty"`
 	// Net17 Specify network devices.
-	Net17 string `json:"net17"`
+	Net17 *string `json:"net17,omitempty"`
 	// Net18 Specify network devices.
-	Net18 string `json:"net18"`
+	Net18 *string `json:"net18,omitempty"`
 	// Net19 Specify network devices.
-	Net19 string `json:"net19"`
+	Net19 *string `json:"net19,omitempty"`
 	// Net2 Specify network devices.
-	Net2 string `json:"net2"`
+	Net2 *string `json:"net2,omitempty"`
 	// Net20 Specify network devices.
-	Net20 string `json:"net20"`
+	Net20 *string `json:"net20,omitempty"`
 	// Net21 Specify network devices.
-	Net21 string `json:"net21"`
+	Net21 *string `json:"net21,omitempty"`
 	// Net22 Specify network devices.
-	Net22 string `json:"net22"`
+	Net22 *string `json:"net22,omitempty"`
 	// Net23 Specify network devices.
-	Net23 string `json:"net23"`
+	Net23 *string `json:"net23,omitempty"`
 	// Net24 Specify network devices.
-	Net24 string `json:"net24"`
+	Net24 *string `json:"net24,omitempty"`
 	// Net25 Specify network devices.
-	Net25 string `json:"net25"`
+	Net25 *string `json:"net25,omitempty"`
 	// Net26 Specify network devices.
-	Net26 string `json:"net26"`
+	Net26 *string `json:"net26,omitempty"`
 	// Net27 Specify network devices.
-	Net27 string `json:"net27"`
+	Net27 *string `json:"net27,omitempty"`
 	// Net28 Specify network devices.
-	Net28 string `json:"net28"`
+	Net28 *string `json:"net28,omitempty"`
 	// Net29 Specify network devices.
-	Net29 string `json:"net29"`
+	Net29 *string `json:"net29,omitempty"`
 	// Net3 Specify network devices.
-	Net3 string `json:"net3"`
+	Net3 *string `json:"net3,omitempty"`
 	// Net30 Specify network devices.
-	Net30 string `json:"net30"`
+	Net30 *string `json:"net30,omitempty"`
 	// Net31 Specify network devices.
-	Net31 string `json:"net31"`
+	Net31 *string `json:"net31,omitempty"`
 	// Net4 Specify network devices.
-	Net4 string `json:"net4"`
+	Net4 *string `json:"net4,omitempty"`
 	// Net5 Specify network devices.
-	Net5 string `json:"net5"`
+	Net5 *string `json:"net5,omitempty"`
 	// Net6 Specify network devices.
-	Net6 string `json:"net6"`
+	Net6 *string `json:"net6,omitempty"`
 	// Net7 Specify network devices.
-	Net7 string `json:"net7"`
+	Net7 *string `json:"net7,omitempty"`
 	// Net8 Specify network devices.
-	Net8 string `json:"net8"`
+	Net8 *string `json:"net8,omitempty"`
 	// Net9 Specify network devices.
-	Net9 string `json:"net9"`
+	Net9 *string `json:"net9,omitempty"`
 	// Numa Enable/disable NUMA.
 	Numa *client.PVEBool `json:"numa,omitempty"`
 	// NumaArray0 NUMA topology.
@@ -5105,11 +5105,11 @@ type ListRemotesQemuConfigResponse struct {
 	// Ostype Specify guest operating system.
 	Ostype *string `json:"ostype,omitempty"`
 	// Parallel0 Map host parallel devices (n is 0 to 2).
-	Parallel0 string `json:"parallel0"`
+	Parallel0 *string `json:"parallel0,omitempty"`
 	// Parallel1 Map host parallel devices (n is 0 to 2).
-	Parallel1 string `json:"parallel1"`
+	Parallel1 *string `json:"parallel1,omitempty"`
 	// Parallel2 Map host parallel devices (n is 0 to 2).
-	Parallel2 string `json:"parallel2"`
+	Parallel2 *string `json:"parallel2,omitempty"`
 	// Parent Parent snapshot name. This is used internally, and should not be modified.
 	Parent *string `json:"parent,omitempty"`
 	// Protection Sets the protection flag of the VM. This will disable the remove VM and remove disk operations.
@@ -5125,91 +5125,91 @@ type ListRemotesQemuConfigResponse struct {
 	// Runningmachine Specifies the QEMU machine type of the running vm. This is used internally for snapshots.
 	Runningmachine *string `json:"runningmachine,omitempty"`
 	// Sata0 Use volume as SATA hard disk or CD-ROM (n is 0 to 5).
-	Sata0 string `json:"sata0"`
+	Sata0 *string `json:"sata0,omitempty"`
 	// Sata1 Use volume as SATA hard disk or CD-ROM (n is 0 to 5).
-	Sata1 string `json:"sata1"`
+	Sata1 *string `json:"sata1,omitempty"`
 	// Sata2 Use volume as SATA hard disk or CD-ROM (n is 0 to 5).
-	Sata2 string `json:"sata2"`
+	Sata2 *string `json:"sata2,omitempty"`
 	// Sata3 Use volume as SATA hard disk or CD-ROM (n is 0 to 5).
-	Sata3 string `json:"sata3"`
+	Sata3 *string `json:"sata3,omitempty"`
 	// Sata4 Use volume as SATA hard disk or CD-ROM (n is 0 to 5).
-	Sata4 string `json:"sata4"`
+	Sata4 *string `json:"sata4,omitempty"`
 	// Sata5 Use volume as SATA hard disk or CD-ROM (n is 0 to 5).
-	Sata5 string `json:"sata5"`
+	Sata5 *string `json:"sata5,omitempty"`
 	// Scsi0 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi0 string `json:"scsi0"`
+	Scsi0 *string `json:"scsi0,omitempty"`
 	// Scsi1 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi1 string `json:"scsi1"`
+	Scsi1 *string `json:"scsi1,omitempty"`
 	// Scsi10 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi10 string `json:"scsi10"`
+	Scsi10 *string `json:"scsi10,omitempty"`
 	// Scsi11 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi11 string `json:"scsi11"`
+	Scsi11 *string `json:"scsi11,omitempty"`
 	// Scsi12 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi12 string `json:"scsi12"`
+	Scsi12 *string `json:"scsi12,omitempty"`
 	// Scsi13 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi13 string `json:"scsi13"`
+	Scsi13 *string `json:"scsi13,omitempty"`
 	// Scsi14 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi14 string `json:"scsi14"`
+	Scsi14 *string `json:"scsi14,omitempty"`
 	// Scsi15 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi15 string `json:"scsi15"`
+	Scsi15 *string `json:"scsi15,omitempty"`
 	// Scsi16 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi16 string `json:"scsi16"`
+	Scsi16 *string `json:"scsi16,omitempty"`
 	// Scsi17 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi17 string `json:"scsi17"`
+	Scsi17 *string `json:"scsi17,omitempty"`
 	// Scsi18 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi18 string `json:"scsi18"`
+	Scsi18 *string `json:"scsi18,omitempty"`
 	// Scsi19 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi19 string `json:"scsi19"`
+	Scsi19 *string `json:"scsi19,omitempty"`
 	// Scsi2 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi2 string `json:"scsi2"`
+	Scsi2 *string `json:"scsi2,omitempty"`
 	// Scsi20 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi20 string `json:"scsi20"`
+	Scsi20 *string `json:"scsi20,omitempty"`
 	// Scsi21 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi21 string `json:"scsi21"`
+	Scsi21 *string `json:"scsi21,omitempty"`
 	// Scsi22 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi22 string `json:"scsi22"`
+	Scsi22 *string `json:"scsi22,omitempty"`
 	// Scsi23 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi23 string `json:"scsi23"`
+	Scsi23 *string `json:"scsi23,omitempty"`
 	// Scsi24 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi24 string `json:"scsi24"`
+	Scsi24 *string `json:"scsi24,omitempty"`
 	// Scsi25 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi25 string `json:"scsi25"`
+	Scsi25 *string `json:"scsi25,omitempty"`
 	// Scsi26 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi26 string `json:"scsi26"`
+	Scsi26 *string `json:"scsi26,omitempty"`
 	// Scsi27 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi27 string `json:"scsi27"`
+	Scsi27 *string `json:"scsi27,omitempty"`
 	// Scsi28 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi28 string `json:"scsi28"`
+	Scsi28 *string `json:"scsi28,omitempty"`
 	// Scsi29 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi29 string `json:"scsi29"`
+	Scsi29 *string `json:"scsi29,omitempty"`
 	// Scsi3 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi3 string `json:"scsi3"`
+	Scsi3 *string `json:"scsi3,omitempty"`
 	// Scsi30 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi30 string `json:"scsi30"`
+	Scsi30 *string `json:"scsi30,omitempty"`
 	// Scsi4 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi4 string `json:"scsi4"`
+	Scsi4 *string `json:"scsi4,omitempty"`
 	// Scsi5 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi5 string `json:"scsi5"`
+	Scsi5 *string `json:"scsi5,omitempty"`
 	// Scsi6 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi6 string `json:"scsi6"`
+	Scsi6 *string `json:"scsi6,omitempty"`
 	// Scsi7 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi7 string `json:"scsi7"`
+	Scsi7 *string `json:"scsi7,omitempty"`
 	// Scsi8 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi8 string `json:"scsi8"`
+	Scsi8 *string `json:"scsi8,omitempty"`
 	// Scsi9 Use volume as SCSI hard disk or CD-ROM (n is 0 to 30).
-	Scsi9 string `json:"scsi9"`
+	Scsi9 *string `json:"scsi9,omitempty"`
 	// Scsihw SCSI controller model
 	Scsihw *string `json:"scsihw,omitempty"`
 	// Searchdomain cloud-init: Sets DNS search domains for a container. Create will automatically use the setting from the host if neither searchdomain nor nameserver are set.
 	Searchdomain *string `json:"searchdomain,omitempty"`
 	// Serial0 Create a serial device inside the VM (n is 0 to 3)
-	Serial0 string `json:"serial0"`
+	Serial0 *string `json:"serial0,omitempty"`
 	// Serial1 Create a serial device inside the VM (n is 0 to 3)
-	Serial1 string `json:"serial1"`
+	Serial1 *string `json:"serial1,omitempty"`
 	// Serial2 Create a serial device inside the VM (n is 0 to 3)
-	Serial2 string `json:"serial2"`
+	Serial2 *string `json:"serial2,omitempty"`
 	// Serial3 Create a serial device inside the VM (n is 0 to 3)
-	Serial3 string `json:"serial3"`
+	Serial3 *string `json:"serial3,omitempty"`
 	// Shares Amount of memory shares for auto-ballooning. The larger the number is, the more memory this VM gets. Number is relative to weights of all other running VMs. Using zero disables auto-ballooning. Auto-ballooning is done by pvestatd.
 	Shares *client.PVEInt `json:"shares,omitempty"`
 	// Smbios1 Specify SMBIOS type 1 fields.
@@ -5239,601 +5239,601 @@ type ListRemotesQemuConfigResponse struct {
 	// Tpmstate0 Configure a Disk for storing TPM state. The format is fixed to 'raw'.
 	Tpmstate0 *string `json:"tpmstate0,omitempty"`
 	// Unused0 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused0 string `json:"unused0"`
+	Unused0 *string `json:"unused0,omitempty"`
 	// Unused1 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused1 string `json:"unused1"`
+	Unused1 *string `json:"unused1,omitempty"`
 	// Unused10 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused10 string `json:"unused10"`
+	Unused10 *string `json:"unused10,omitempty"`
 	// Unused100 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused100 string `json:"unused100"`
+	Unused100 *string `json:"unused100,omitempty"`
 	// Unused101 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused101 string `json:"unused101"`
+	Unused101 *string `json:"unused101,omitempty"`
 	// Unused102 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused102 string `json:"unused102"`
+	Unused102 *string `json:"unused102,omitempty"`
 	// Unused103 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused103 string `json:"unused103"`
+	Unused103 *string `json:"unused103,omitempty"`
 	// Unused104 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused104 string `json:"unused104"`
+	Unused104 *string `json:"unused104,omitempty"`
 	// Unused105 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused105 string `json:"unused105"`
+	Unused105 *string `json:"unused105,omitempty"`
 	// Unused106 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused106 string `json:"unused106"`
+	Unused106 *string `json:"unused106,omitempty"`
 	// Unused107 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused107 string `json:"unused107"`
+	Unused107 *string `json:"unused107,omitempty"`
 	// Unused108 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused108 string `json:"unused108"`
+	Unused108 *string `json:"unused108,omitempty"`
 	// Unused109 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused109 string `json:"unused109"`
+	Unused109 *string `json:"unused109,omitempty"`
 	// Unused11 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused11 string `json:"unused11"`
+	Unused11 *string `json:"unused11,omitempty"`
 	// Unused110 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused110 string `json:"unused110"`
+	Unused110 *string `json:"unused110,omitempty"`
 	// Unused111 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused111 string `json:"unused111"`
+	Unused111 *string `json:"unused111,omitempty"`
 	// Unused112 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused112 string `json:"unused112"`
+	Unused112 *string `json:"unused112,omitempty"`
 	// Unused113 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused113 string `json:"unused113"`
+	Unused113 *string `json:"unused113,omitempty"`
 	// Unused114 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused114 string `json:"unused114"`
+	Unused114 *string `json:"unused114,omitempty"`
 	// Unused115 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused115 string `json:"unused115"`
+	Unused115 *string `json:"unused115,omitempty"`
 	// Unused116 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused116 string `json:"unused116"`
+	Unused116 *string `json:"unused116,omitempty"`
 	// Unused117 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused117 string `json:"unused117"`
+	Unused117 *string `json:"unused117,omitempty"`
 	// Unused118 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused118 string `json:"unused118"`
+	Unused118 *string `json:"unused118,omitempty"`
 	// Unused119 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused119 string `json:"unused119"`
+	Unused119 *string `json:"unused119,omitempty"`
 	// Unused12 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused12 string `json:"unused12"`
+	Unused12 *string `json:"unused12,omitempty"`
 	// Unused120 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused120 string `json:"unused120"`
+	Unused120 *string `json:"unused120,omitempty"`
 	// Unused121 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused121 string `json:"unused121"`
+	Unused121 *string `json:"unused121,omitempty"`
 	// Unused122 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused122 string `json:"unused122"`
+	Unused122 *string `json:"unused122,omitempty"`
 	// Unused123 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused123 string `json:"unused123"`
+	Unused123 *string `json:"unused123,omitempty"`
 	// Unused124 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused124 string `json:"unused124"`
+	Unused124 *string `json:"unused124,omitempty"`
 	// Unused125 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused125 string `json:"unused125"`
+	Unused125 *string `json:"unused125,omitempty"`
 	// Unused126 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused126 string `json:"unused126"`
+	Unused126 *string `json:"unused126,omitempty"`
 	// Unused127 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused127 string `json:"unused127"`
+	Unused127 *string `json:"unused127,omitempty"`
 	// Unused128 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused128 string `json:"unused128"`
+	Unused128 *string `json:"unused128,omitempty"`
 	// Unused129 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused129 string `json:"unused129"`
+	Unused129 *string `json:"unused129,omitempty"`
 	// Unused13 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused13 string `json:"unused13"`
+	Unused13 *string `json:"unused13,omitempty"`
 	// Unused130 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused130 string `json:"unused130"`
+	Unused130 *string `json:"unused130,omitempty"`
 	// Unused131 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused131 string `json:"unused131"`
+	Unused131 *string `json:"unused131,omitempty"`
 	// Unused132 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused132 string `json:"unused132"`
+	Unused132 *string `json:"unused132,omitempty"`
 	// Unused133 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused133 string `json:"unused133"`
+	Unused133 *string `json:"unused133,omitempty"`
 	// Unused134 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused134 string `json:"unused134"`
+	Unused134 *string `json:"unused134,omitempty"`
 	// Unused135 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused135 string `json:"unused135"`
+	Unused135 *string `json:"unused135,omitempty"`
 	// Unused136 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused136 string `json:"unused136"`
+	Unused136 *string `json:"unused136,omitempty"`
 	// Unused137 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused137 string `json:"unused137"`
+	Unused137 *string `json:"unused137,omitempty"`
 	// Unused138 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused138 string `json:"unused138"`
+	Unused138 *string `json:"unused138,omitempty"`
 	// Unused139 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused139 string `json:"unused139"`
+	Unused139 *string `json:"unused139,omitempty"`
 	// Unused14 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused14 string `json:"unused14"`
+	Unused14 *string `json:"unused14,omitempty"`
 	// Unused140 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused140 string `json:"unused140"`
+	Unused140 *string `json:"unused140,omitempty"`
 	// Unused141 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused141 string `json:"unused141"`
+	Unused141 *string `json:"unused141,omitempty"`
 	// Unused142 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused142 string `json:"unused142"`
+	Unused142 *string `json:"unused142,omitempty"`
 	// Unused143 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused143 string `json:"unused143"`
+	Unused143 *string `json:"unused143,omitempty"`
 	// Unused144 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused144 string `json:"unused144"`
+	Unused144 *string `json:"unused144,omitempty"`
 	// Unused145 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused145 string `json:"unused145"`
+	Unused145 *string `json:"unused145,omitempty"`
 	// Unused146 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused146 string `json:"unused146"`
+	Unused146 *string `json:"unused146,omitempty"`
 	// Unused147 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused147 string `json:"unused147"`
+	Unused147 *string `json:"unused147,omitempty"`
 	// Unused148 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused148 string `json:"unused148"`
+	Unused148 *string `json:"unused148,omitempty"`
 	// Unused149 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused149 string `json:"unused149"`
+	Unused149 *string `json:"unused149,omitempty"`
 	// Unused15 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused15 string `json:"unused15"`
+	Unused15 *string `json:"unused15,omitempty"`
 	// Unused150 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused150 string `json:"unused150"`
+	Unused150 *string `json:"unused150,omitempty"`
 	// Unused151 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused151 string `json:"unused151"`
+	Unused151 *string `json:"unused151,omitempty"`
 	// Unused152 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused152 string `json:"unused152"`
+	Unused152 *string `json:"unused152,omitempty"`
 	// Unused153 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused153 string `json:"unused153"`
+	Unused153 *string `json:"unused153,omitempty"`
 	// Unused154 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused154 string `json:"unused154"`
+	Unused154 *string `json:"unused154,omitempty"`
 	// Unused155 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused155 string `json:"unused155"`
+	Unused155 *string `json:"unused155,omitempty"`
 	// Unused156 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused156 string `json:"unused156"`
+	Unused156 *string `json:"unused156,omitempty"`
 	// Unused157 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused157 string `json:"unused157"`
+	Unused157 *string `json:"unused157,omitempty"`
 	// Unused158 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused158 string `json:"unused158"`
+	Unused158 *string `json:"unused158,omitempty"`
 	// Unused159 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused159 string `json:"unused159"`
+	Unused159 *string `json:"unused159,omitempty"`
 	// Unused16 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused16 string `json:"unused16"`
+	Unused16 *string `json:"unused16,omitempty"`
 	// Unused160 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused160 string `json:"unused160"`
+	Unused160 *string `json:"unused160,omitempty"`
 	// Unused161 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused161 string `json:"unused161"`
+	Unused161 *string `json:"unused161,omitempty"`
 	// Unused162 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused162 string `json:"unused162"`
+	Unused162 *string `json:"unused162,omitempty"`
 	// Unused163 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused163 string `json:"unused163"`
+	Unused163 *string `json:"unused163,omitempty"`
 	// Unused164 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused164 string `json:"unused164"`
+	Unused164 *string `json:"unused164,omitempty"`
 	// Unused165 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused165 string `json:"unused165"`
+	Unused165 *string `json:"unused165,omitempty"`
 	// Unused166 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused166 string `json:"unused166"`
+	Unused166 *string `json:"unused166,omitempty"`
 	// Unused167 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused167 string `json:"unused167"`
+	Unused167 *string `json:"unused167,omitempty"`
 	// Unused168 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused168 string `json:"unused168"`
+	Unused168 *string `json:"unused168,omitempty"`
 	// Unused169 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused169 string `json:"unused169"`
+	Unused169 *string `json:"unused169,omitempty"`
 	// Unused17 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused17 string `json:"unused17"`
+	Unused17 *string `json:"unused17,omitempty"`
 	// Unused170 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused170 string `json:"unused170"`
+	Unused170 *string `json:"unused170,omitempty"`
 	// Unused171 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused171 string `json:"unused171"`
+	Unused171 *string `json:"unused171,omitempty"`
 	// Unused172 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused172 string `json:"unused172"`
+	Unused172 *string `json:"unused172,omitempty"`
 	// Unused173 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused173 string `json:"unused173"`
+	Unused173 *string `json:"unused173,omitempty"`
 	// Unused174 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused174 string `json:"unused174"`
+	Unused174 *string `json:"unused174,omitempty"`
 	// Unused175 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused175 string `json:"unused175"`
+	Unused175 *string `json:"unused175,omitempty"`
 	// Unused176 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused176 string `json:"unused176"`
+	Unused176 *string `json:"unused176,omitempty"`
 	// Unused177 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused177 string `json:"unused177"`
+	Unused177 *string `json:"unused177,omitempty"`
 	// Unused178 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused178 string `json:"unused178"`
+	Unused178 *string `json:"unused178,omitempty"`
 	// Unused179 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused179 string `json:"unused179"`
+	Unused179 *string `json:"unused179,omitempty"`
 	// Unused18 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused18 string `json:"unused18"`
+	Unused18 *string `json:"unused18,omitempty"`
 	// Unused180 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused180 string `json:"unused180"`
+	Unused180 *string `json:"unused180,omitempty"`
 	// Unused181 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused181 string `json:"unused181"`
+	Unused181 *string `json:"unused181,omitempty"`
 	// Unused182 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused182 string `json:"unused182"`
+	Unused182 *string `json:"unused182,omitempty"`
 	// Unused183 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused183 string `json:"unused183"`
+	Unused183 *string `json:"unused183,omitempty"`
 	// Unused184 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused184 string `json:"unused184"`
+	Unused184 *string `json:"unused184,omitempty"`
 	// Unused185 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused185 string `json:"unused185"`
+	Unused185 *string `json:"unused185,omitempty"`
 	// Unused186 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused186 string `json:"unused186"`
+	Unused186 *string `json:"unused186,omitempty"`
 	// Unused187 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused187 string `json:"unused187"`
+	Unused187 *string `json:"unused187,omitempty"`
 	// Unused188 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused188 string `json:"unused188"`
+	Unused188 *string `json:"unused188,omitempty"`
 	// Unused189 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused189 string `json:"unused189"`
+	Unused189 *string `json:"unused189,omitempty"`
 	// Unused19 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused19 string `json:"unused19"`
+	Unused19 *string `json:"unused19,omitempty"`
 	// Unused190 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused190 string `json:"unused190"`
+	Unused190 *string `json:"unused190,omitempty"`
 	// Unused191 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused191 string `json:"unused191"`
+	Unused191 *string `json:"unused191,omitempty"`
 	// Unused192 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused192 string `json:"unused192"`
+	Unused192 *string `json:"unused192,omitempty"`
 	// Unused193 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused193 string `json:"unused193"`
+	Unused193 *string `json:"unused193,omitempty"`
 	// Unused194 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused194 string `json:"unused194"`
+	Unused194 *string `json:"unused194,omitempty"`
 	// Unused195 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused195 string `json:"unused195"`
+	Unused195 *string `json:"unused195,omitempty"`
 	// Unused196 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused196 string `json:"unused196"`
+	Unused196 *string `json:"unused196,omitempty"`
 	// Unused197 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused197 string `json:"unused197"`
+	Unused197 *string `json:"unused197,omitempty"`
 	// Unused198 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused198 string `json:"unused198"`
+	Unused198 *string `json:"unused198,omitempty"`
 	// Unused199 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused199 string `json:"unused199"`
+	Unused199 *string `json:"unused199,omitempty"`
 	// Unused2 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused2 string `json:"unused2"`
+	Unused2 *string `json:"unused2,omitempty"`
 	// Unused20 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused20 string `json:"unused20"`
+	Unused20 *string `json:"unused20,omitempty"`
 	// Unused200 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused200 string `json:"unused200"`
+	Unused200 *string `json:"unused200,omitempty"`
 	// Unused201 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused201 string `json:"unused201"`
+	Unused201 *string `json:"unused201,omitempty"`
 	// Unused202 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused202 string `json:"unused202"`
+	Unused202 *string `json:"unused202,omitempty"`
 	// Unused203 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused203 string `json:"unused203"`
+	Unused203 *string `json:"unused203,omitempty"`
 	// Unused204 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused204 string `json:"unused204"`
+	Unused204 *string `json:"unused204,omitempty"`
 	// Unused205 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused205 string `json:"unused205"`
+	Unused205 *string `json:"unused205,omitempty"`
 	// Unused206 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused206 string `json:"unused206"`
+	Unused206 *string `json:"unused206,omitempty"`
 	// Unused207 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused207 string `json:"unused207"`
+	Unused207 *string `json:"unused207,omitempty"`
 	// Unused208 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused208 string `json:"unused208"`
+	Unused208 *string `json:"unused208,omitempty"`
 	// Unused209 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused209 string `json:"unused209"`
+	Unused209 *string `json:"unused209,omitempty"`
 	// Unused21 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused21 string `json:"unused21"`
+	Unused21 *string `json:"unused21,omitempty"`
 	// Unused210 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused210 string `json:"unused210"`
+	Unused210 *string `json:"unused210,omitempty"`
 	// Unused211 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused211 string `json:"unused211"`
+	Unused211 *string `json:"unused211,omitempty"`
 	// Unused212 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused212 string `json:"unused212"`
+	Unused212 *string `json:"unused212,omitempty"`
 	// Unused213 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused213 string `json:"unused213"`
+	Unused213 *string `json:"unused213,omitempty"`
 	// Unused214 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused214 string `json:"unused214"`
+	Unused214 *string `json:"unused214,omitempty"`
 	// Unused215 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused215 string `json:"unused215"`
+	Unused215 *string `json:"unused215,omitempty"`
 	// Unused216 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused216 string `json:"unused216"`
+	Unused216 *string `json:"unused216,omitempty"`
 	// Unused217 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused217 string `json:"unused217"`
+	Unused217 *string `json:"unused217,omitempty"`
 	// Unused218 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused218 string `json:"unused218"`
+	Unused218 *string `json:"unused218,omitempty"`
 	// Unused219 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused219 string `json:"unused219"`
+	Unused219 *string `json:"unused219,omitempty"`
 	// Unused22 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused22 string `json:"unused22"`
+	Unused22 *string `json:"unused22,omitempty"`
 	// Unused220 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused220 string `json:"unused220"`
+	Unused220 *string `json:"unused220,omitempty"`
 	// Unused221 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused221 string `json:"unused221"`
+	Unused221 *string `json:"unused221,omitempty"`
 	// Unused222 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused222 string `json:"unused222"`
+	Unused222 *string `json:"unused222,omitempty"`
 	// Unused223 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused223 string `json:"unused223"`
+	Unused223 *string `json:"unused223,omitempty"`
 	// Unused224 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused224 string `json:"unused224"`
+	Unused224 *string `json:"unused224,omitempty"`
 	// Unused225 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused225 string `json:"unused225"`
+	Unused225 *string `json:"unused225,omitempty"`
 	// Unused226 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused226 string `json:"unused226"`
+	Unused226 *string `json:"unused226,omitempty"`
 	// Unused227 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused227 string `json:"unused227"`
+	Unused227 *string `json:"unused227,omitempty"`
 	// Unused228 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused228 string `json:"unused228"`
+	Unused228 *string `json:"unused228,omitempty"`
 	// Unused229 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused229 string `json:"unused229"`
+	Unused229 *string `json:"unused229,omitempty"`
 	// Unused23 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused23 string `json:"unused23"`
+	Unused23 *string `json:"unused23,omitempty"`
 	// Unused230 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused230 string `json:"unused230"`
+	Unused230 *string `json:"unused230,omitempty"`
 	// Unused231 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused231 string `json:"unused231"`
+	Unused231 *string `json:"unused231,omitempty"`
 	// Unused232 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused232 string `json:"unused232"`
+	Unused232 *string `json:"unused232,omitempty"`
 	// Unused233 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused233 string `json:"unused233"`
+	Unused233 *string `json:"unused233,omitempty"`
 	// Unused234 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused234 string `json:"unused234"`
+	Unused234 *string `json:"unused234,omitempty"`
 	// Unused235 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused235 string `json:"unused235"`
+	Unused235 *string `json:"unused235,omitempty"`
 	// Unused236 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused236 string `json:"unused236"`
+	Unused236 *string `json:"unused236,omitempty"`
 	// Unused237 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused237 string `json:"unused237"`
+	Unused237 *string `json:"unused237,omitempty"`
 	// Unused238 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused238 string `json:"unused238"`
+	Unused238 *string `json:"unused238,omitempty"`
 	// Unused239 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused239 string `json:"unused239"`
+	Unused239 *string `json:"unused239,omitempty"`
 	// Unused24 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused24 string `json:"unused24"`
+	Unused24 *string `json:"unused24,omitempty"`
 	// Unused240 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused240 string `json:"unused240"`
+	Unused240 *string `json:"unused240,omitempty"`
 	// Unused241 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused241 string `json:"unused241"`
+	Unused241 *string `json:"unused241,omitempty"`
 	// Unused242 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused242 string `json:"unused242"`
+	Unused242 *string `json:"unused242,omitempty"`
 	// Unused243 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused243 string `json:"unused243"`
+	Unused243 *string `json:"unused243,omitempty"`
 	// Unused244 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused244 string `json:"unused244"`
+	Unused244 *string `json:"unused244,omitempty"`
 	// Unused245 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused245 string `json:"unused245"`
+	Unused245 *string `json:"unused245,omitempty"`
 	// Unused246 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused246 string `json:"unused246"`
+	Unused246 *string `json:"unused246,omitempty"`
 	// Unused247 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused247 string `json:"unused247"`
+	Unused247 *string `json:"unused247,omitempty"`
 	// Unused248 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused248 string `json:"unused248"`
+	Unused248 *string `json:"unused248,omitempty"`
 	// Unused249 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused249 string `json:"unused249"`
+	Unused249 *string `json:"unused249,omitempty"`
 	// Unused25 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused25 string `json:"unused25"`
+	Unused25 *string `json:"unused25,omitempty"`
 	// Unused250 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused250 string `json:"unused250"`
+	Unused250 *string `json:"unused250,omitempty"`
 	// Unused251 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused251 string `json:"unused251"`
+	Unused251 *string `json:"unused251,omitempty"`
 	// Unused252 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused252 string `json:"unused252"`
+	Unused252 *string `json:"unused252,omitempty"`
 	// Unused253 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused253 string `json:"unused253"`
+	Unused253 *string `json:"unused253,omitempty"`
 	// Unused254 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused254 string `json:"unused254"`
+	Unused254 *string `json:"unused254,omitempty"`
 	// Unused255 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused255 string `json:"unused255"`
+	Unused255 *string `json:"unused255,omitempty"`
 	// Unused26 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused26 string `json:"unused26"`
+	Unused26 *string `json:"unused26,omitempty"`
 	// Unused27 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused27 string `json:"unused27"`
+	Unused27 *string `json:"unused27,omitempty"`
 	// Unused28 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused28 string `json:"unused28"`
+	Unused28 *string `json:"unused28,omitempty"`
 	// Unused29 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused29 string `json:"unused29"`
+	Unused29 *string `json:"unused29,omitempty"`
 	// Unused3 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused3 string `json:"unused3"`
+	Unused3 *string `json:"unused3,omitempty"`
 	// Unused30 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused30 string `json:"unused30"`
+	Unused30 *string `json:"unused30,omitempty"`
 	// Unused31 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused31 string `json:"unused31"`
+	Unused31 *string `json:"unused31,omitempty"`
 	// Unused32 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused32 string `json:"unused32"`
+	Unused32 *string `json:"unused32,omitempty"`
 	// Unused33 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused33 string `json:"unused33"`
+	Unused33 *string `json:"unused33,omitempty"`
 	// Unused34 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused34 string `json:"unused34"`
+	Unused34 *string `json:"unused34,omitempty"`
 	// Unused35 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused35 string `json:"unused35"`
+	Unused35 *string `json:"unused35,omitempty"`
 	// Unused36 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused36 string `json:"unused36"`
+	Unused36 *string `json:"unused36,omitempty"`
 	// Unused37 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused37 string `json:"unused37"`
+	Unused37 *string `json:"unused37,omitempty"`
 	// Unused38 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused38 string `json:"unused38"`
+	Unused38 *string `json:"unused38,omitempty"`
 	// Unused39 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused39 string `json:"unused39"`
+	Unused39 *string `json:"unused39,omitempty"`
 	// Unused4 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused4 string `json:"unused4"`
+	Unused4 *string `json:"unused4,omitempty"`
 	// Unused40 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused40 string `json:"unused40"`
+	Unused40 *string `json:"unused40,omitempty"`
 	// Unused41 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused41 string `json:"unused41"`
+	Unused41 *string `json:"unused41,omitempty"`
 	// Unused42 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused42 string `json:"unused42"`
+	Unused42 *string `json:"unused42,omitempty"`
 	// Unused43 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused43 string `json:"unused43"`
+	Unused43 *string `json:"unused43,omitempty"`
 	// Unused44 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused44 string `json:"unused44"`
+	Unused44 *string `json:"unused44,omitempty"`
 	// Unused45 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused45 string `json:"unused45"`
+	Unused45 *string `json:"unused45,omitempty"`
 	// Unused46 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused46 string `json:"unused46"`
+	Unused46 *string `json:"unused46,omitempty"`
 	// Unused47 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused47 string `json:"unused47"`
+	Unused47 *string `json:"unused47,omitempty"`
 	// Unused48 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused48 string `json:"unused48"`
+	Unused48 *string `json:"unused48,omitempty"`
 	// Unused49 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused49 string `json:"unused49"`
+	Unused49 *string `json:"unused49,omitempty"`
 	// Unused5 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused5 string `json:"unused5"`
+	Unused5 *string `json:"unused5,omitempty"`
 	// Unused50 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused50 string `json:"unused50"`
+	Unused50 *string `json:"unused50,omitempty"`
 	// Unused51 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused51 string `json:"unused51"`
+	Unused51 *string `json:"unused51,omitempty"`
 	// Unused52 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused52 string `json:"unused52"`
+	Unused52 *string `json:"unused52,omitempty"`
 	// Unused53 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused53 string `json:"unused53"`
+	Unused53 *string `json:"unused53,omitempty"`
 	// Unused54 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused54 string `json:"unused54"`
+	Unused54 *string `json:"unused54,omitempty"`
 	// Unused55 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused55 string `json:"unused55"`
+	Unused55 *string `json:"unused55,omitempty"`
 	// Unused56 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused56 string `json:"unused56"`
+	Unused56 *string `json:"unused56,omitempty"`
 	// Unused57 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused57 string `json:"unused57"`
+	Unused57 *string `json:"unused57,omitempty"`
 	// Unused58 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused58 string `json:"unused58"`
+	Unused58 *string `json:"unused58,omitempty"`
 	// Unused59 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused59 string `json:"unused59"`
+	Unused59 *string `json:"unused59,omitempty"`
 	// Unused6 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused6 string `json:"unused6"`
+	Unused6 *string `json:"unused6,omitempty"`
 	// Unused60 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused60 string `json:"unused60"`
+	Unused60 *string `json:"unused60,omitempty"`
 	// Unused61 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused61 string `json:"unused61"`
+	Unused61 *string `json:"unused61,omitempty"`
 	// Unused62 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused62 string `json:"unused62"`
+	Unused62 *string `json:"unused62,omitempty"`
 	// Unused63 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused63 string `json:"unused63"`
+	Unused63 *string `json:"unused63,omitempty"`
 	// Unused64 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused64 string `json:"unused64"`
+	Unused64 *string `json:"unused64,omitempty"`
 	// Unused65 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused65 string `json:"unused65"`
+	Unused65 *string `json:"unused65,omitempty"`
 	// Unused66 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused66 string `json:"unused66"`
+	Unused66 *string `json:"unused66,omitempty"`
 	// Unused67 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused67 string `json:"unused67"`
+	Unused67 *string `json:"unused67,omitempty"`
 	// Unused68 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused68 string `json:"unused68"`
+	Unused68 *string `json:"unused68,omitempty"`
 	// Unused69 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused69 string `json:"unused69"`
+	Unused69 *string `json:"unused69,omitempty"`
 	// Unused7 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused7 string `json:"unused7"`
+	Unused7 *string `json:"unused7,omitempty"`
 	// Unused70 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused70 string `json:"unused70"`
+	Unused70 *string `json:"unused70,omitempty"`
 	// Unused71 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused71 string `json:"unused71"`
+	Unused71 *string `json:"unused71,omitempty"`
 	// Unused72 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused72 string `json:"unused72"`
+	Unused72 *string `json:"unused72,omitempty"`
 	// Unused73 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused73 string `json:"unused73"`
+	Unused73 *string `json:"unused73,omitempty"`
 	// Unused74 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused74 string `json:"unused74"`
+	Unused74 *string `json:"unused74,omitempty"`
 	// Unused75 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused75 string `json:"unused75"`
+	Unused75 *string `json:"unused75,omitempty"`
 	// Unused76 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused76 string `json:"unused76"`
+	Unused76 *string `json:"unused76,omitempty"`
 	// Unused77 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused77 string `json:"unused77"`
+	Unused77 *string `json:"unused77,omitempty"`
 	// Unused78 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused78 string `json:"unused78"`
+	Unused78 *string `json:"unused78,omitempty"`
 	// Unused79 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused79 string `json:"unused79"`
+	Unused79 *string `json:"unused79,omitempty"`
 	// Unused8 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused8 string `json:"unused8"`
+	Unused8 *string `json:"unused8,omitempty"`
 	// Unused80 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused80 string `json:"unused80"`
+	Unused80 *string `json:"unused80,omitempty"`
 	// Unused81 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused81 string `json:"unused81"`
+	Unused81 *string `json:"unused81,omitempty"`
 	// Unused82 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused82 string `json:"unused82"`
+	Unused82 *string `json:"unused82,omitempty"`
 	// Unused83 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused83 string `json:"unused83"`
+	Unused83 *string `json:"unused83,omitempty"`
 	// Unused84 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused84 string `json:"unused84"`
+	Unused84 *string `json:"unused84,omitempty"`
 	// Unused85 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused85 string `json:"unused85"`
+	Unused85 *string `json:"unused85,omitempty"`
 	// Unused86 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused86 string `json:"unused86"`
+	Unused86 *string `json:"unused86,omitempty"`
 	// Unused87 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused87 string `json:"unused87"`
+	Unused87 *string `json:"unused87,omitempty"`
 	// Unused88 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused88 string `json:"unused88"`
+	Unused88 *string `json:"unused88,omitempty"`
 	// Unused89 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused89 string `json:"unused89"`
+	Unused89 *string `json:"unused89,omitempty"`
 	// Unused9 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused9 string `json:"unused9"`
+	Unused9 *string `json:"unused9,omitempty"`
 	// Unused90 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused90 string `json:"unused90"`
+	Unused90 *string `json:"unused90,omitempty"`
 	// Unused91 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused91 string `json:"unused91"`
+	Unused91 *string `json:"unused91,omitempty"`
 	// Unused92 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused92 string `json:"unused92"`
+	Unused92 *string `json:"unused92,omitempty"`
 	// Unused93 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused93 string `json:"unused93"`
+	Unused93 *string `json:"unused93,omitempty"`
 	// Unused94 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused94 string `json:"unused94"`
+	Unused94 *string `json:"unused94,omitempty"`
 	// Unused95 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused95 string `json:"unused95"`
+	Unused95 *string `json:"unused95,omitempty"`
 	// Unused96 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused96 string `json:"unused96"`
+	Unused96 *string `json:"unused96,omitempty"`
 	// Unused97 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused97 string `json:"unused97"`
+	Unused97 *string `json:"unused97,omitempty"`
 	// Unused98 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused98 string `json:"unused98"`
+	Unused98 *string `json:"unused98,omitempty"`
 	// Unused99 Reference to unused volumes. This is used internally, and should not be modified manually.
-	Unused99 string `json:"unused99"`
+	Unused99 *string `json:"unused99,omitempty"`
 	// Usb0 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb0 string `json:"usb0"`
+	Usb0 *string `json:"usb0,omitempty"`
 	// Usb1 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb1 string `json:"usb1"`
+	Usb1 *string `json:"usb1,omitempty"`
 	// Usb10 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb10 string `json:"usb10"`
+	Usb10 *string `json:"usb10,omitempty"`
 	// Usb11 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb11 string `json:"usb11"`
+	Usb11 *string `json:"usb11,omitempty"`
 	// Usb12 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb12 string `json:"usb12"`
+	Usb12 *string `json:"usb12,omitempty"`
 	// Usb13 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb13 string `json:"usb13"`
+	Usb13 *string `json:"usb13,omitempty"`
 	// Usb2 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb2 string `json:"usb2"`
+	Usb2 *string `json:"usb2,omitempty"`
 	// Usb3 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb3 string `json:"usb3"`
+	Usb3 *string `json:"usb3,omitempty"`
 	// Usb4 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb4 string `json:"usb4"`
+	Usb4 *string `json:"usb4,omitempty"`
 	// Usb5 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb5 string `json:"usb5"`
+	Usb5 *string `json:"usb5,omitempty"`
 	// Usb6 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb6 string `json:"usb6"`
+	Usb6 *string `json:"usb6,omitempty"`
 	// Usb7 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb7 string `json:"usb7"`
+	Usb7 *string `json:"usb7,omitempty"`
 	// Usb8 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb8 string `json:"usb8"`
+	Usb8 *string `json:"usb8,omitempty"`
 	// Usb9 Configure an USB device (n is 0 to 4, for machine version >= 7.1 and ostype l26 or windows > 7, n can be up to 14).
-	Usb9 string `json:"usb9"`
+	Usb9 *string `json:"usb9,omitempty"`
 	// Vcpus Number of hotplugged vcpus.
 	Vcpus *client.PVEInt `json:"vcpus,omitempty"`
 	// Vga Configure the VGA hardware.
 	Vga *string `json:"vga,omitempty"`
 	// Virtio0 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio0 string `json:"virtio0"`
+	Virtio0 *string `json:"virtio0,omitempty"`
 	// Virtio1 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio1 string `json:"virtio1"`
+	Virtio1 *string `json:"virtio1,omitempty"`
 	// Virtio10 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio10 string `json:"virtio10"`
+	Virtio10 *string `json:"virtio10,omitempty"`
 	// Virtio11 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio11 string `json:"virtio11"`
+	Virtio11 *string `json:"virtio11,omitempty"`
 	// Virtio12 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio12 string `json:"virtio12"`
+	Virtio12 *string `json:"virtio12,omitempty"`
 	// Virtio13 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio13 string `json:"virtio13"`
+	Virtio13 *string `json:"virtio13,omitempty"`
 	// Virtio14 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio14 string `json:"virtio14"`
+	Virtio14 *string `json:"virtio14,omitempty"`
 	// Virtio15 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio15 string `json:"virtio15"`
+	Virtio15 *string `json:"virtio15,omitempty"`
 	// Virtio2 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio2 string `json:"virtio2"`
+	Virtio2 *string `json:"virtio2,omitempty"`
 	// Virtio3 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio3 string `json:"virtio3"`
+	Virtio3 *string `json:"virtio3,omitempty"`
 	// Virtio4 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio4 string `json:"virtio4"`
+	Virtio4 *string `json:"virtio4,omitempty"`
 	// Virtio5 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio5 string `json:"virtio5"`
+	Virtio5 *string `json:"virtio5,omitempty"`
 	// Virtio6 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio6 string `json:"virtio6"`
+	Virtio6 *string `json:"virtio6,omitempty"`
 	// Virtio7 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio7 string `json:"virtio7"`
+	Virtio7 *string `json:"virtio7,omitempty"`
 	// Virtio8 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio8 string `json:"virtio8"`
+	Virtio8 *string `json:"virtio8,omitempty"`
 	// Virtio9 Use volume as VIRTIO hard disk (n is 0 to 15).
-	Virtio9 string `json:"virtio9"`
+	Virtio9 *string `json:"virtio9,omitempty"`
 	// Virtiofs0 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs0 string `json:"virtiofs0"`
+	Virtiofs0 *string `json:"virtiofs0,omitempty"`
 	// Virtiofs1 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs1 string `json:"virtiofs1"`
+	Virtiofs1 *string `json:"virtiofs1,omitempty"`
 	// Virtiofs2 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs2 string `json:"virtiofs2"`
+	Virtiofs2 *string `json:"virtiofs2,omitempty"`
 	// Virtiofs3 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs3 string `json:"virtiofs3"`
+	Virtiofs3 *string `json:"virtiofs3,omitempty"`
 	// Virtiofs4 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs4 string `json:"virtiofs4"`
+	Virtiofs4 *string `json:"virtiofs4,omitempty"`
 	// Virtiofs5 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs5 string `json:"virtiofs5"`
+	Virtiofs5 *string `json:"virtiofs5,omitempty"`
 	// Virtiofs6 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs6 string `json:"virtiofs6"`
+	Virtiofs6 *string `json:"virtiofs6,omitempty"`
 	// Virtiofs7 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs7 string `json:"virtiofs7"`
+	Virtiofs7 *string `json:"virtiofs7,omitempty"`
 	// Virtiofs8 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs8 string `json:"virtiofs8"`
+	Virtiofs8 *string `json:"virtiofs8,omitempty"`
 	// Virtiofs9 Configuration for sharing a directory between host and guest using Virtio-fs.
-	Virtiofs9 string `json:"virtiofs9"`
+	Virtiofs9 *string `json:"virtiofs9,omitempty"`
 	// Vmgenid Set VM Generation ID. Use '1' to autogenerate on create or update, pass '0' to disable explicitly.
 	Vmgenid *string `json:"vmgenid,omitempty"`
 	// Vmstate Reference to a volume which stores the VM state. This is used internally for snapshots.
