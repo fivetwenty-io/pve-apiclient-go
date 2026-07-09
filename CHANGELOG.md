@@ -5,6 +5,58 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.7.0] — 2026-07-09
+
+### Fixed
+
+- `cmd/pvegen` gained per-endpoint returns-schema overrides
+  (`returnsOverrides`, keyed `"VERB /path"` per dialect). Eleven PDM
+  endpoints whose apidoc declares `returns: null` but which return data —
+  `GET /nodes`, `GET /nodes/{node}/journal`,
+  `GET /auto-install/prepared/{id}`, the PVE/PBS remote
+  `apt/repositories` proxies, `GET /pve/remotes/{remote}/options`,
+  `/updates`, `/cluster-nextid`, `/nodes/{node}/config`, and the qemu/lxc
+  `/pending` endpoints — now generate real response types instead of
+  discarding the body.
+- Two copy-pasted PDM returns schemas corrected:
+  `GET /pve/remotes/{remote}/nodes/{node}/subscription` now decodes
+  subscription info (was the node-status shape), and
+  `GET /pve/remotes/{remote}/tasks/{upid}/log` now decodes an array of
+  `{n, t}` log-line objects (was the task-status shape).
+- PDM-native `GET /nodes/{node}/tasks/{upid}/log` (`ListTasksLog`) now
+  decodes as an array of `{n, t}` line objects; the apidoc documents a
+  single element's shape without the wrapping array.
+- Endpoints whose returns schema is marked `optional` now tolerate an
+  empty response body instead of erroring. Fixes PDM
+  `UpdateUsersToken` with `regenerate=false` and PBS
+  `ListAccessTfaWebauthn`, which share the same optional-returns pattern.
+- `json.RawMessage` and `[]json.RawMessage` request fields are now sent
+  as their compact JSON text as single form values. Previously the
+  marshal-to-map round-trip mangled them into Proxmox comma
+  option-strings or Go `%v` map formatting, so servers expecting nested
+  JSON rejected or misparsed the request. Affects PDM
+  `auto-install/prepared`, `sdn/vnets`, `sdn/zones`,
+  `subscriptions/bulk-assign`, and PVE `cluster/sdn/fabrics/*`.
+- Numbered-slot properties in returns schemas (`dev0`–`dev255`, `mp*`,
+  `net*`, `unused*`, `scsi*`, and the other guest-config slot families)
+  are now treated as implicitly optional and generate pointer fields
+  with `omitempty`. Sparse PDM remote LXC/QEMU guest configs no longer
+  fabricate hundreds of empty values on re-marshal.
+
+### Changed
+
+Breaking corrections — compile-time breaks for consumers of the
+previously mis-generated symbols, which carried no usable data:
+
+- Eleven PDM service methods changed signature from `(ctx, ...) error`
+  to `(ctx, ...) (*Response, error)` (the returns-null endpoints above).
+- `pdm/nodes.ListTasksLogResponse` redefined from a task-status struct
+  to a slice of log-line objects.
+- Roughly 1,224 fields in `pdm/pve` LXC/QEMU config response structs
+  changed from value types to pointers with `omitempty`.
+- `pdm/access.UpdateUsersTokenResponse.Value` changed from `string` to
+  `*string` (absent when the token secret is not regenerated).
+
 ## [v3.6.0] — 2026-07-08
 
 ### Added
