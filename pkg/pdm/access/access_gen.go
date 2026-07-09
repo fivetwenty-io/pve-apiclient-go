@@ -1315,10 +1315,8 @@ type UpdateUsersTokenParams struct {
 
 // UpdateUsersTokenResponse mirrors the shape returned by PUT /access/users/{userid}/token/{token-name}.
 type UpdateUsersTokenResponse struct {
-	// Tokenid Authentication ID
-	Tokenid string `json:"tokenid"`
-	// Value The secret associated with the token.
-	Value string `json:"value"`
+	Tokenid string  `json:"tokenid"`
+	Value   *string `json:"value,omitempty"`
 }
 
 // UpdateUsersToken implements Service.UpdateUsersToken. PUT /access/users/{userid}/token/{token-name}.

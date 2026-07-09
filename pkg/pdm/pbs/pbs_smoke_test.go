@@ -387,16 +387,19 @@ func TestGenerated_Pbs_Methods(t *testing.T) {
 	t.Run("ListRemotesNodesAptRepositories", func(t *testing.T) {
 		harness.set(http.StatusOK, `{"data":{},"success":1}`)
 
-		err := svc.ListRemotesNodesAptRepositories(ctx, "sample-remote", "sample-node")
+		resp, err := svc.ListRemotesNodesAptRepositories(ctx, "sample-remote", "sample-node")
 		if err != nil {
 			t.Fatalf("ListRemotesNodesAptRepositories: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesNodesAptRepositories: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pbs/remotes/sample-remote/nodes/sample-node/apt/repositories")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesNodesAptRepositories(nilCtx, "sample-remote", "sample-node"); err == nil {
+		if _, err := svc.ListRemotesNodesAptRepositories(nilCtx, "sample-remote", "sample-node"); err == nil {
 			t.Errorf("ListRemotesNodesAptRepositories: expected error for nil context, got nil")
 		}
 	})

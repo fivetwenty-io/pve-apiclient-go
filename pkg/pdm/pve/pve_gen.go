@@ -46,7 +46,7 @@ type Service interface {
 	GetRemotes(ctx context.Context, remote string) error
 	// ListRemotesClusterNextid GET /pve/remotes/{remote}/cluster-nextid
 	// Get the next free VMID on the (target) cluster, e.g. to prefill a migration target VMID.
-	ListRemotesClusterNextid(ctx context.Context, remote string, params *ListRemotesClusterNextidParams) error
+	ListRemotesClusterNextid(ctx context.Context, remote string, params *ListRemotesClusterNextidParams) (*ListRemotesClusterNextidResponse, error)
 	// ListRemotesClusterStatus GET /pve/remotes/{remote}/cluster-status
 	// Query the cluster nodes status.
 	ListRemotesClusterStatus(ctx context.Context, remote string, params *ListRemotesClusterStatusParams) (*ListRemotesClusterStatusResponse, error)
@@ -91,7 +91,7 @@ type Service interface {
 	CreateRemotesLxcMigrate(ctx context.Context, remote string, vmid string, params *CreateRemotesLxcMigrateParams) (*CreateRemotesLxcMigrateResponse, error)
 	// ListRemotesLxcPending GET /pve/remotes/{remote}/lxc/{vmid}/pending
 	// Get the pending configuration of a lxc container from a remote. If a node is provided, the container must be on that node, otherwise the node is determined automatically.
-	ListRemotesLxcPending(ctx context.Context, remote string, vmid string, params *ListRemotesLxcPendingParams) error
+	ListRemotesLxcPending(ctx context.Context, remote string, vmid string, params *ListRemotesLxcPendingParams) (*ListRemotesLxcPendingResponse, error)
 	// CreateRemotesLxcRemoteMigrate POST /pve/remotes/{remote}/lxc/{vmid}/remote-migrate
 	// Perform a remote migration of an lxc container.
 	CreateRemotesLxcRemoteMigrate(ctx context.Context, remote string, vmid string, params *CreateRemotesLxcRemoteMigrateParams) (*CreateRemotesLxcRemoteMigrateResponse, error)
@@ -145,7 +145,7 @@ type Service interface {
 	ListRemotesNodesAptChangelog(ctx context.Context, remote string, node string, params *ListRemotesNodesAptChangelogParams) (*ListRemotesNodesAptChangelogResponse, error)
 	// ListRemotesNodesAptRepositories GET /pve/remotes/{remote}/nodes/{node}/apt/repositories
 	// Get configured APT repositories.
-	ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) error
+	ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) (*ListRemotesNodesAptRepositoriesResponse, error)
 	// ListRemotesNodesAptUpdate GET /pve/remotes/{remote}/nodes/{node}/apt/update
 	// List available APT updates for a remote PVE node.
 	ListRemotesNodesAptUpdate(ctx context.Context, remote string, node string) (*ListRemotesNodesAptUpdateResponse, error)
@@ -154,7 +154,7 @@ type Service interface {
 	CreateRemotesNodesAptUpdate(ctx context.Context, remote string, node string) (*CreateRemotesNodesAptUpdateResponse, error)
 	// ListRemotesNodesConfig GET /pve/remotes/{remote}/nodes/{node}/config
 	// Get config for the node.
-	ListRemotesNodesConfig(ctx context.Context, remote string, node string) error
+	ListRemotesNodesConfig(ctx context.Context, remote string, node string) (*ListRemotesNodesConfigResponse, error)
 	// ListRemotesNodesFirewall GET /pve/remotes/{remote}/nodes/{node}/firewall
 	// Directory index.
 	ListRemotesNodesFirewall(ctx context.Context, remote string, node string) error
@@ -217,7 +217,7 @@ type Service interface {
 	ListRemotesNodesVncwebsocket(ctx context.Context, remote string, node string, params *ListRemotesNodesVncwebsocketParams) error
 	// ListRemotesOptions GET /pve/remotes/{remote}/options
 	// Return the remote's cluster options.
-	ListRemotesOptions(ctx context.Context, remote string) error
+	ListRemotesOptions(ctx context.Context, remote string) (*ListRemotesOptionsResponse, error)
 	// ListRemotesQemu GET /pve/remotes/{remote}/qemu
 	// Query the remote's list of qemu VMs. If no node is provided, the all nodes are queried.
 	ListRemotesQemu(ctx context.Context, remote string, params *ListRemotesQemuParams) (*ListRemotesQemuResponse, error)
@@ -247,7 +247,7 @@ type Service interface {
 	CreateRemotesQemuMigrate(ctx context.Context, remote string, vmid string, params *CreateRemotesQemuMigrateParams) (*CreateRemotesQemuMigrateResponse, error)
 	// ListRemotesQemuPending GET /pve/remotes/{remote}/qemu/{vmid}/pending
 	// Get the pending configuration of a qemu VM from a remote. If a node is provided, the VM must be on that node, otherwise the node is determined automatically.
-	ListRemotesQemuPending(ctx context.Context, remote string, vmid string, params *ListRemotesQemuPendingParams) error
+	ListRemotesQemuPending(ctx context.Context, remote string, vmid string, params *ListRemotesQemuPendingParams) (*ListRemotesQemuPendingResponse, error)
 	// CreateRemotesQemuRemoteMigrate POST /pve/remotes/{remote}/qemu/{vmid}/remote-migrate
 	// Perform a remote migration of a VM.
 	CreateRemotesQemuRemoteMigrate(ctx context.Context, remote string, vmid string, params *CreateRemotesQemuRemoteMigrateParams) (*CreateRemotesQemuRemoteMigrateResponse, error)
@@ -313,7 +313,7 @@ type Service interface {
 	ListRemotesTasksStatus(ctx context.Context, remote string, upid string, params *ListRemotesTasksStatusParams) (*ListRemotesTasksStatusResponse, error)
 	// ListRemotesUpdates GET /pve/remotes/{remote}/updates
 	// Return the cached update information about a remote.
-	ListRemotesUpdates(ctx context.Context, remote string) error
+	ListRemotesUpdates(ctx context.Context, remote string) (*ListRemotesUpdatesResponse, error)
 	// CreateScan POST /pve/scan
 	// Scans the given connection info for pve cluster information  For each node that is returned, the TLS connection is probed, to check if using a fingerprint is necessary.
 	CreateScan(ctx context.Context, params *CreateScanParams) (*CreateScanResponse, error)
@@ -550,34 +550,49 @@ type ListRemotesClusterNextidParams struct {
 	TargetEndpoint *string `json:"target-endpoint,omitempty"`
 }
 
+// ListRemotesClusterNextidResponse is the raw JSON returned by GET /pve/remotes/{remote}/cluster-nextid.
+type ListRemotesClusterNextidResponse = json.RawMessage
+
 // ListRemotesClusterNextid implements Service.ListRemotesClusterNextid. GET /pve/remotes/{remote}/cluster-nextid.
-func (s *service) ListRemotesClusterNextid(ctx context.Context, remote string, params *ListRemotesClusterNextidParams) error {
+func (s *service) ListRemotesClusterNextid(ctx context.Context, remote string, params *ListRemotesClusterNextidParams) (*ListRemotesClusterNextidResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pve.ListRemotesClusterNextid: ctx must not be nil")
+		return nil, fmt.Errorf("pve.ListRemotesClusterNextid: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pve/remotes/%s/cluster-nextid", url.PathEscape(remote))
 	var body map[string]interface{}
 	if params != nil {
 		raw, err := json.Marshal(params)
 		if err != nil {
-			return fmt.Errorf("pve.ListRemotesClusterNextid: marshal params: %w", err)
+			return nil, fmt.Errorf("pve.ListRemotesClusterNextid: marshal params: %w", err)
 		}
 		dec := json.NewDecoder(strings.NewReader(string(raw)))
 		dec.UseNumber()
 		err = dec.Decode(&body)
 		if err != nil {
-			return fmt.Errorf("pve.ListRemotesClusterNextid: decode params: %w", err)
+			return nil, fmt.Errorf("pve.ListRemotesClusterNextid: decode params: %w", err)
 		}
 	}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pve.ListRemotesClusterNextid: %w", err)
+		return nil, fmt.Errorf("pve.ListRemotesClusterNextid: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pve.ListRemotesClusterNextid: nil response from client")
+		return nil, fmt.Errorf("pve.ListRemotesClusterNextid: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListRemotesClusterNextidResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesClusterNextid: re-marshal data: %w", err)
+	}
+	out := &ListRemotesClusterNextidResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesClusterNextid: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // ListRemotesClusterStatusParams is the request payload for ListRemotesClusterStatus.
@@ -2869,34 +2884,49 @@ type ListRemotesLxcPendingParams struct {
 	Node *string `json:"node,omitempty"`
 }
 
+// ListRemotesLxcPendingResponse mirrors the shape returned by GET /pve/remotes/{remote}/lxc/{vmid}/pending.
+type ListRemotesLxcPendingResponse []json.RawMessage
+
 // ListRemotesLxcPending implements Service.ListRemotesLxcPending. GET /pve/remotes/{remote}/lxc/{vmid}/pending.
-func (s *service) ListRemotesLxcPending(ctx context.Context, remote string, vmid string, params *ListRemotesLxcPendingParams) error {
+func (s *service) ListRemotesLxcPending(ctx context.Context, remote string, vmid string, params *ListRemotesLxcPendingParams) (*ListRemotesLxcPendingResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pve.ListRemotesLxcPending: ctx must not be nil")
+		return nil, fmt.Errorf("pve.ListRemotesLxcPending: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pve/remotes/%s/lxc/%s/pending", url.PathEscape(remote), url.PathEscape(vmid))
 	var body map[string]interface{}
 	if params != nil {
 		raw, err := json.Marshal(params)
 		if err != nil {
-			return fmt.Errorf("pve.ListRemotesLxcPending: marshal params: %w", err)
+			return nil, fmt.Errorf("pve.ListRemotesLxcPending: marshal params: %w", err)
 		}
 		dec := json.NewDecoder(strings.NewReader(string(raw)))
 		dec.UseNumber()
 		err = dec.Decode(&body)
 		if err != nil {
-			return fmt.Errorf("pve.ListRemotesLxcPending: decode params: %w", err)
+			return nil, fmt.Errorf("pve.ListRemotesLxcPending: decode params: %w", err)
 		}
 	}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pve.ListRemotesLxcPending: %w", err)
+		return nil, fmt.Errorf("pve.ListRemotesLxcPending: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pve.ListRemotesLxcPending: nil response from client")
+		return nil, fmt.Errorf("pve.ListRemotesLxcPending: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListRemotesLxcPendingResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesLxcPending: re-marshal data: %w", err)
+	}
+	out := &ListRemotesLxcPendingResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesLxcPending: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // CreateRemotesLxcRemoteMigrateParams is the request payload for CreateRemotesLxcRemoteMigrate.
@@ -3720,22 +3750,42 @@ func (s *service) ListRemotesNodesAptChangelog(ctx context.Context, remote strin
 	return out, nil
 }
 
+// ListRemotesNodesAptRepositoriesResponse mirrors the shape returned by GET /pve/remotes/{remote}/nodes/{node}/apt/repositories.
+type ListRemotesNodesAptRepositoriesResponse struct {
+	Digest        string            `json:"digest"`
+	Errors        []json.RawMessage `json:"errors"`
+	Files         []json.RawMessage `json:"files"`
+	Infos         []json.RawMessage `json:"infos"`
+	StandardRepos []json.RawMessage `json:"standard-repos"`
+}
+
 // ListRemotesNodesAptRepositories implements Service.ListRemotesNodesAptRepositories. GET /pve/remotes/{remote}/nodes/{node}/apt/repositories.
-func (s *service) ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) error {
+func (s *service) ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) (*ListRemotesNodesAptRepositoriesResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pve.ListRemotesNodesAptRepositories: ctx must not be nil")
+		return nil, fmt.Errorf("pve.ListRemotesNodesAptRepositories: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pve/remotes/%s/nodes/%s/apt/repositories", url.PathEscape(remote), url.PathEscape(node))
 	var body map[string]interface{}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pve.ListRemotesNodesAptRepositories: %w", err)
+		return nil, fmt.Errorf("pve.ListRemotesNodesAptRepositories: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pve.ListRemotesNodesAptRepositories: nil response from client")
+		return nil, fmt.Errorf("pve.ListRemotesNodesAptRepositories: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		return nil, fmt.Errorf("pve.ListRemotesNodesAptRepositories: empty data in response (code=%d)", resp.Code)
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesNodesAptRepositories: re-marshal data: %w", err)
+	}
+	out := &ListRemotesNodesAptRepositoriesResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesNodesAptRepositories: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // ListRemotesNodesAptUpdateResponse mirrors the shape returned by GET /pve/remotes/{remote}/nodes/{node}/apt/update.
@@ -3804,22 +3854,37 @@ func (s *service) CreateRemotesNodesAptUpdate(ctx context.Context, remote string
 	return out, nil
 }
 
+// ListRemotesNodesConfigResponse is the raw JSON returned by GET /pve/remotes/{remote}/nodes/{node}/config.
+type ListRemotesNodesConfigResponse = json.RawMessage
+
 // ListRemotesNodesConfig implements Service.ListRemotesNodesConfig. GET /pve/remotes/{remote}/nodes/{node}/config.
-func (s *service) ListRemotesNodesConfig(ctx context.Context, remote string, node string) error {
+func (s *service) ListRemotesNodesConfig(ctx context.Context, remote string, node string) (*ListRemotesNodesConfigResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pve.ListRemotesNodesConfig: ctx must not be nil")
+		return nil, fmt.Errorf("pve.ListRemotesNodesConfig: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pve/remotes/%s/nodes/%s/config", url.PathEscape(remote), url.PathEscape(node))
 	var body map[string]interface{}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pve.ListRemotesNodesConfig: %w", err)
+		return nil, fmt.Errorf("pve.ListRemotesNodesConfig: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pve.ListRemotesNodesConfig: nil response from client")
+		return nil, fmt.Errorf("pve.ListRemotesNodesConfig: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListRemotesNodesConfigResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesNodesConfig: re-marshal data: %w", err)
+	}
+	out := &ListRemotesNodesConfigResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesNodesConfig: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // ListRemotesNodesFirewall implements Service.ListRemotesNodesFirewall. GET /pve/remotes/{remote}/nodes/{node}/firewall.
@@ -4527,22 +4592,18 @@ func (s *service) ListRemotesNodesStorageStatus(ctx context.Context, remote stri
 
 // ListRemotesNodesSubscriptionResponse mirrors the shape returned by GET /pve/remotes/{remote}/nodes/{node}/subscription.
 type ListRemotesNodesSubscriptionResponse struct {
-	// BootInfo Meta-information about the boot mode.
-	BootInfo json.RawMessage `json:"boot-info"`
-	// Cpu The current cpu usage.
-	Cpu client.PVEFloat `json:"cpu"`
-	// Cpuinfo Object.
-	Cpuinfo json.RawMessage `json:"cpuinfo"`
-	// CurrentKernel Meta-information about the currently booted kernel of this node.
-	CurrentKernel json.RawMessage `json:"current-kernel"`
-	// Loadavg An array of load avg for 1, 5 and 15 minutes respectively.
-	Loadavg []string `json:"loadavg"`
-	// Memory Object.
-	Memory json.RawMessage `json:"memory"`
-	// Pveversion The PVE version string.
-	Pveversion string `json:"pveversion"`
-	// Rootfs Object.
-	Rootfs json.RawMessage `json:"rootfs"`
+	Checktime   *client.PVEInt `json:"checktime,omitempty"`
+	Key         *string        `json:"key,omitempty"`
+	Level       *string        `json:"level,omitempty"`
+	Message     *string        `json:"message,omitempty"`
+	Nextduedate *string        `json:"nextduedate,omitempty"`
+	Productname *string        `json:"productname,omitempty"`
+	Regdate     *string        `json:"regdate,omitempty"`
+	Serverid    *string        `json:"serverid,omitempty"`
+	Signature   *string        `json:"signature,omitempty"`
+	Sockets     *client.PVEInt `json:"sockets,omitempty"`
+	Status      string         `json:"status"`
+	Url         *string        `json:"url,omitempty"`
 }
 
 // ListRemotesNodesSubscription implements Service.ListRemotesNodesSubscription. GET /pve/remotes/{remote}/nodes/{node}/subscription.
@@ -4651,22 +4712,37 @@ func (s *service) ListRemotesNodesVncwebsocket(ctx context.Context, remote strin
 	return nil
 }
 
+// ListRemotesOptionsResponse is the raw JSON returned by GET /pve/remotes/{remote}/options.
+type ListRemotesOptionsResponse = json.RawMessage
+
 // ListRemotesOptions implements Service.ListRemotesOptions. GET /pve/remotes/{remote}/options.
-func (s *service) ListRemotesOptions(ctx context.Context, remote string) error {
+func (s *service) ListRemotesOptions(ctx context.Context, remote string) (*ListRemotesOptionsResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pve.ListRemotesOptions: ctx must not be nil")
+		return nil, fmt.Errorf("pve.ListRemotesOptions: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pve/remotes/%s/options", url.PathEscape(remote))
 	var body map[string]interface{}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pve.ListRemotesOptions: %w", err)
+		return nil, fmt.Errorf("pve.ListRemotesOptions: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pve.ListRemotesOptions: nil response from client")
+		return nil, fmt.Errorf("pve.ListRemotesOptions: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListRemotesOptionsResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesOptions: re-marshal data: %w", err)
+	}
+	out := &ListRemotesOptionsResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesOptions: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // ListRemotesQemuParams is the request payload for ListRemotesQemu.
@@ -6153,34 +6229,49 @@ type ListRemotesQemuPendingParams struct {
 	Node *string `json:"node,omitempty"`
 }
 
+// ListRemotesQemuPendingResponse mirrors the shape returned by GET /pve/remotes/{remote}/qemu/{vmid}/pending.
+type ListRemotesQemuPendingResponse []json.RawMessage
+
 // ListRemotesQemuPending implements Service.ListRemotesQemuPending. GET /pve/remotes/{remote}/qemu/{vmid}/pending.
-func (s *service) ListRemotesQemuPending(ctx context.Context, remote string, vmid string, params *ListRemotesQemuPendingParams) error {
+func (s *service) ListRemotesQemuPending(ctx context.Context, remote string, vmid string, params *ListRemotesQemuPendingParams) (*ListRemotesQemuPendingResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pve.ListRemotesQemuPending: ctx must not be nil")
+		return nil, fmt.Errorf("pve.ListRemotesQemuPending: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pve/remotes/%s/qemu/%s/pending", url.PathEscape(remote), url.PathEscape(vmid))
 	var body map[string]interface{}
 	if params != nil {
 		raw, err := json.Marshal(params)
 		if err != nil {
-			return fmt.Errorf("pve.ListRemotesQemuPending: marshal params: %w", err)
+			return nil, fmt.Errorf("pve.ListRemotesQemuPending: marshal params: %w", err)
 		}
 		dec := json.NewDecoder(strings.NewReader(string(raw)))
 		dec.UseNumber()
 		err = dec.Decode(&body)
 		if err != nil {
-			return fmt.Errorf("pve.ListRemotesQemuPending: decode params: %w", err)
+			return nil, fmt.Errorf("pve.ListRemotesQemuPending: decode params: %w", err)
 		}
 	}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pve.ListRemotesQemuPending: %w", err)
+		return nil, fmt.Errorf("pve.ListRemotesQemuPending: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pve.ListRemotesQemuPending: nil response from client")
+		return nil, fmt.Errorf("pve.ListRemotesQemuPending: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListRemotesQemuPendingResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesQemuPending: re-marshal data: %w", err)
+	}
+	out := &ListRemotesQemuPendingResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesQemuPending: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // CreateRemotesQemuRemoteMigrateParams is the request payload for CreateRemotesQemuRemoteMigrate.
@@ -7153,28 +7244,7 @@ type ListRemotesTasksLogParams struct {
 }
 
 // ListRemotesTasksLogResponse mirrors the shape returned by GET /pve/remotes/{remote}/tasks/{upid}/log.
-type ListRemotesTasksLogResponse struct {
-	// Exitstatus The task's exit status.
-	Exitstatus *string `json:"exitstatus,omitempty"`
-	// Id The task id.
-	Id string `json:"id"`
-	// Node The task's node.
-	Node string `json:"node"`
-	// Pid The task process id.
-	Pid client.PVEInt `json:"pid"`
-	// Pstart The task's proc start time.
-	Pstart client.PVEInt `json:"pstart"`
-	// Starttime The task's start time.
-	Starttime client.PVEInt `json:"starttime"`
-	// Status A guest's run state.
-	Status string `json:"status"`
-	// Type The task type.
-	Type string `json:"type"`
-	// Upid The task's UPID.
-	Upid string `json:"upid"`
-	// User The task owner's user id.
-	User string `json:"user"`
-}
+type ListRemotesTasksLogResponse []json.RawMessage
 
 // ListRemotesTasksLog implements Service.ListRemotesTasksLog. GET /pve/remotes/{remote}/tasks/{upid}/log.
 func (s *service) ListRemotesTasksLog(ctx context.Context, remote string, upid string, params *ListRemotesTasksLogParams) (*ListRemotesTasksLogResponse, error) {
@@ -7203,7 +7273,8 @@ func (s *service) ListRemotesTasksLog(ctx context.Context, remote string, upid s
 		return nil, fmt.Errorf("pve.ListRemotesTasksLog: nil response from client")
 	}
 	if resp.Data == nil {
-		return nil, fmt.Errorf("pve.ListRemotesTasksLog: empty data in response (code=%d)", resp.Code)
+		out := ListRemotesTasksLogResponse{}
+		return &out, nil
 	}
 	raw, err := json.Marshal(resp.Data)
 	if err != nil {
@@ -7288,22 +7359,37 @@ func (s *service) ListRemotesTasksStatus(ctx context.Context, remote string, upi
 	return out, nil
 }
 
+// ListRemotesUpdatesResponse mirrors the shape returned by GET /pve/remotes/{remote}/updates.
+type ListRemotesUpdatesResponse []json.RawMessage
+
 // ListRemotesUpdates implements Service.ListRemotesUpdates. GET /pve/remotes/{remote}/updates.
-func (s *service) ListRemotesUpdates(ctx context.Context, remote string) error {
+func (s *service) ListRemotesUpdates(ctx context.Context, remote string) (*ListRemotesUpdatesResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pve.ListRemotesUpdates: ctx must not be nil")
+		return nil, fmt.Errorf("pve.ListRemotesUpdates: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pve/remotes/%s/updates", url.PathEscape(remote))
 	var body map[string]interface{}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pve.ListRemotesUpdates: %w", err)
+		return nil, fmt.Errorf("pve.ListRemotesUpdates: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pve.ListRemotesUpdates: nil response from client")
+		return nil, fmt.Errorf("pve.ListRemotesUpdates: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListRemotesUpdatesResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesUpdates: re-marshal data: %w", err)
+	}
+	out := &ListRemotesUpdatesResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pve.ListRemotesUpdates: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // CreateScanParams is the request payload for CreateScan.

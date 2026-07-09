@@ -327,16 +327,19 @@ func TestGenerated_Autoinstall_Methods(t *testing.T) {
 	t.Run("GetPrepared", func(t *testing.T) {
 		harness.set(http.StatusOK, `{"data":{},"success":1}`)
 
-		err := svc.GetPrepared(ctx, "sample-id")
+		resp, err := svc.GetPrepared(ctx, "sample-id")
 		if err != nil {
 			t.Fatalf("GetPrepared: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("GetPrepared: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/auto-install/prepared/sample-id")
 
 		var nilCtx context.Context
-		if err := svc.GetPrepared(nilCtx, "sample-id"); err == nil {
+		if _, err := svc.GetPrepared(nilCtx, "sample-id"); err == nil {
 			t.Errorf("GetPrepared: expected error for nil context, got nil")
 		}
 	})

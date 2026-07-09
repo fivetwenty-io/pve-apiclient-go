@@ -151,18 +151,21 @@ func TestGenerated_Nodes_Methods(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("ListNodes", func(t *testing.T) {
-		harness.set(http.StatusOK, `{"data":{},"success":1}`)
+		harness.set(http.StatusOK, `{"data":[],"success":1}`)
 
-		err := svc.ListNodes(ctx)
+		resp, err := svc.ListNodes(ctx)
 		if err != nil {
 			t.Fatalf("ListNodes: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListNodes: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/nodes")
 
 		var nilCtx context.Context
-		if err := svc.ListNodes(nilCtx); err == nil {
+		if _, err := svc.ListNodes(nilCtx); err == nil {
 			t.Errorf("ListNodes: expected error for nil context, got nil")
 		}
 	})
@@ -525,18 +528,21 @@ func TestGenerated_Nodes_Methods(t *testing.T) {
 		}
 	})
 	t.Run("ListJournal", func(t *testing.T) {
-		harness.set(http.StatusOK, `{"data":{},"success":1}`)
+		harness.set(http.StatusOK, `{"data":[],"success":1}`)
 
-		err := svc.ListJournal(ctx, "sample-node", &nodes.ListJournalParams{})
+		resp, err := svc.ListJournal(ctx, "sample-node", &nodes.ListJournalParams{})
 		if err != nil {
 			t.Fatalf("ListJournal: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListJournal: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/nodes/sample-node/journal")
 
 		var nilCtx context.Context
-		if err := svc.ListJournal(nilCtx, "sample-node", &nodes.ListJournalParams{}); err == nil {
+		if _, err := svc.ListJournal(nilCtx, "sample-node", &nodes.ListJournalParams{}); err == nil {
 			t.Errorf("ListJournal: expected error for nil context, got nil")
 		}
 	})
@@ -932,7 +938,7 @@ func TestGenerated_Nodes_Methods(t *testing.T) {
 		}
 	})
 	t.Run("ListTasksLog", func(t *testing.T) {
-		harness.set(http.StatusOK, `{"data":{},"success":1}`)
+		harness.set(http.StatusOK, `{"data":[],"success":1}`)
 
 		resp, err := svc.ListTasksLog(ctx, "sample-node", "sample-upid", &nodes.ListTasksLogParams{})
 		if err != nil {
@@ -1045,7 +1051,7 @@ func TestGenerated_Nodes_Methods(t *testing.T) {
 	t.Run("ErrorPath_GET", func(t *testing.T) {
 		harness.set(http.StatusInternalServerError, `{"data":null,"success":0,"message":"boom"}`)
 
-		err := svc.ListNodes(ctx)
+		_, err := svc.ListNodes(ctx)
 		if err == nil {
 			t.Fatalf("ListNodes: expected error on 500 response, got nil")
 		}

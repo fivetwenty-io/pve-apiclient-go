@@ -212,7 +212,169 @@ var dialects = map[string]*dialectConfig{
 			namespaceRoot: true,
 		},
 		skipSmokeTests:   map[string]bool{},
-		returnsOverrides: map[string]*schema{},
+		returnsOverrides: pdmReturnsOverrides,
+	},
+}
+
+// schemaOptional is the json.RawMessage encoding of "optional": 1, used
+// when hand-authoring returnsOverrides schema literals below (see
+// isOptional).
+var schemaOptional = json.RawMessage("1") //nolint:gochecknoglobals // immutable literal reused across override schemas
+
+// aptRepositoriesSchema mirrors the "returns" shape both PVE's and PBS's
+// own GET /nodes/{node}/apt/repositories declare — identical top-level
+// properties in both _data/apidoc.json and _data/pbs-apidoc.json — reused
+// below for both PDM remote-proxy variants of the endpoint. Nested item
+// shapes are left as bare objects: goTypeFor collapses array-of-object
+// item types to json.RawMessage regardless of how much of the nested
+// shape is spelled out, so there is nothing to gain by transcribing it.
+//
+//nolint:gochecknoglobals // hand-authored override schema, read-only after init
+var aptRepositoriesSchema = &schema{
+	Type: schemaTypeObject,
+	Properties: map[string]*schema{
+		"digest":         {Type: schemaTypeString},
+		"errors":         {Type: schemaTypeArray, Items: &schema{Type: schemaTypeObject}},
+		"files":          {Type: schemaTypeArray, Items: &schema{Type: schemaTypeObject}},
+		"infos":          {Type: schemaTypeArray, Items: &schema{Type: schemaTypeObject}},
+		"standard-repos": {Type: schemaTypeArray, Items: &schema{Type: schemaTypeObject}},
+	},
+}
+
+// pendingItemsSchema mirrors PVE's GET /nodes/{node}/qemu/{vmid}/pending
+// and GET /nodes/{node}/lxc/{vmid}/pending (identical shape for both guest
+// types): an array of pending-change descriptors.
+//
+//nolint:gochecknoglobals // hand-authored override schema, read-only after init
+var pendingItemsSchema = &schema{
+	Type: schemaTypeArray,
+	Items: &schema{
+		Type: schemaTypeObject,
+		Properties: map[string]*schema{
+			"key":      {Type: schemaTypeString},
+			fieldValue: {Type: schemaTypeString, Optional: schemaOptional},
+			"pending":  {Type: schemaTypeString, Optional: schemaOptional},
+			"delete":   {Type: schemaTypeInteger, Optional: schemaOptional},
+		},
+	},
+}
+
+// subscriptionInfoSchema mirrors PVE's GET /nodes/{node}/subscription — the
+// correct shape for the PDM remote-proxy subscription endpoint, which
+// today wrongly carries a copy of the node-status schema (see
+// pdmReturnsOverrides).
+//
+//nolint:gochecknoglobals // hand-authored override schema, read-only after init
+var subscriptionInfoSchema = &schema{
+	Type: schemaTypeObject,
+	Properties: map[string]*schema{
+		"status":      {Type: schemaTypeString},
+		"key":         {Type: schemaTypeString, Optional: schemaOptional},
+		"level":       {Type: schemaTypeString, Optional: schemaOptional},
+		"message":     {Type: schemaTypeString, Optional: schemaOptional},
+		"checktime":   {Type: schemaTypeInteger, Optional: schemaOptional},
+		"nextduedate": {Type: schemaTypeString, Optional: schemaOptional},
+		"productname": {Type: schemaTypeString, Optional: schemaOptional},
+		"regdate":     {Type: schemaTypeString, Optional: schemaOptional},
+		"serverid":    {Type: schemaTypeString, Optional: schemaOptional},
+		"signature":   {Type: schemaTypeString, Optional: schemaOptional},
+		"sockets":     {Type: schemaTypeInteger, Optional: schemaOptional},
+		"url":         {Type: schemaTypeString, Optional: schemaOptional},
+	},
+}
+
+// taskLogLinesSchema mirrors PVE's GET /nodes/{node}/tasks/{upid}/log: an
+// array of {n, t} log-line objects. Reused below for the PDM-native
+// task-log endpoint (whose own apidoc entry documents a single line's
+// shape without the wrapping array) and for the PVE remote-proxy variant
+// of the endpoint (which today wrongly carries a copy of the task-status
+// schema).
+//
+//nolint:gochecknoglobals // hand-authored override schema, read-only after init
+var taskLogLinesSchema = &schema{
+	Type: schemaTypeArray,
+	Items: &schema{
+		Type: schemaTypeObject,
+		Properties: map[string]*schema{
+			"n": {Type: schemaTypeInteger},
+			"t": {Type: schemaTypeString},
+		},
+	},
+}
+
+// pdmReturnsOverrides supplies the correct "returns" schema for PDM
+// endpoints whose vendored _data/pdm-apidoc.json entry is wrong: either
+// "returns": {"type": "null"} on an endpoint that genuinely returns data
+// (the proxy/listing endpoints below), or a schema copy-pasted from an
+// unrelated endpoint (the subscription and task-log entries). Every entry
+// is consulted in collectEndpoints, which is the single point everything
+// downstream reads endpt.Info.Returns from, so one override fixes response
+// type generation, struct field emission, and the isResponseEmptyOk guard
+// together. Where the proxied PVE/PBS sibling endpoint's own apidoc entry
+// declares a real object schema it is reproduced here; array-of-object and
+// bare-scalar shapes are left permissive (json.RawMessage / []json.RawMessage)
+// since goTypeFor collapses those regardless of how much nested detail is
+// supplied.
+//
+//nolint:gochecknoglobals // hand-authored override table, mirrors the dialects map above
+var pdmReturnsOverrides = map[string]*schema{
+	"GET /nodes": {
+		Type:  schemaTypeArray,
+		Items: &schema{Type: schemaTypeObject},
+	},
+	"GET /nodes/{node}/journal": {
+		Type:  schemaTypeArray,
+		Items: &schema{Type: schemaTypeString},
+	},
+	// PDM-native; no PVE/PBS sibling apidoc entry exists to copy from.
+	"GET /auto-install/prepared/{id}": {
+		Type: schemaTypeObject,
+	},
+	"GET /pbs/remotes/{remote}/nodes/{node}/apt/repositories": aptRepositoriesSchema,
+	"GET /pve/remotes/{remote}/nodes/{node}/apt/repositories": aptRepositoriesSchema,
+	"GET /pve/remotes/{remote}/options": {
+		Type: schemaTypeObject,
+	},
+	"GET /pve/remotes/{remote}/updates": {
+		Type:  schemaTypeArray,
+		Items: &schema{Type: schemaTypeObject},
+	},
+	"GET /pve/remotes/{remote}/cluster-nextid": {
+		Type: schemaTypeInteger,
+	},
+	// The sibling PVE apidoc entry for /nodes/{node}/config is a real
+	// object schema, but one of its properties ("acmedomain[n]") is a
+	// numbered-slot name that response-struct emission does not sanitize
+	// the way indexed request parameters are; left permissive rather than
+	// hand-modeling around that single property.
+	"GET /pve/remotes/{remote}/nodes/{node}/config": {
+		Type: schemaTypeObject,
+	},
+	"GET /pve/remotes/{remote}/qemu/{vmid}/pending": pendingItemsSchema,
+	"GET /pve/remotes/{remote}/lxc/{vmid}/pending":  pendingItemsSchema,
+
+	// Copy-pasted schemas corrected: both previously carried an unrelated
+	// endpoint's shape (node status, task status respectively).
+	"GET /pve/remotes/{remote}/nodes/{node}/subscription": subscriptionInfoSchema,
+	"GET /pve/remotes/{remote}/tasks/{upid}/log":          taskLogLinesSchema,
+
+	// The PDM-native task log endpoint's own apidoc entry documents one
+	// array element's shape without the wrapping array; supply the
+	// correct array-of-lines schema.
+	"GET /nodes/{node}/tasks/{upid}/log": taskLogLinesSchema,
+
+	// UpdateUsersToken only returns "value" (the freshly generated
+	// secret) when the caller set regenerate=true; mark it optional so
+	// it generates as *string. The top-level Optional is preserved from
+	// the real apidoc entry so isResponseEmptyOk still tolerates the
+	// no-body case (see requirement 2).
+	"PUT /access/users/{userid}/token/{token-name}": {
+		Type:     schemaTypeObject,
+		Optional: schemaOptional,
+		Properties: map[string]*schema{
+			"tokenid":  {Type: schemaTypeString},
+			fieldValue: {Type: schemaTypeString, Optional: schemaOptional},
+		},
 	},
 }
 

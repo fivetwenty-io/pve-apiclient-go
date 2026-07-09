@@ -49,7 +49,7 @@ type Service interface {
 	DeletePrepared(ctx context.Context, id string) error
 	// GetPrepared GET /auto-install/prepared/{id}
 	// GET /auto-install/prepared/{id}  Retrieves a prepared auto-installer answer configuration.
-	GetPrepared(ctx context.Context, id string) error
+	GetPrepared(ctx context.Context, id string) (*GetPreparedResponse, error)
 	// UpdatePrepared PUT /auto-install/prepared/{id}
 	// PUT /auto-install/prepared/{id}  Updates a prepared auto-installer answer configuration.
 	UpdatePrepared(ctx context.Context, id string, params *UpdatePreparedParams) (*UpdatePreparedResponse, error)
@@ -449,22 +449,37 @@ func (s *service) DeletePrepared(ctx context.Context, id string) error {
 	return nil
 }
 
+// GetPreparedResponse is the raw JSON returned by GET /auto-install/prepared/{id}.
+type GetPreparedResponse = json.RawMessage
+
 // GetPrepared implements Service.GetPrepared. GET /auto-install/prepared/{id}.
-func (s *service) GetPrepared(ctx context.Context, id string) error {
+func (s *service) GetPrepared(ctx context.Context, id string) (*GetPreparedResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("autoinstall.GetPrepared: ctx must not be nil")
+		return nil, fmt.Errorf("autoinstall.GetPrepared: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/auto-install/prepared/%s", url.PathEscape(id))
 	var body map[string]interface{}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("autoinstall.GetPrepared: %w", err)
+		return nil, fmt.Errorf("autoinstall.GetPrepared: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("autoinstall.GetPrepared: nil response from client")
+		return nil, fmt.Errorf("autoinstall.GetPrepared: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := GetPreparedResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("autoinstall.GetPrepared: re-marshal data: %w", err)
+	}
+	out := &GetPreparedResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("autoinstall.GetPrepared: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // UpdatePreparedParams is the request payload for UpdatePrepared.

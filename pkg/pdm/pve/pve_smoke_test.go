@@ -276,16 +276,19 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 	t.Run("ListRemotesClusterNextid", func(t *testing.T) {
 		harness.set(http.StatusOK, `{"data":{},"success":1}`)
 
-		err := svc.ListRemotesClusterNextid(ctx, "sample-remote", &pve.ListRemotesClusterNextidParams{})
+		resp, err := svc.ListRemotesClusterNextid(ctx, "sample-remote", &pve.ListRemotesClusterNextidParams{})
 		if err != nil {
 			t.Fatalf("ListRemotesClusterNextid: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesClusterNextid: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pve/remotes/sample-remote/cluster-nextid")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesClusterNextid(nilCtx, "sample-remote", &pve.ListRemotesClusterNextidParams{}); err == nil {
+		if _, err := svc.ListRemotesClusterNextid(nilCtx, "sample-remote", &pve.ListRemotesClusterNextidParams{}); err == nil {
 			t.Errorf("ListRemotesClusterNextid: expected error for nil context, got nil")
 		}
 	})
@@ -543,18 +546,21 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 		}
 	})
 	t.Run("ListRemotesLxcPending", func(t *testing.T) {
-		harness.set(http.StatusOK, `{"data":{},"success":1}`)
+		harness.set(http.StatusOK, `{"data":[],"success":1}`)
 
-		err := svc.ListRemotesLxcPending(ctx, "sample-remote", "sample-vmid", &pve.ListRemotesLxcPendingParams{})
+		resp, err := svc.ListRemotesLxcPending(ctx, "sample-remote", "sample-vmid", &pve.ListRemotesLxcPendingParams{})
 		if err != nil {
 			t.Fatalf("ListRemotesLxcPending: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesLxcPending: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pve/remotes/sample-remote/lxc/sample-vmid/pending")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesLxcPending(nilCtx, "sample-remote", "sample-vmid", &pve.ListRemotesLxcPendingParams{}); err == nil {
+		if _, err := svc.ListRemotesLxcPending(nilCtx, "sample-remote", "sample-vmid", &pve.ListRemotesLxcPendingParams{}); err == nil {
 			t.Errorf("ListRemotesLxcPending: expected error for nil context, got nil")
 		}
 	})
@@ -881,16 +887,19 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 	t.Run("ListRemotesNodesAptRepositories", func(t *testing.T) {
 		harness.set(http.StatusOK, `{"data":{},"success":1}`)
 
-		err := svc.ListRemotesNodesAptRepositories(ctx, "sample-remote", "sample-node")
+		resp, err := svc.ListRemotesNodesAptRepositories(ctx, "sample-remote", "sample-node")
 		if err != nil {
 			t.Fatalf("ListRemotesNodesAptRepositories: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesNodesAptRepositories: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pve/remotes/sample-remote/nodes/sample-node/apt/repositories")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesNodesAptRepositories(nilCtx, "sample-remote", "sample-node"); err == nil {
+		if _, err := svc.ListRemotesNodesAptRepositories(nilCtx, "sample-remote", "sample-node"); err == nil {
 			t.Errorf("ListRemotesNodesAptRepositories: expected error for nil context, got nil")
 		}
 	})
@@ -935,16 +944,19 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 	t.Run("ListRemotesNodesConfig", func(t *testing.T) {
 		harness.set(http.StatusOK, `{"data":{},"success":1}`)
 
-		err := svc.ListRemotesNodesConfig(ctx, "sample-remote", "sample-node")
+		resp, err := svc.ListRemotesNodesConfig(ctx, "sample-remote", "sample-node")
 		if err != nil {
 			t.Fatalf("ListRemotesNodesConfig: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesNodesConfig: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pve/remotes/sample-remote/nodes/sample-node/config")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesNodesConfig(nilCtx, "sample-remote", "sample-node"); err == nil {
+		if _, err := svc.ListRemotesNodesConfig(nilCtx, "sample-remote", "sample-node"); err == nil {
 			t.Errorf("ListRemotesNodesConfig: expected error for nil context, got nil")
 		}
 	})
@@ -1316,16 +1328,19 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 	t.Run("ListRemotesOptions", func(t *testing.T) {
 		harness.set(http.StatusOK, `{"data":{},"success":1}`)
 
-		err := svc.ListRemotesOptions(ctx, "sample-remote")
+		resp, err := svc.ListRemotesOptions(ctx, "sample-remote")
 		if err != nil {
 			t.Fatalf("ListRemotesOptions: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesOptions: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pve/remotes/sample-remote/options")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesOptions(nilCtx, "sample-remote"); err == nil {
+		if _, err := svc.ListRemotesOptions(nilCtx, "sample-remote"); err == nil {
 			t.Errorf("ListRemotesOptions: expected error for nil context, got nil")
 		}
 	})
@@ -1494,18 +1509,21 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 		}
 	})
 	t.Run("ListRemotesQemuPending", func(t *testing.T) {
-		harness.set(http.StatusOK, `{"data":{},"success":1}`)
+		harness.set(http.StatusOK, `{"data":[],"success":1}`)
 
-		err := svc.ListRemotesQemuPending(ctx, "sample-remote", "sample-vmid", &pve.ListRemotesQemuPendingParams{})
+		resp, err := svc.ListRemotesQemuPending(ctx, "sample-remote", "sample-vmid", &pve.ListRemotesQemuPendingParams{})
 		if err != nil {
 			t.Fatalf("ListRemotesQemuPending: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesQemuPending: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pve/remotes/sample-remote/qemu/sample-vmid/pending")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesQemuPending(nilCtx, "sample-remote", "sample-vmid", &pve.ListRemotesQemuPendingParams{}); err == nil {
+		if _, err := svc.ListRemotesQemuPending(nilCtx, "sample-remote", "sample-vmid", &pve.ListRemotesQemuPendingParams{}); err == nil {
 			t.Errorf("ListRemotesQemuPending: expected error for nil context, got nil")
 		}
 	})
@@ -1867,7 +1885,7 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 		}
 	})
 	t.Run("ListRemotesTasksLog", func(t *testing.T) {
-		harness.set(http.StatusOK, `{"data":{},"success":1}`)
+		harness.set(http.StatusOK, `{"data":[],"success":1}`)
 
 		resp, err := svc.ListRemotesTasksLog(ctx, "sample-remote", "sample-upid", &pve.ListRemotesTasksLogParams{})
 		if err != nil {
@@ -1905,18 +1923,21 @@ func TestGenerated_Pve_Methods(t *testing.T) {
 		}
 	})
 	t.Run("ListRemotesUpdates", func(t *testing.T) {
-		harness.set(http.StatusOK, `{"data":{},"success":1}`)
+		harness.set(http.StatusOK, `{"data":[],"success":1}`)
 
-		err := svc.ListRemotesUpdates(ctx, "sample-remote")
+		resp, err := svc.ListRemotesUpdates(ctx, "sample-remote")
 		if err != nil {
 			t.Fatalf("ListRemotesUpdates: unexpected error: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ListRemotesUpdates: response is nil")
 		}
 
 		got := harness.snapshot()
 		assertRequestLine(t, got, "GET", "/api2/json/pve/remotes/sample-remote/updates")
 
 		var nilCtx context.Context
-		if err := svc.ListRemotesUpdates(nilCtx, "sample-remote"); err == nil {
+		if _, err := svc.ListRemotesUpdates(nilCtx, "sample-remote"); err == nil {
 			t.Errorf("ListRemotesUpdates: expected error for nil context, got nil")
 		}
 	})

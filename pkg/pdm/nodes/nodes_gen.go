@@ -25,7 +25,7 @@ var _ = strconv.Itoa
 type Service interface {
 	// ListNodes GET /nodes
 	// List Nodes (only for compatibility)
-	ListNodes(ctx context.Context) error
+	ListNodes(ctx context.Context) (*ListNodesResponse, error)
 	// GetNodes GET /nodes/{node}
 	// Directory index.
 	GetNodes(ctx context.Context, node string) error
@@ -88,7 +88,7 @@ type Service interface {
 	UpdateDns(ctx context.Context, node string, params *UpdateDnsParams) error
 	// ListJournal GET /nodes/{node}/journal
 	// Read syslog entries.
-	ListJournal(ctx context.Context, node string, params *ListJournalParams) error
+	ListJournal(ctx context.Context, node string, params *ListJournalParams) (*ListJournalResponse, error)
 	// DeleteNetwork DELETE /nodes/{node}/network
 	// Revert network configuration (rm /etc/network/interfaces.new).
 	DeleteNetwork(ctx context.Context, node string) error
@@ -189,22 +189,37 @@ type service struct {
 	c client.Client
 }
 
+// ListNodesResponse mirrors the shape returned by GET /nodes.
+type ListNodesResponse []json.RawMessage
+
 // ListNodes implements Service.ListNodes. GET /nodes.
-func (s *service) ListNodes(ctx context.Context) error {
+func (s *service) ListNodes(ctx context.Context) (*ListNodesResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("nodes.ListNodes: ctx must not be nil")
+		return nil, fmt.Errorf("nodes.ListNodes: ctx must not be nil")
 	}
 	path := "/nodes"
 	var body map[string]interface{}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("nodes.ListNodes: %w", err)
+		return nil, fmt.Errorf("nodes.ListNodes: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("nodes.ListNodes: nil response from client")
+		return nil, fmt.Errorf("nodes.ListNodes: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListNodesResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("nodes.ListNodes: re-marshal data: %w", err)
+	}
+	out := &ListNodesResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("nodes.ListNodes: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // GetNodes implements Service.GetNodes. GET /nodes/{node}.
@@ -1014,34 +1029,49 @@ type ListJournalParams struct {
 	Until *int64 `json:"until,omitempty"`
 }
 
+// ListJournalResponse mirrors the shape returned by GET /nodes/{node}/journal.
+type ListJournalResponse []string
+
 // ListJournal implements Service.ListJournal. GET /nodes/{node}/journal.
-func (s *service) ListJournal(ctx context.Context, node string, params *ListJournalParams) error {
+func (s *service) ListJournal(ctx context.Context, node string, params *ListJournalParams) (*ListJournalResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("nodes.ListJournal: ctx must not be nil")
+		return nil, fmt.Errorf("nodes.ListJournal: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/nodes/%s/journal", url.PathEscape(node))
 	var body map[string]interface{}
 	if params != nil {
 		raw, err := json.Marshal(params)
 		if err != nil {
-			return fmt.Errorf("nodes.ListJournal: marshal params: %w", err)
+			return nil, fmt.Errorf("nodes.ListJournal: marshal params: %w", err)
 		}
 		dec := json.NewDecoder(strings.NewReader(string(raw)))
 		dec.UseNumber()
 		err = dec.Decode(&body)
 		if err != nil {
-			return fmt.Errorf("nodes.ListJournal: decode params: %w", err)
+			return nil, fmt.Errorf("nodes.ListJournal: decode params: %w", err)
 		}
 	}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("nodes.ListJournal: %w", err)
+		return nil, fmt.Errorf("nodes.ListJournal: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("nodes.ListJournal: nil response from client")
+		return nil, fmt.Errorf("nodes.ListJournal: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		out := ListJournalResponse{}
+		return &out, nil
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("nodes.ListJournal: re-marshal data: %w", err)
+	}
+	out := &ListJournalResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("nodes.ListJournal: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // DeleteNetwork implements Service.DeleteNetwork. DELETE /nodes/{node}/network.
@@ -1990,16 +2020,7 @@ type ListTasksLogParams struct {
 }
 
 // ListTasksLogResponse mirrors the shape returned by GET /nodes/{node}/tasks/{upid}/log.
-type ListTasksLogResponse struct {
-	// Active Whether the task is still active.
-	Active client.PVEBool `json:"active"`
-	// Data A line of a task log.
-	Data json.RawMessage `json:"data"`
-	// Success Whether the request was successful.
-	Success client.PVEInt `json:"success"`
-	// Total Total number of lines.
-	Total client.PVEInt `json:"total"`
-}
+type ListTasksLogResponse []json.RawMessage
 
 // ListTasksLog implements Service.ListTasksLog. GET /nodes/{node}/tasks/{upid}/log.
 func (s *service) ListTasksLog(ctx context.Context, node string, upid string, params *ListTasksLogParams) (*ListTasksLogResponse, error) {

@@ -64,7 +64,7 @@ type Service interface {
 	ListRemotesNodesAptChangelog(ctx context.Context, remote string, node string, params *ListRemotesNodesAptChangelogParams) (*ListRemotesNodesAptChangelogResponse, error)
 	// ListRemotesNodesAptRepositories GET /pbs/remotes/{remote}/nodes/{node}/apt/repositories
 	// Get configured APT repositories.
-	ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) error
+	ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) (*ListRemotesNodesAptRepositoriesResponse, error)
 	// ListRemotesNodesAptUpdate GET /pbs/remotes/{remote}/nodes/{node}/apt/update
 	// List available APT updates for a remote PVE node.
 	ListRemotesNodesAptUpdate(ctx context.Context, remote string, node string) (*ListRemotesNodesAptUpdateResponse, error)
@@ -577,22 +577,42 @@ func (s *service) ListRemotesNodesAptChangelog(ctx context.Context, remote strin
 	return out, nil
 }
 
+// ListRemotesNodesAptRepositoriesResponse mirrors the shape returned by GET /pbs/remotes/{remote}/nodes/{node}/apt/repositories.
+type ListRemotesNodesAptRepositoriesResponse struct {
+	Digest        string            `json:"digest"`
+	Errors        []json.RawMessage `json:"errors"`
+	Files         []json.RawMessage `json:"files"`
+	Infos         []json.RawMessage `json:"infos"`
+	StandardRepos []json.RawMessage `json:"standard-repos"`
+}
+
 // ListRemotesNodesAptRepositories implements Service.ListRemotesNodesAptRepositories. GET /pbs/remotes/{remote}/nodes/{node}/apt/repositories.
-func (s *service) ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) error {
+func (s *service) ListRemotesNodesAptRepositories(ctx context.Context, remote string, node string) (*ListRemotesNodesAptRepositoriesResponse, error) {
 	if ctx == nil {
-		return fmt.Errorf("pbs.ListRemotesNodesAptRepositories: ctx must not be nil")
+		return nil, fmt.Errorf("pbs.ListRemotesNodesAptRepositories: ctx must not be nil")
 	}
 	path := fmt.Sprintf("/pbs/remotes/%s/nodes/%s/apt/repositories", url.PathEscape(remote), url.PathEscape(node))
 	var body map[string]interface{}
 	resp, err := s.c.GetRawCtx(ctx, path, body)
 	if err != nil {
-		return fmt.Errorf("pbs.ListRemotesNodesAptRepositories: %w", err)
+		return nil, fmt.Errorf("pbs.ListRemotesNodesAptRepositories: %w", err)
 	}
 	if resp == nil {
-		return fmt.Errorf("pbs.ListRemotesNodesAptRepositories: nil response from client")
+		return nil, fmt.Errorf("pbs.ListRemotesNodesAptRepositories: nil response from client")
 	}
-	_ = resp
-	return nil
+	if resp.Data == nil {
+		return nil, fmt.Errorf("pbs.ListRemotesNodesAptRepositories: empty data in response (code=%d)", resp.Code)
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("pbs.ListRemotesNodesAptRepositories: re-marshal data: %w", err)
+	}
+	out := &ListRemotesNodesAptRepositoriesResponse{}
+	err = json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, fmt.Errorf("pbs.ListRemotesNodesAptRepositories: unmarshal data: %w", err)
+	}
+	return out, nil
 }
 
 // ListRemotesNodesAptUpdateResponse mirrors the shape returned by GET /pbs/remotes/{remote}/nodes/{node}/apt/update.
