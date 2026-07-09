@@ -1,8 +1,10 @@
-package pve
+package pve_test
 
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/fivetwenty-io/proxmox-apiclient-go/v3/pkg/pdm/pve"
 )
 
 // TestListRemotesLxcConfigResponseSparseRoundTrip guards against the defect
@@ -19,8 +21,10 @@ func TestListRemotesLxcConfigResponseSparseRoundTrip(t *testing.T) {
 
 	const sparse = `{"arch":"amd64","cores":2,"dev0":"/dev/foo"}`
 
-	var resp ListRemotesLxcConfigResponse
-	if err := json.Unmarshal([]byte(sparse), &resp); err != nil {
+	var resp pve.ListRemotesLxcConfigResponse
+
+	err := json.Unmarshal([]byte(sparse), &resp)
+	if err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
 
@@ -50,7 +54,9 @@ func TestListRemotesLxcConfigResponseSparseRoundTrip(t *testing.T) {
 	}
 
 	var roundTripped map[string]any
-	if err := json.Unmarshal(out, &roundTripped); err != nil {
+
+	err = json.Unmarshal(out, &roundTripped)
+	if err != nil {
 		t.Fatalf("json.Unmarshal(remarshaled) error = %v", err)
 	}
 
@@ -76,8 +82,10 @@ func TestListRemotesQemuConfigResponseSparseRoundTrip(t *testing.T) {
 
 	const sparse = `{"cores":4,"net0":"virtio=aa:bb:cc:dd:ee:ff,bridge=vmbr0"}`
 
-	var resp ListRemotesQemuConfigResponse
-	if err := json.Unmarshal([]byte(sparse), &resp); err != nil {
+	var resp pve.ListRemotesQemuConfigResponse
+
+	err := json.Unmarshal([]byte(sparse), &resp)
+	if err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
 
@@ -95,7 +103,9 @@ func TestListRemotesQemuConfigResponseSparseRoundTrip(t *testing.T) {
 	}
 
 	var roundTripped map[string]any
-	if err := json.Unmarshal(out, &roundTripped); err != nil {
+
+	err = json.Unmarshal(out, &roundTripped)
+	if err != nil {
 		t.Fatalf("json.Unmarshal(remarshaled) error = %v", err)
 	}
 
