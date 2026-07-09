@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.8.0] — 2026-07-09
+
+### Fixed
+
+- PDM `GET /pve/remotes/{remote}/updates` (`pdm/pve.ListRemotesUpdates`)
+  now decodes the endpoint's real object body. The hand-authored
+  returns override previously declared an array of opaque objects, so
+  the generated binding failed against a real server's response. The
+  schema is transcribed from PDM's `pdm-api-types` `RemoteUpdateSummary`:
+  `nodes` (map of node name → per-node update summary), `remote-type`,
+  `status`, and optional `status-message`.
+
+### Changed
+
+Breaking correction — compile-time break for consumers of the
+previously mis-generated symbol, which could not decode real data:
+
+- `pdm/pve.ListRemotesUpdatesResponse` redefined from an array alias to
+  a struct (`Nodes json.RawMessage`, `RemoteType string`,
+  `Status string`, `StatusMessage *string`).
+
+### Added
+
+- Runtime test coverage for the generated nil-data decode branches over
+  HTTP: tolerant endpoints (`{"data": null}` or a missing `data` key
+  return a zero-value response) and strict endpoints (nil data is a
+  hard "empty data" error).
+
 ## [v3.7.0] — 2026-07-09
 
 ### Fixed
