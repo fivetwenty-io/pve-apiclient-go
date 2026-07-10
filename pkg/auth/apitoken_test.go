@@ -493,7 +493,7 @@ func buildFormatDetectionTestCases() []struct {
 			name:               "pre-formatted token should not double-prefix",
 			tokenID:            "PVEAPIToken=user@pam!token",
 			tokenSecret:        testSecretPass,
-			customTokenName:    "PVEAPIToken",
+			customTokenName:    testPVEAPITokenName,
 			expectedAuthHeader: "PVEAPIToken=user@pam!token=secret",
 			description:        "Already formatted tokens should not be double-prefixed",
 		},
@@ -538,7 +538,7 @@ func TestAPITokenAuthenticator_CustomTokenName(t *testing.T) {
 		},
 		{
 			name:           "explicit PVEAPIToken",
-			tokenName:      "PVEAPIToken",
+			tokenName:      testPVEAPITokenName,
 			expectedPrefix: "PVEAPIToken=",
 		},
 		{
@@ -572,4 +572,68 @@ func TestAPITokenAuthenticator_CustomTokenName(t *testing.T) {
 // hasPrefix checks if a string has the given prefix.
 func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
+}
+
+// TestGetHeaders_SeparatorByTokenName pins the Authorization header's id/secret
+// separator to the configured token name: PVE's Perl parser expects '=', while
+// PBS and PDM (proxmox-auth-api, Rust) split on ':'.
+func TestGetHeaders_SeparatorByTokenName(t *testing.T) {
+	t.Parallel()
+
+	token := &auth.Token{ID: "user@pbs!automation", Secret: testShortSecret}
+
+	tests := []struct {
+		name      string
+		tokenName string
+		want      string
+	}{
+		{"pve default", "", "PVEAPIToken=user@pbs!automation=s3cr3t"},
+		{"pve explicit", testPVEAPITokenName, "PVEAPIToken=user@pbs!automation=s3cr3t"},
+		{"pbs", "PBSAPIToken", "PBSAPIToken=user@pbs!automation:s3cr3t"},
+		{"pdm", "PDMAPIToken", "PDMAPIToken=user@pbs!automation:s3cr3t"},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			authenticator := auth.NewAPITokenAuthenticator(token, testCase.tokenName)
+
+			got := authenticator.GetHeaders()["Authorization"]
+			if got != testCase.want {
+				t.Fatalf("Authorization = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+// TestParseAPIToken_ColonSeparator proves the PBS/PDM pasted-token form
+// ("user@realm!tokenid:secret") parses just as PVE's "=" form does.
+func TestParseAPIToken_ColonSeparator(t *testing.T) {
+	t.Parallel()
+
+	token, err := auth.ParseAPIToken("user@pbs!automation:s3cr3t")
+	if err != nil {
+		t.Fatalf("ParseAPIToken: %v", err)
+	}
+
+	if token.ID != "user@pbs!automation" || token.Secret != testShortSecret {
+		t.Fatalf("got ID=%q Secret=%q", token.ID, token.Secret)
+	}
+}
+
+// TestParseAPIToken_EqualsBeforeColonWins confirms the split happens at the
+// first separator character encountered (PVE UUID secrets never contain ':'
+// before '=', but a '=' secret with a later ':' must still split at '=').
+func TestParseAPIToken_EqualsBeforeColonWins(t *testing.T) {
+	t.Parallel()
+
+	token, err := auth.ParseAPIToken("user@pve!ci=aaaa:bbbb")
+	if err != nil {
+		t.Fatalf("ParseAPIToken: %v", err)
+	}
+
+	if token.ID != "user@pve!ci" || token.Secret != "aaaa:bbbb" {
+		t.Fatalf("got ID=%q Secret=%q", token.ID, token.Secret)
+	}
 }

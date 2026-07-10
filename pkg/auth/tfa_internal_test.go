@@ -11,6 +11,10 @@ import (
 	"testing"
 )
 
+// testInternalSecret is a placeholder password value shared by this file's
+// prompt-reading tests.
+const testInternalSecret = "s3cr3t"
+
 // newInteractiveTFAHandlerWithReader creates an InteractiveTFAHandler that
 // reads from r instead of os.Stdin. Used only in tests.
 func newInteractiveTFAHandlerWithReader(r *bufio.Reader) *InteractiveTFAHandler {
@@ -390,15 +394,15 @@ func newPipeWithContent(t *testing.T, content string) *os.File {
 func TestPromptPasswordFrom_NonTerminal_ReadsLine(t *testing.T) {
 	t.Parallel()
 
-	r := newPipeWithContent(t, "s3cr3t\n")
+	r := newPipeWithContent(t, testInternalSecret+"\n")
 
 	got, err := promptPasswordFrom(r, "Password: ")
 	if err != nil {
 		t.Fatalf("promptPasswordFrom() error = %v", err)
 	}
 
-	if got != "s3cr3t" {
-		t.Errorf("promptPasswordFrom() = %q, want %q", got, "s3cr3t")
+	if got != testInternalSecret {
+		t.Errorf("promptPasswordFrom() = %q, want %q", got, testInternalSecret)
 	}
 }
 

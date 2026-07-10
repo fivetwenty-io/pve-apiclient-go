@@ -38,6 +38,9 @@ const (
 	testTokenSecret   = "secret-value"
 	testTokenIDSecret = "root@pam!mytoken=secret-value"
 
+	testPVEAPITokenName = "PVEAPIToken"
+	testShortSecret     = "s3cr3t"
+
 	testCaseValidToken  = "valid token"
 	testCaseNilToken    = "nil token"
 	testCaseEmptyID     = "empty ID"
@@ -807,7 +810,7 @@ func TestAuthenticate_HTTP401(t *testing.T) {
 func TestAPITokenAuthenticator_GetHeaders_PVEFormat(t *testing.T) {
 	t.Parallel()
 
-	tok := &auth.Token{ID: "alice@pve!myjob", Secret: "s3cr3t"}
+	tok := &auth.Token{ID: "alice@pve!myjob", Secret: testShortSecret}
 	ata := auth.NewAPITokenAuthenticator(tok, "")
 
 	headers := ata.GetHeaders()

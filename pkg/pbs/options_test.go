@@ -64,8 +64,10 @@ func TestDefaultOptions_PreservesExplicitValues(t *testing.T) {
 }
 
 // TestNewClient_SendsPBSAPITokenHeader proves the preset wires the PBS
-// token name all the way onto the Authorization header of a real
-// request issued through a generated pkg/pbs service.
+// token name all the way onto the Authorization header of a real request
+// issued through a generated pkg/pbs service, using the ':' id/secret
+// separator PBS's Rust auth API (proxmox-auth-api) expects rather than
+// PVE's '='.
 func TestNewClient_SendsPBSAPITokenHeader(t *testing.T) {
 	t.Parallel()
 
@@ -103,9 +105,9 @@ func TestNewClient_SendsPBSAPITokenHeader(t *testing.T) {
 		t.Fatalf("version.Get: %v", err)
 	}
 
-	const wantPrefix = "PBSAPIToken=user@pbs!tok"
-	if !strings.HasPrefix(gotAuth, wantPrefix) {
-		t.Errorf("Authorization = %q, want prefix %q", gotAuth, wantPrefix)
+	const wantAuth = "PBSAPIToken=user@pbs!tok:secret"
+	if gotAuth != wantAuth {
+		t.Errorf("Authorization = %q, want %q", gotAuth, wantAuth)
 	}
 }
 

@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-
-	"github.com/fivetwenty-io/proxmox-apiclient-go/v3/internal/constants"
 )
 
 var (
@@ -54,7 +52,8 @@ func NewAPITokenAuthenticator(token *Token, tokenName string) *APITokenAuthentic
 }
 
 // NewAPITokenAuthenticatorFromString creates a new API token authenticator from a string.
-// The token string should be in the format: "user@realm!tokenid=secret".
+// The token string may be in the format "user@realm!tokenid=secret" (PVE) or
+// "user@realm!tokenid:secret" (PBS/PDM); see ParseAPIToken.
 // Uses default token name "PVEAPIToken".
 func NewAPITokenAuthenticatorFromString(tokenString string) (*APITokenAuthenticator, error) {
 	token, err := ParseAPIToken(tokenString)
@@ -97,7 +96,7 @@ func (ata *APITokenAuthenticator) GetHeaders() map[string]string {
 	}
 
 	// Build the authorization header value
-	authHeader := fmt.Sprintf("%s=%s", ata.token.ID, ata.token.Secret)
+	authHeader := fmt.Sprintf("%s%s%s", ata.token.ID, secretSeparator(ata.tokenName), ata.token.Secret)
 
 	// Check if the token is already formatted (starts with word char followed by = or space)
 	// This matches Perl implementation behavior: only add prefix if not already present
@@ -107,6 +106,21 @@ func (ata *APITokenAuthenticator) GetHeaders() map[string]string {
 
 	return map[string]string{
 		"Authorization": authHeader,
+	}
+}
+
+// secretSeparator returns the character joining token ID and secret in the
+// Authorization header value. The Perl-based PVE API expects
+// "user@realm!tokenid=secret"; the Rust-based products (PBS, PDM) split the
+// value on ':' (proxmox-auth-api reads the token as TOKENID:TOKENSECRET), so
+// their token names select the colon form. Unknown token names keep the PVE
+// form for backward compatibility.
+func secretSeparator(tokenName string) string {
+	switch tokenName {
+	case "PBSAPIToken", "PDMAPIToken":
+		return ":"
+	default:
+		return "="
 	}
 }
 
@@ -143,20 +157,22 @@ func (ata *APITokenAuthenticator) hasValidTokenLocked() bool {
 }
 
 // ParseAPIToken parses an API token string into a Token struct.
-// Expected format: "user@realm!tokenid=secret".
+// Accepts both "user@realm!tokenid=secret" (PVE) and
+// "user@realm!tokenid:secret" (PBS/PDM) forms.
 func ParseAPIToken(tokenString string) (*Token, error) {
 	if tokenString == "" {
 		return nil, ErrEmptyTokenString
 	}
 
-	// Split on '=' to separate ID and secret
-	parts := strings.SplitN(tokenString, "=", constants.ExpectedPartsCount)
-	if len(parts) != constants.ExpectedPartsCount {
-		return nil, fmt.Errorf("%w: expected 'user@realm!tokenid=secret'", ErrInvalidTokenFormat)
+	// Split on the first '=' (PVE form) or ':' (PBS/PDM form), whichever
+	// comes first, to separate ID and secret.
+	sep := strings.IndexAny(tokenString, "=:")
+	if sep < 0 {
+		return nil, fmt.Errorf("%w: expected 'user@realm!tokenid=secret' or 'user@realm!tokenid:secret'", ErrInvalidTokenFormat)
 	}
 
-	tokenID := parts[0]
-	secret := parts[1]
+	tokenID := tokenString[:sep]
+	secret := tokenString[sep+1:]
 
 	// Validate token ID format (should contain @ and !)
 	if !strings.Contains(tokenID, "@") || !strings.Contains(tokenID, "!") {
@@ -174,7 +190,9 @@ func ParseAPIToken(tokenString string) (*Token, error) {
 	}, nil
 }
 
-// FormatAPIToken formats a Token into a string.
+// FormatAPIToken formats a Token into a string using the "=" separator, the
+// canonical internal/PVE representation. The result round-trips through
+// ParseAPIToken, which also accepts the ":" separator PBS/PDM use.
 func FormatAPIToken(token *Token) string {
 	if token == nil {
 		return ""

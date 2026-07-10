@@ -317,6 +317,45 @@ func TestClient_SetKeepAlive_TakesEffect(t *testing.T) {
 	}
 }
 
+// TestClient_SendsPVEAPITokenHeader pins the Authorization header PVE's
+// Perl API expects: id and secret joined by '=' under the default
+// "PVEAPIToken" prefix. It mirrors pkg/pbs and pkg/pdm's equivalent tests,
+// which pin the ':' separator those Rust-based products require instead.
+func TestClient_SendsPVEAPITokenHeader(t *testing.T) {
+	t.Parallel()
+
+	var gotAuth string
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data": {"ok": true}, "success": 1}`))
+	}))
+	defer srv.Close()
+
+	host, port := parseServerURL(srv.URL)
+
+	cli, err := client.NewClient(client.Options{
+		Host:     host,
+		Port:     port,
+		Protocol: testProtoHTTP,
+		APIToken: "user@pve!tok=secret",
+	})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	_, err = cli.Get("/test", nil)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	const wantAuth = "PVEAPIToken=user@pve!tok=secret"
+	if gotAuth != wantAuth {
+		t.Errorf("Authorization = %q, want %q", gotAuth, wantAuth)
+	}
+}
+
 func createTestServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/api2/json") {
